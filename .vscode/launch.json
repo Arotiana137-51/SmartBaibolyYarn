@@ -1,0 +1,63 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    // Your existing Node.js configurations
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Data Import",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/debugDataImporter.ts",
+      "sourceMaps": true,
+      "smartStep": true,
+      "internalConsoleOptions": "openOnSessionStart",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node", "--transpile-only"],
+      "env": {
+        "NODE_ENV": "development",
+        "TS_NODE_FILES": "true"
+      },
+      "console": "integratedTerminal",
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Data Import with Breakpoints",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/debugDataImporter.ts",
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node", "--transpile-only"],
+      "sourceMaps": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Database Operations",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    
+    // Add these new React Native configurations
+    {
+      "name": "Debug Android",
+      "cwd": "${workspaceFolder}",
+      "type": "reactnative",
+      "request": "launch",
+      "platform": "android"
+    },
+    {
+      "name": "Debug iOS",
+      "cwd": "${workspaceFolder}",
+      "type": "reactnative",
+      "request": "launch",
+      "platform": "ios"
+    },
+    {
+      "name": "Attach to packager",
+      "cwd": "${workspaceFolder}",
+      "type": "reactnative",
+      "request": "attach"
+    }
+  ]
+}

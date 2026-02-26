@@ -1,8 +1,38 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-    "types": ["jest"],
+    "target": "esnext",
+    "module": "Node16",
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "jsx": "react-native",
+    "types": ["jest", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@services/*": ["src/services/*"],
+      "@components/*": ["src/components/*"]
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["**/node_modules", "**/Pods"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "App.tsx",
+    "index.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/__tests__/*",
+    "android",
+    "ios"
+  ]
 }
