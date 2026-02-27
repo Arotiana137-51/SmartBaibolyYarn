@@ -6,18 +6,13 @@ import { AppMode } from '../screens/MainScreen';
 interface CustomBottomNavProps {
   activeMode: AppMode;
   onTabPress: (mode: AppMode) => void;
-  bottomPadding?: number;
 }
 
-const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress, bottomPadding }) => {
+const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress }) => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingBottom: bottomPadding ?? insets.bottom, height: styles.container.height + (bottomPadding ?? insets.bottom) },
-      ]}>
+    <View style={styles.container}>
       <Pressable 
         style={[styles.tab, activeMode === 'bible' && styles.tabActive]} 
         onPress={() => onTabPress('bible')}>

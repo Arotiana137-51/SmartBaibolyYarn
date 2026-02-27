@@ -208,7 +208,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         isMenuOpen={isMenuOpen}
         onMenuPress={() => setIsMenuOpen(open => !open)}
         onTitlePress={handleTitlePress}
-        topPadding={proportionalTopPadding}
         onPreviousPress={handlePreviousChapter}
         onNextPress={handleNextChapter}
       />
@@ -222,7 +221,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onVersePress={mode === 'bible' ? openCrossReferences : undefined}
         />
       </View>
-      <CustomBottomNav activeMode={mode} onTabPress={setMode} bottomPadding={proportionalBottomPadding} />
+      <CustomBottomNav activeMode={mode} onTabPress={setMode} />
 
       <Modal
         visible={crossRefModalVisible}

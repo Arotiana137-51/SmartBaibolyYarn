@@ -9,7 +9,6 @@ interface TopBarProps {
   onMenuPress?: () => void;
   onTitlePress?: () => void;
   isMenuOpen?: boolean;
-  topPadding?: number;
   onPreviousPress?: () => void;
   onNextPress?: () => void;
 }
@@ -20,7 +19,6 @@ const TopBar: React.FC<TopBarProps> = ({
   onMenuPress,
   onTitlePress,
   isMenuOpen,
-  topPadding,
   onPreviousPress,
   onNextPress,
 }) => {
@@ -45,11 +43,7 @@ const TopBar: React.FC<TopBarProps> = ({
   });
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: topPadding ?? insets.top, height: styles.container.height + (topPadding ?? insets.top) },
-      ]}>
+    <View style={styles.container}>
       <Pressable style={styles.button} accessibilityLabel="Previous chapter" onPress={onPreviousPress}>
         <Text style={styles.buttonText}>{'‹‹'}</Text>
       </Pressable>
@@ -92,11 +86,13 @@ const styles = StyleSheet.create({
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
     padding: 12,
     minWidth: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: 'white',
@@ -106,6 +102,7 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     color: 'white',
