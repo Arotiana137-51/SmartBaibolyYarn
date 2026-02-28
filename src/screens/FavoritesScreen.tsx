@@ -8,7 +8,7 @@ const FavoritesScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>{t('menu.favorites')}</Text>
-        <Text style={styles.placeholder}>{t('hymns.placeholder')}</Text>
+        <Text style={styles.placeholder}>Page Favorites - Contenu à implémenter</Text>
       </View>
     </SafeAreaView>
   );

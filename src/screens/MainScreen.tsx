@@ -4,7 +4,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import TopBar from '../components/TopBar';
 import ReaderView from '../components/ReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
-import HymnSelectionModalOptimized from '../components/HymnSelectionModalOptimized';
+import HymnSelectionModalOptimized from '../components/HymnSelectionModal';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
 import { useHymnsData } from '../hooks/useHymnsData';
 import HamburgerMenuPopover, {
@@ -208,7 +208,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         isMenuOpen={isMenuOpen}
         onMenuPress={() => setIsMenuOpen(open => !open)}
         onTitlePress={handleTitlePress}
-        topPadding={proportionalTopPadding}
         onPreviousPress={handlePreviousChapter}
         onNextPress={handleNextChapter}
       />
@@ -222,7 +221,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onVersePress={mode === 'bible' ? openCrossReferences : undefined}
         />
       </View>
-      <CustomBottomNav activeMode={mode} onTabPress={setMode} bottomPadding={proportionalBottomPadding} />
+      <CustomBottomNav activeMode={mode} onTabPress={setMode} />
 
       <Modal
         visible={crossRefModalVisible}

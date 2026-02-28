@@ -8,7 +8,7 @@ const HistoryScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>{t('menu.history')}</Text>
-        <Text style={styles.placeholder}>{t('hymns.placeholder')}</Text>
+        <Text style={styles.placeholder}>Page History - Contenu à implémenter</Text>
       </View>
     </SafeAreaView>
   );
