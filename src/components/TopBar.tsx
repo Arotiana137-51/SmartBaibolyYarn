@@ -13,7 +13,7 @@ const HYMNAL_CATEGORIES = [
 interface TopBarProps {
   appMode: AppMode;
   title: string;
-  onMenuPress?: () => void;
+  onMenuPress: () => void;
   onTitlePress?: () => void;
   isMenuOpen?: boolean;
   onPreviousPress?: () => void;
@@ -110,7 +110,7 @@ const TopBar: React.FC<TopBarProps> = ({
       <View style={styles.rightActions}>
         <AnimatedHamburger
           isOpen={isMenuOpen || false}
-          onPress={onMenuPress || (() => {})}
+          onPress={onMenuPress}
           accessibilityLabel={isMenuOpen ? 'Close menu' : 'Open menu'}
         />
       </View>

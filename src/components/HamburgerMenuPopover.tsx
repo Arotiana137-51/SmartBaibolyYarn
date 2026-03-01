@@ -97,9 +97,13 @@ const HamburgerMenuPopover: React.FC<Props> = ({
       statusBarTranslucent
       animationType="none"
       onRequestClose={onClose}>
-      <View style={styles.root}>
+      <View style={styles.root} pointerEvents="box-none">
         <Pressable
-          style={[styles.backdrop, {top: topInset}]}
+          style={[styles.headerCloseHotspot, {height: topInset, right: menuRight}]}
+          onPress={onClose}
+        />
+        <Pressable
+          style={styles.backdrop}
           onPress={onClose}
         />
 
@@ -169,6 +173,12 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  headerCloseHotspot: {
+    position: 'absolute',
+    top: 0,
+    width: 56,
+    zIndex: 10,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

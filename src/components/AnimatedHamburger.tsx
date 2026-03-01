@@ -19,6 +19,9 @@ const AnimatedHamburger: React.FC<AnimatedHamburgerProps> = ({
   const animatedValue = React.useRef(new Animated.Value(isOpen ? 1 : 0)).current;
 
   React.useEffect(() => {
+    // Stop any ongoing animation first
+    animatedValue.stopAnimation();
+    // Then animate to the new value
     Animated.timing(animatedValue, {
       toValue: isOpen ? 1 : 0,
       duration: 300,

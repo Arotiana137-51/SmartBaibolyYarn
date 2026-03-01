@@ -130,7 +130,13 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
         appMode={mode}
         title={title}
         isMenuOpen={isMenuOpen}
-        onMenuPress={() => setIsMenuOpen(open => !open)}
+        onMenuPress={() => {
+        if (isMenuOpen) {
+          setIsMenuOpen(false); // Always close when open
+        } else {
+          setIsMenuOpen(true);  // Always open when closed
+        }
+      }}
         onTitlePress={handleTitlePress}
         onPreviousPress={handlePrevious}
         onNextPress={handleNext}
