@@ -8,6 +8,7 @@ import {
   View,
   Alert,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hymn } from '../hooks/useHymnsData';
@@ -27,6 +28,8 @@ const CATEGORIES = [
   { key: 'ff', label: 'F. Fanampiny' },
 ];
 
+const TAB_ROW_HEIGHT = 60;
+
 const CATEGORY_MAX: Record<string, number> = {
   ffpm: 827,
   ff: 54,
@@ -43,6 +46,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
  }) => {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
+  const tabsTopInset = Platform.OS === 'ios' ? insets.top : 0;
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
   const [inputNumber, setInputNumber] = useState<string>('');
 
@@ -176,37 +180,48 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     >
       <Pressable style={styles.modalBackdrop} onPress={handleClose}>
         <View style={styles.modalContent} pointerEvents="box-none">
-          <View style={[styles.categoryTabs, { paddingTop: insets.top }]}>
-            {CATEGORIES.map((category) => (
-              <Pressable
-                key={category.key}
-                style={[
-                  styles.categoryTab,
-                  selectedCategory === category.key && styles.activeCategoryTab,
-                ]}
-                onPress={() => handleCategoryChange(category.key)}
-              >
-                <Text
+          <View style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset }]}>
+            <View style={styles.categoryTabsRow}>
+              {CATEGORIES.map((category) => (
+                <Pressable
+                  key={category.key}
                   style={[
-                    styles.categoryTabText,
-                    selectedCategory === category.key && styles.activeCategoryTabText,
+                    styles.categoryTab,
+                    selectedCategory === category.key && styles.activeCategoryTab,
                   ]}
+                  onPress={() => handleCategoryChange(category.key)}
                 >
-                  {category.label}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.categoryTabText,
+                      selectedCategory === category.key && styles.activeCategoryTabText,
+                    ]}
+                  >
+                    {category.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
-          <View style={[styles.keypadPanel, { paddingTop: insets.top + 56 + 16 }]} pointerEvents="box-none">
+          <View style={[styles.keypadPanel, { top: tabsTopInset + TAB_ROW_HEIGHT }]} pointerEvents="box-none">
             <Pressable style={styles.keypadCard} onPress={() => {}}>
               <View style={[styles.inputContainer, { width: keypadWidth }]}>
-                <View style={styles.inputField}>
+                <View style={[styles.inputField, { marginRight: Math.max(8, Math.floor(keypadButtonSize * 0.12)) }]}>
                   <Text style={styles.inputText}>
                     {inputNumber || (currentHymn ? currentHymn.number.toString() : '')}
                   </Text>
                 </View>
-                <Pressable style={styles.backspaceButton} onPress={handleBackspace}>
+                <Pressable
+                  style={[
+                    styles.backspaceButton,
+                    {
+                      width: Math.round(keypadButtonSize * 1.3),
+                      height: keypadButtonSize,
+                    },
+                  ]}
+                  onPress={handleBackspace}
+                >
                   <Text style={styles.backspaceIcon}>⌫</Text>
                 </Pressable>
               </View>
@@ -229,10 +244,12 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
   },
-  categoryTabs: {
-    flexDirection: 'row',
-    height: 56,
+  categoryTabsSafeArea: {
     backgroundColor: '#1976D2',
+  },
+  categoryTabsRow: {
+    flexDirection: 'row',
+    height: TAB_ROW_HEIGHT,
   },
   categoryTab: {
     flex: 1,
@@ -245,9 +262,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1565C0',
   },
   categoryTabText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
   activeCategoryTabText: {
     color: '#FFFFFF',
@@ -257,9 +276,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top: 0,
+    top: TAB_ROW_HEIGHT,
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
   },
   keypadCard: {
     alignItems: 'center',
@@ -299,12 +318,14 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginTop: 24,
     marginBottom: 12,
   },
   inputField: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
+    width: '55%',
     height: 56,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
@@ -319,9 +340,9 @@ const styles = StyleSheet.create({
     color: '#111111',
   },
   backspaceButton: {
-    width: 86,
+    width: 100,
     height: 56,
-    backgroundColor: '#1976D2',
+    backgroundColor: '#1a608fd7',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
