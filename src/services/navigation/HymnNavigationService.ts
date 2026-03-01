@@ -27,6 +27,12 @@ export class HymnNavigationService extends BaseNavigationService<HymnNavigationS
     this.notify();
   }
 
+  // Set category without changing hymn
+  setCategory(category: string) {
+    this.state.currentHymnCategory = category;
+    this.notify();
+  }
+
   // Navigate to previous hymn in same category
   navigatePrevious(hymns: Hymn[]): boolean {
     if (!this.state.currentHymnNumber || !this.state.currentHymnCategory) {

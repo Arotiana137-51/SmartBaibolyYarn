@@ -3,6 +3,12 @@ import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppMode} from '../screens/MainScreen';
 
+const HYMNAL_CATEGORIES = [
+  { key: 'ffpm', label: 'Fihirana' },
+  { key: 'antema', label: 'Antema' },
+  { key: 'ff', label: 'F. Fanampiny' },
+];
+
 interface TopBarProps {
   appMode: AppMode;
   title: string;
@@ -11,6 +17,8 @@ interface TopBarProps {
   isMenuOpen?: boolean;
   onPreviousPress?: () => void;
   onNextPress?: () => void;
+  currentHymnalCategory?: string;
+  onHymnalCategoryChange?: (category: string) => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -21,6 +29,8 @@ const TopBar: React.FC<TopBarProps> = ({
   isMenuOpen,
   onPreviousPress,
   onNextPress,
+  currentHymnalCategory,
+  onHymnalCategoryChange,
 }) => {
   const insets = useSafeAreaInsets();
   const menuAnim = useRef(new Animated.Value(isMenuOpen ? 1 : 0)).current;
@@ -41,19 +51,61 @@ const TopBar: React.FC<TopBarProps> = ({
     inputRange: [0, 1],
     outputRange: [0, 1],
   });
+  const handleTitlePress = () => {
+    if (appMode === 'hymnal' && onHymnalCategoryChange && currentHymnalCategory) {
+      // Cycle through hymnal categories
+      const currentIndex = HYMNAL_CATEGORIES.findIndex(cat => cat.key === currentHymnalCategory);
+      const nextIndex = (currentIndex + 1) % HYMNAL_CATEGORIES.length;
+      onHymnalCategoryChange(HYMNAL_CATEGORIES[nextIndex].key);
+    } else if (onTitlePress) {
+      onTitlePress();
+    }
+  };
+
+  // Get display title for hymnal mode
+  const displayTitle = appMode === 'hymnal' && currentHymnalCategory 
+    ? HYMNAL_CATEGORIES.find(cat => cat.key === currentHymnalCategory)?.label || title
+    : title;
 
   return (
     <View style={styles.container}>
       <Pressable style={styles.button} accessibilityLabel="Previous chapter" onPress={onPreviousPress}>
         <Text style={styles.buttonText}>{'‹‹'}</Text>
       </Pressable>
-      <Pressable style={styles.titleContainer} onPress={onTitlePress}>
-        <Text style={styles.title}>{title}</Text>
-      </Pressable>
+      
+      {appMode === 'hymnal' && onHymnalCategoryChange ? (
+        // Hymnal category tabs - replace title when in hymnal mode
+        <View style={styles.categoryTabsContainer}>
+          {HYMNAL_CATEGORIES.map((category) => (
+            <Pressable
+              key={category.key}
+              style={[
+                styles.categoryTab,
+                currentHymnalCategory === category.key && styles.activeCategoryTab,
+              ]}
+              onPress={() => onHymnalCategoryChange(category.key)}
+            >
+              <Text style={[
+                styles.categoryTabText,
+                currentHymnalCategory === category.key && styles.activeCategoryTabText,
+              ]}>
+                {category.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        // Normal title for other modes
+        <Pressable style={styles.titleContainer} onPress={handleTitlePress}>
+          <Text style={styles.title}>{displayTitle}</Text>
+        </Pressable>
+      )}
+      
       <Pressable style={styles.button} accessibilityLabel="Next chapter" onPress={onNextPress}>
         <Text style={styles.buttonText}>{'››'}</Text>
       </Pressable>
 
+      {/* Hamburger menu - always present */}
       <View style={styles.rightActions}>
         <Pressable
           style={styles.button}
@@ -103,10 +155,40 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
   title: {
     color: 'white',
     fontSize: 20,
+    fontWeight: 'bold',
+  },
+  categoryTabsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+  },
+  categoryTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+  },
+  activeCategoryTab: {
+    backgroundColor: 'rgba(52, 152, 219, 0.3)',
+    borderBottomWidth: 2,
+    borderBottomColor: '#3498db',
+  },
+  categoryTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#ecf0f1',
+  },
+  activeCategoryTabText: {
+    color: '#3498db',
     fontWeight: 'bold',
   },
   iconWrapper: {

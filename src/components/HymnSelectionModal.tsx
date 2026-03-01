@@ -47,6 +47,9 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   const insets = useSafeAreaInsets();
 
   const filteredHymns = hymns.filter(hymn => hymn.category === selectedCategory);
+  
+  // Check if current category should show titles (only F. Fanampiny)
+  const shouldShowTitles = selectedCategory === 'ff';
 
   const handleNumberInput = (num: string) => {
     if (inputNumber.length < 4) {
@@ -83,7 +86,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       ['1', '2', '3'],
       ['4', '5', '6'],
       ['7', '8', '9'],
-      ['⌫', '0', '✓'],
+      ['0', 'OK'],
     ];
 
     return (
@@ -95,18 +98,17 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                 key={button}
                 style={[
                   styles.keypadButton,
-                  button === '✓' && styles.okButton,
-                  button === '⌫' && styles.backspaceButton,
+                  button === 'OK' && styles.okButton,
+                  button === 'OK' && styles.doubleWidthButton,
                 ]}
                 onPress={() => {
-                  if (button === '✓') handleOk();
-                  else if (button === '⌫') handleBackspace();
+                  if (button === 'OK') handleOk();
                   else handleNumberInput(button);
                 }}
               >
                 <Text style={[
                   styles.keypadText,
-                  (button === '✓' || button === '⌫') && styles.keypadSpecialText
+                  button === 'OK' && styles.keypadSpecialText
                 ]}>
                   {button}
                 </Text>
@@ -122,12 +124,12 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
       onRequestClose={onClose}
     >
       <Pressable style={styles.modalBackdrop} onPress={onClose}>
         <Pressable style={[styles.modalContainer, { paddingTop: insets.top }]} onPress={() => {}}>
-          {/* Category Tabs */}
+          {/* Category Tabs - Now at top like navigation */}
           <View style={styles.categoryTabs}>
             {CATEGORIES.map((category) => (
               <TouchableOpacity
@@ -151,26 +153,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
             ))}
           </View>
 
-          {/* Hymn List */}
-          <ScrollView style={styles.hymnListContainer}>
-            <View style={styles.hymnList}>
-              {filteredHymns.map((hymn) => (
-                <TouchableOpacity
-                  key={hymn.id}
-                  style={[
-                    styles.hymnItem,
-                    hymn.number === currentNumber && selectedCategory === currentCategory && styles.currentHymnItem,
-                  ]}
-                  onPress={() => handleHymnPress(hymn)}
-                >
-                  <Text style={styles.hymnNumber}>{hymn.number}</Text>
-                  <Text style={styles.hymnTitle} numberOfLines={1}>
-                    {hymn.title || 'Tsy lohateny'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+          {/* Hymn List - REMOVED */}
 
           {/* Number Input */}
           <View style={styles.inputContainer}>
@@ -179,8 +162,8 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                 {inputNumber || 'Safidio ny laharana'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
-              <Text style={styles.clearButtonText}>Fafao</Text>
+            <TouchableOpacity style={styles.backspaceButton} onPress={handleBackspace}>
+              <Text style={styles.backspaceIcon}>⌫</Text>
             </TouchableOpacity>
           </View>
 
@@ -195,42 +178,63 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-start',
     alignItems: 'center',
+    paddingTop: 0,
   },
   modalContainer: {
-    width: '90%',
-    height: '80%',
-    backgroundColor: 'white',
+    width: '100%',
+    maxWidth: 400,
+    height: 'auto',
+    maxHeight: '80%',
+    backgroundColor: 'rgba(44, 62, 80, 0.98)',
     borderRadius: 12,
     overflow: 'hidden',
+    marginTop: 60,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   categoryTabs: {
     flexDirection: 'row',
-    height: 60,
+    height: 50,
+    backgroundColor: '#2c3e50',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#34495e',
   },
   categoryTab: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'transparent',
   },
   activeCategoryTab: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#34495e',
+    borderBottomWidth: 2,
+    borderBottomColor: '#3498db',
   },
   categoryTabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: '#ecf0f1',
   },
   activeCategoryTabText: {
-    color: 'white',
+    color: '#3498db',
+    fontWeight: 'bold',
   },
   hymnListContainer: {
-    flex: 1,
+    maxHeight: 300,
+    backgroundColor: 'rgba(44, 62, 80, 0.95)',
+    marginHorizontal: 10,
+    borderRadius: 8,
+    marginTop: 10,
   },
   hymnList: {
     padding: 8,
@@ -240,77 +244,96 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(52, 73, 94, 0.5)',
   },
   currentHymnItem: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: 'rgba(52, 152, 219, 0.3)',
   },
   hymnNumber: {
     width: 40,
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: '#3498db',
   },
   hymnTitle: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: '#ecf0f1',
     marginLeft: 12,
   },
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#34495e',
     alignItems: 'center',
+    backgroundColor: 'transparent',
+    gap: 8,
   },
   inputField: {
-    flex: 1,
+    flex: 2,
     height: 50,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'rgba(52, 73, 94, 0.8)',
     borderRadius: 8,
     justifyContent: 'center',
     paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 152, 219, 0.5)',
   },
   inputText: {
     fontSize: 18,
-    color: '#333',
+    color: '#ecf0f1',
   },
-  clearButton: {
-    marginLeft: 12,
-    paddingHorizontal: 16,
-    height: 40,
+  backspaceButton: {
+    flex: 1,
+    height: 50,
+    backgroundColor: 'rgba(52, 73, 94, 0.8)',
+    borderRadius: 8,
     justifyContent: 'center',
-    backgroundColor: '#ff5252',
-    borderRadius: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 152, 219, 0.5)',
   },
-  clearButtonText: {
-    color: 'white',
-    fontWeight: '500',
+  backspaceIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#e74c3c',
   },
   keypadContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    padding: 20,
+    backgroundColor: 'transparent',
   },
   keypadRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
+    gap: 12,
   },
   keypadButton: {
-    width: 90,
-    height: 90,
-    backgroundColor: '#2196F3',
+    width: 80,
+    height: 80,
+    backgroundColor: '#3498db',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 152, 219, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   okButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#27ae60',
+    borderColor: '#27ae60',
   },
-  backspaceButton: {
-    backgroundColor: '#ff5252',
+  doubleWidthButton: {
+    flexGrow: 1,
+    width: 'auto',
   },
   keypadText: {
     fontSize: 24,

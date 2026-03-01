@@ -33,6 +33,7 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
   const [mode, setMode] = useState<AppMode>('bible');
   const [fontScale, setFontScale] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentHymnalCategory, setCurrentHymnalCategory] = useState<string>('ffpm');
   
   // Modal states using custom hook
   const crossRefModal = useModalState<BibleVerse>();
@@ -89,9 +90,15 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
 
   // Modal handlers
   const handleTitlePress = () => {
-    if (mode === 'hymnal') {
-      hymnSelectionModal.open();
+    if (mode === 'bible') {
+      // Handle Bible mode title press if needed
     }
+  };
+
+  const handleHymnalCategoryChange = (category: string) => {
+    setCurrentHymnalCategory(category);
+    // Update the hymn navigation service with new category
+    hymnNavService.setCategory(category);
   };
 
   const handleHymnSelect = (hymnId: string, category: string, number: number) => {
@@ -125,9 +132,10 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
         isMenuOpen={isMenuOpen}
         onMenuPress={() => setIsMenuOpen(open => !open)}
         onTitlePress={handleTitlePress}
-        topPadding={proportionalTopPadding}
         onPreviousPress={handlePrevious}
         onNextPress={handleNext}
+        currentHymnalCategory={currentHymnalCategory}
+        onHymnalCategoryChange={handleHymnalCategoryChange}
       />
       
       <View style={styles.readerContainer}>
@@ -144,7 +152,6 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
       <CustomBottomNav 
         activeMode={mode} 
         onTabPress={setMode} 
-        bottomPadding={proportionalBottomPadding} 
       />
 
       {/* Cross References Modal */}
