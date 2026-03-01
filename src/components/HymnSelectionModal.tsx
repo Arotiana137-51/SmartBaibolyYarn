@@ -7,6 +7,7 @@ import {
   Text,
   View,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hymn } from '../hooks/useHymnsData';
@@ -26,6 +27,12 @@ const CATEGORIES = [
   { key: 'ff', label: 'F. Fanampiny' },
 ];
 
+const CATEGORY_MAX: Record<string, number> = {
+  ffpm: 827,
+  ff: 54,
+  antema: 24,
+};
+
 const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   visible,
   hymns,
@@ -35,8 +42,21 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   onHymnSelect,
  }) => {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
   const [inputNumber, setInputNumber] = useState<string>('');
+
+  const maxNumber = CATEGORY_MAX[selectedCategory] ?? 9999;
+  const maxDigits = String(maxNumber).length;
+
+  const keypadWidth = useMemo(() => {
+    return Math.min(320, Math.floor(windowWidth * 0.75));
+  }, [windowWidth]);
+
+  const keypadButtonSize = useMemo(() => {
+    const base = Math.min(80, Math.floor(windowWidth * 0.22));
+    return Math.max(52, Math.floor(base * 0.8));
+  }, [windowWidth]);
 
   const filteredHymns = useMemo(() => {
     return hymns
@@ -54,8 +74,20 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   }, []);
 
   const handleNumberInput = useCallback((num: string) => {
-    setInputNumber(prev => (prev.length >= 4 ? prev : prev + num));
-  }, []);
+    setInputNumber(prev => {
+      if (prev.length >= maxDigits) {
+        return prev;
+      }
+
+      const next = prev + num;
+      const nextValue = parseInt(next, 10);
+      if (!Number.isNaN(nextValue) && nextValue > maxNumber) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [maxDigits, maxNumber]);
 
   const handleBackspace = useCallback(() => {
     setInputNumber(prev => prev.slice(0, -1));
@@ -67,6 +99,11 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       return;
     }
 
+    if (number > maxNumber) {
+      Alert.alert('Tsy mety', `Tsy maintsy latsaky na mitovy amin'ny ${maxNumber} ny laharana.`);
+      return;
+    }
+
     const hymn = filteredHymns.find(h => h.number === number);
     if (!hymn) {
       Alert.alert('Tsy hita', `Tsy misy hira laharana ${number} amin'ity sokajy ity.`);
@@ -75,7 +112,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
     onHymnSelect(hymn.id, hymn.category || '', hymn.number);
     onClose();
-  }, [inputNumber, filteredHymns, onHymnSelect, onClose]);
+  }, [inputNumber, filteredHymns, maxNumber, onHymnSelect, onClose]);
 
   const handleClose = useCallback(() => {
     setInputNumber('');
@@ -97,7 +134,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     ];
 
     return (
-      <View style={styles.keypadContainer}>
+      <View style={[styles.keypadContainer, { width: keypadWidth }]}>
         {buttons.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.keypadRow}>
             {row.map((button) => (
@@ -105,6 +142,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                 key={button}
                 style={[
                   styles.keypadButton,
+                  { height: keypadButtonSize, borderRadius: Math.max(8, Math.floor(keypadButtonSize * 0.12)) },
                   button === 'OK' && styles.okButton,
                   button === 'OK' && styles.doubleWidthButton,
                 ]}
@@ -137,7 +175,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       onRequestClose={handleClose}
     >
       <Pressable style={styles.modalBackdrop} onPress={handleClose}>
-        <Pressable style={styles.modalContent} onPress={() => {}}>
+        <View style={styles.modalContent} pointerEvents="box-none">
           <View style={[styles.categoryTabs, { paddingTop: insets.top }]}>
             {CATEGORIES.map((category) => (
               <Pressable
@@ -160,21 +198,23 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
             ))}
           </View>
 
-          <View style={[styles.keypadPanel, { paddingTop: insets.top + 56 + 16 }]}>
-            <View style={styles.inputContainer}>
-              <View style={styles.inputField}>
-                <Text style={styles.inputText}>
-                  {inputNumber || (currentHymn ? currentHymn.number.toString() : '')}
-                </Text>
+          <View style={[styles.keypadPanel, { paddingTop: insets.top + 56 + 16 }]} pointerEvents="box-none">
+            <Pressable style={styles.keypadCard} onPress={() => {}}>
+              <View style={[styles.inputContainer, { width: keypadWidth }]}>
+                <View style={styles.inputField}>
+                  <Text style={styles.inputText}>
+                    {inputNumber || (currentHymn ? currentHymn.number.toString() : '')}
+                  </Text>
+                </View>
+                <Pressable style={styles.backspaceButton} onPress={handleBackspace}>
+                  <Text style={styles.backspaceIcon}>⌫</Text>
+                </Pressable>
               </View>
-              <Pressable style={styles.backspaceButton} onPress={handleBackspace}>
-                <Text style={styles.backspaceIcon}>⌫</Text>
-              </Pressable>
-            </View>
 
-            {renderKeypad()}
+              {renderKeypad()}
+            </Pressable>
           </View>
-        </Pressable>
+        </View>
       </Pressable>
     </Modal>
   );
@@ -221,6 +261,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
+  keypadCard: {
+    alignItems: 'center',
+  },
   hymnListContainer: {
     maxHeight: 300,
     backgroundColor: 'rgba(44, 62, 80, 0.95)',
@@ -256,8 +299,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '86%',
-    maxWidth: 360,
     gap: 8,
     marginTop: 24,
     marginBottom: 12,
@@ -297,8 +338,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   keypadContainer: {
-    width: '86%',
-    maxWidth: 360,
+    alignItems: 'center',
   },
   keypadRow: {
     flexDirection: 'row',
