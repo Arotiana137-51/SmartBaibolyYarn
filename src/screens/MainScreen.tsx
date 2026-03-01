@@ -4,7 +4,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import TopBar from '../components/TopBar';
 import ReaderView from '../components/ReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
-import HymnSelectionModalOptimized from '../components/HymnSelectionModal';
+import HymnSelectionModal from '../components/HymnSelectionModal';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
 import { useHymnsData } from '../hooks/useHymnsData';
 import HamburgerMenuPopover, {
@@ -290,7 +290,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         }
       />
 
-      <HymnSelectionModalOptimized
+      <HymnSelectionModal
         visible={hymnSelectionVisible}
         hymns={hymns}
         currentCategory={currentHymnCategory}

@@ -1,24 +1,15 @@
 // src/components/HymnSelectionModal.tsx
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
-  TouchableOpacity,
-  ScrollView,
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-interface Hymn {
-  id: string;
-  number: number;
-  category?: string;
-  title: string;
-  authors: string[];
-}
+import { Hymn } from '../hooks/useHymnsData';
 
 interface HymnSelectionModalProps {
   visible: boolean;
@@ -42,66 +33,60 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   currentNumber,
   onClose,
   onHymnSelect,
-}) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
-  const [inputNumber, setInputNumber] = useState<string>(currentNumber?.toString() || '');
+ }) => {
   const insets = useSafeAreaInsets();
+  const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
+  const [inputNumber, setInputNumber] = useState<string>('');
 
-  const filteredHymns = hymns.filter(hymn => hymn.category === selectedCategory);
-  
-  // Debug filtering logic
-  console.log('HymnSelectionModal - Debug Info:');
-  console.log('- Total hymns:', hymns.length);
-  console.log('- Selected category:', selectedCategory);
-  console.log('- Filtered hymns count:', filteredHymns.length);
-  console.log('- Sample hymns:', hymns.slice(0, 3).map(h => ({ id: h.id, number: h.number, category: h.category })));
-  console.log('- Filtered sample:', filteredHymns.slice(0, 3).map(h => ({ id: h.id, number: h.number, category: h.category })));
-  
-  // Check if current category should show titles (only F. Fanampiny)
-  const shouldShowTitles = selectedCategory === 'ff';
+  const filteredHymns = useMemo(() => {
+    return hymns
+      .filter(hymn => hymn.category === selectedCategory)
+      .sort((a, b) => a.number - b.number);
+  }, [hymns, selectedCategory]);
 
-  const handleNumberInput = (num: string) => {
-    if (inputNumber.length < 4) {
-      setInputNumber(inputNumber + num);
-    }
-  };
+  const currentHymn = useMemo(() => {
+    return filteredHymns.find(h => h.number === currentNumber);
+  }, [filteredHymns, currentNumber]);
 
-  const handleBackspace = () => {
-    setInputNumber(inputNumber.slice(0, -1));
-  };
-
-  const handleClear = () => {
+  const handleCategoryChange = useCallback((category: string) => {
+    setSelectedCategory(category);
     setInputNumber('');
-  };
+  }, []);
 
-  const handleOk = () => {
-    const number = parseInt(inputNumber);
-    console.log('HymnSelectionModal - handleOk called:', { inputNumber, number, selectedCategory });
-    console.log('HymnSelectionModal - filteredHymns count:', filteredHymns.length);
-    console.log('HymnSelectionModal - filteredHymns sample:', filteredHymns.slice(0, 3));
-    
-    if (number && number > 0) {
-      const hymn = filteredHymns.find(h => h.number === number);
-      console.log('HymnSelectionModal - found hymn:', hymn);
-      
-      if (hymn) {
-        console.log('HymnSelectionModal - calling onHymnSelect:', { hymnId: hymn.id, category: selectedCategory, number });
-        onHymnSelect(hymn.id, selectedCategory, number);
-        onClose();
-      } else {
-        console.log('HymnSelectionModal - hymn not found for number:', number);
-        // Optional: Show feedback to user that hymn wasn't found
-        Alert.alert(`Hymn ${number} not found in ${selectedCategory}`);
-      }
-    } else {
-      console.log('HymnSelectionModal - invalid number:', inputNumber);
+  const handleNumberInput = useCallback((num: string) => {
+    setInputNumber(prev => (prev.length >= 4 ? prev : prev + num));
+  }, []);
+
+  const handleBackspace = useCallback(() => {
+    setInputNumber(prev => prev.slice(0, -1));
+  }, []);
+
+  const handleOk = useCallback(() => {
+    const number = parseInt(inputNumber, 10);
+    if (Number.isNaN(number) || number <= 0) {
+      return;
     }
-  };
 
-  const handleHymnPress = (hymn: Hymn) => {
-    onHymnSelect(hymn.id, selectedCategory, hymn.number);
+    const hymn = filteredHymns.find(h => h.number === number);
+    if (!hymn) {
+      Alert.alert('Tsy hita', `Tsy misy hira laharana ${number} amin'ity sokajy ity.`);
+      return;
+    }
+
+    onHymnSelect(hymn.id, hymn.category || '', hymn.number);
     onClose();
-  };
+  }, [inputNumber, filteredHymns, onHymnSelect, onClose]);
+
+  const handleClose = useCallback(() => {
+    setInputNumber('');
+    onClose();
+  }, [onClose]);
+
+  React.useEffect(() => {
+    if (!visible) {
+      setInputNumber('');
+    }
+  }, [visible]);
 
   const renderKeypad = () => {
     const buttons = [
@@ -116,7 +101,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
         {buttons.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.keypadRow}>
             {row.map((button) => (
-              <TouchableOpacity
+              <Pressable
                 key={button}
                 style={[
                   styles.keypadButton,
@@ -128,13 +113,15 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                   else handleNumberInput(button);
                 }}
               >
-                <Text style={[
-                  styles.keypadText,
-                  button === 'OK' && styles.keypadSpecialText
-                ]}>
+                <Text
+                  style={[
+                    styles.keypadText,
+                    button === 'OK' && styles.keypadSpecialText,
+                  ]}
+                >
                   {button}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         ))}
@@ -147,109 +134,92 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={[styles.modalContainer, { paddingTop: insets.top }]} onPress={() => {}}>
-          {/* Category Tabs - Now at top like navigation */}
-          <View style={styles.categoryTabs}>
+      <Pressable style={styles.modalBackdrop} onPress={handleClose}>
+        <Pressable style={styles.modalContent} onPress={() => {}}>
+          <View style={[styles.categoryTabs, { paddingTop: insets.top }]}>
             {CATEGORIES.map((category) => (
-              <TouchableOpacity
+              <Pressable
                 key={category.key}
                 style={[
                   styles.categoryTab,
                   selectedCategory === category.key && styles.activeCategoryTab,
                 ]}
-                onPress={() => {
-                  setSelectedCategory(category.key);
-                  setInputNumber('');
-                }}
+                onPress={() => handleCategoryChange(category.key)}
               >
-                <Text style={[
-                  styles.categoryTabText,
-                  selectedCategory === category.key && styles.activeCategoryTabText,
-                ]}>
+                <Text
+                  style={[
+                    styles.categoryTabText,
+                    selectedCategory === category.key && styles.activeCategoryTabText,
+                  ]}
+                >
                   {category.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
 
-          {/* Hymn List - REMOVED */}
+          <View style={[styles.keypadPanel, { paddingTop: insets.top + 56 + 16 }]}>
+            <View style={styles.inputContainer}>
+              <View style={styles.inputField}>
+                <Text style={styles.inputText}>
+                  {inputNumber || (currentHymn ? currentHymn.number.toString() : '')}
+                </Text>
+              </View>
+              <Pressable style={styles.backspaceButton} onPress={handleBackspace}>
+                <Text style={styles.backspaceIcon}>⌫</Text>
+              </Pressable>
+            </View>
 
-          {/* Number Input */}
-          <View style={styles.inputContainer}>
-            <TouchableOpacity style={styles.inputField} onPress={() => {}}>
-              <Text style={styles.inputText}>
-                {inputNumber || 'Safidio ny laharana'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.backspaceButton} onPress={handleBackspace}>
-              <Text style={styles.backspaceIcon}>⌫</Text>
-            </TouchableOpacity>
+            {renderKeypad()}
           </View>
-
-          {/* Numeric Keypad */}
-          {renderKeypad()}
         </Pressable>
       </Pressable>
     </Modal>
   );
-};
+ };
 
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
     justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 0,
   },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 400,
-    height: 'auto',
-    maxHeight: '80%',
-    backgroundColor: 'rgba(44, 62, 80, 0.98)',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 60,
-    marginHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  modalContent: {
+    flex: 1,
   },
   categoryTabs: {
     flexDirection: 'row',
-    height: 50,
-    backgroundColor: '#2c3e50',
-    borderBottomWidth: 1,
-    borderBottomColor: '#34495e',
+    height: 56,
+    backgroundColor: '#1976D2',
   },
   categoryTab: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: 'rgba(255,255,255,0.4)',
   },
   activeCategoryTab: {
-    backgroundColor: '#34495e',
-    borderBottomWidth: 2,
-    borderBottomColor: '#3498db',
+    backgroundColor: '#1565C0',
   },
   categoryTabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#ecf0f1',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   activeCategoryTabText: {
-    color: '#3498db',
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  keypadPanel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   hymnListContainer: {
     maxHeight: 300,
@@ -285,45 +255,50 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#34495e',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    width: '86%',
+    maxWidth: 360,
     gap: 8,
+    marginTop: 24,
+    marginBottom: 12,
   },
   inputField: {
-    flex: 2,
-    height: 50,
-    backgroundColor: 'rgba(52, 73, 94, 0.8)',
-    borderRadius: 8,
+    flex: 1,
+    height: 56,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(52, 152, 219, 0.5)',
+    paddingHorizontal: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(25, 118, 210, 0.35)',
   },
   inputText: {
-    fontSize: 18,
-    color: '#ecf0f1',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111111',
   },
   backspaceButton: {
-    flex: 1,
-    height: 50,
-    backgroundColor: 'rgba(52, 73, 94, 0.8)',
-    borderRadius: 8,
+    width: 86,
+    height: 56,
+    backgroundColor: '#1976D2',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 152, 219, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   backspaceIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#e74c3c',
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    lineHeight: 28,
   },
   keypadContainer: {
-    padding: 20,
-    backgroundColor: 'transparent',
+    width: '86%',
+    maxWidth: 360,
   },
   keypadRow: {
     flexDirection: 'row',
@@ -332,14 +307,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   keypadButton: {
-    width: 80,
+    flex: 1,
     height: 80,
-    backgroundColor: '#3498db',
-    borderRadius: 8,
+    backgroundColor: '#1976D2',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 152, 219, 0.3)',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -350,12 +323,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   okButton: {
-    backgroundColor: '#27ae60',
-    borderColor: '#27ae60',
+    backgroundColor: 'rgba(25, 118, 210, 0.55)',
   },
   doubleWidthButton: {
-    flexGrow: 1,
-    width: 'auto',
+    flex: 2,
   },
   keypadText: {
     fontSize: 24,
