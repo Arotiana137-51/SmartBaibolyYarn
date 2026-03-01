@@ -8,6 +8,7 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,6 +49,14 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
   const filteredHymns = hymns.filter(hymn => hymn.category === selectedCategory);
   
+  // Debug filtering logic
+  console.log('HymnSelectionModal - Debug Info:');
+  console.log('- Total hymns:', hymns.length);
+  console.log('- Selected category:', selectedCategory);
+  console.log('- Filtered hymns count:', filteredHymns.length);
+  console.log('- Sample hymns:', hymns.slice(0, 3).map(h => ({ id: h.id, number: h.number, category: h.category })));
+  console.log('- Filtered sample:', filteredHymns.slice(0, 3).map(h => ({ id: h.id, number: h.number, category: h.category })));
+  
   // Check if current category should show titles (only F. Fanampiny)
   const shouldShowTitles = selectedCategory === 'ff';
 
@@ -67,12 +76,25 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 
   const handleOk = () => {
     const number = parseInt(inputNumber);
+    console.log('HymnSelectionModal - handleOk called:', { inputNumber, number, selectedCategory });
+    console.log('HymnSelectionModal - filteredHymns count:', filteredHymns.length);
+    console.log('HymnSelectionModal - filteredHymns sample:', filteredHymns.slice(0, 3));
+    
     if (number && number > 0) {
       const hymn = filteredHymns.find(h => h.number === number);
+      console.log('HymnSelectionModal - found hymn:', hymn);
+      
       if (hymn) {
+        console.log('HymnSelectionModal - calling onHymnSelect:', { hymnId: hymn.id, category: selectedCategory, number });
         onHymnSelect(hymn.id, selectedCategory, number);
         onClose();
+      } else {
+        console.log('HymnSelectionModal - hymn not found for number:', number);
+        // Optional: Show feedback to user that hymn wasn't found
+        Alert.alert(`Hymn ${number} not found in ${selectedCategory}`);
       }
+    } else {
+      console.log('HymnSelectionModal - invalid number:', inputNumber);
     }
   };
 
