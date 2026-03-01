@@ -2,6 +2,7 @@ import React, {useEffect, useRef} from 'react';
 import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppMode} from '../screens/MainScreen';
+import AnimatedHamburger from './AnimatedHamburger';
 
 const HYMNAL_CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },
@@ -107,20 +108,11 @@ const TopBar: React.FC<TopBarProps> = ({
 
       {/* Hamburger menu - always present */}
       <View style={styles.rightActions}>
-        <Pressable
-          style={styles.button}
+        <AnimatedHamburger
+          isOpen={isMenuOpen || false}
+          onPress={onMenuPress || (() => {})}
           accessibilityLabel={isMenuOpen ? 'Close menu' : 'Open menu'}
-          onPress={onMenuPress}>
-          <View style={styles.iconWrapper}>
-            <Animated.Text style={[styles.buttonText, {opacity: burgerOpacity}]}>
-              {'≡'}
-            </Animated.Text>
-            <Animated.Text
-              style={[styles.buttonText, styles.closeIcon, {opacity: closeOpacity}]}>
-              {'×'}
-            </Animated.Text>
-          </View>
-        </Pressable>
+        />
       </View>
     </View>
   );
@@ -148,8 +140,8 @@ const styles = StyleSheet.create({
 },
   buttonText: {
     color: 'white',
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 31,
+    fontWeight: '900',
   },
   titleContainer: {
     flex: 1,
