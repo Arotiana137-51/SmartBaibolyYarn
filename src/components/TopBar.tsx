@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 50,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#247BA0',
     alignItems: 'stretch',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
