@@ -11,6 +11,7 @@ interface ReaderViewProps {
   isLoading: boolean;
   fontScale?: number;
   onVersePress?: (verse: BibleVerse) => void;
+  selectedVerseNumber?: number | null;
 }
 
 const formatBibleText = (text: string) => {
@@ -69,6 +70,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({
   isLoading,
   fontScale = 1,
   onVersePress,
+  selectedVerseNumber,
 }) => {
   if (isLoading) {
     return (
@@ -94,9 +96,13 @@ const ReaderView: React.FC<ReaderViewProps> = ({
           }
           const restLines = lines.slice(i);
 
+          const isSelected =
+            typeof selectedVerseNumber === 'number' &&
+            item.verse_number === selectedVerseNumber;
+
           return (
             <Pressable
-              style={styles.bibleVerseBlock}
+              style={[styles.bibleVerseBlock, isSelected && styles.selectedVerseBlock]}
               onPress={() => onVersePress?.(item)}
               disabled={!onVersePress}
             >
@@ -253,6 +259,11 @@ const styles = StyleSheet.create({
   },
   bibleVerseBlock: {
     marginBottom: 10,
+  },
+  selectedVerseBlock: {
+    backgroundColor: 'rgba(77, 150, 255, 0.10)',
+    borderRadius: 12,
+    padding: 10,
   },
   hymnStanza: {
     flexDirection: 'row',

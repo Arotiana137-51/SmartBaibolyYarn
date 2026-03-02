@@ -80,6 +80,22 @@ export const useBibleData = () => {
     }
   }, []);
 
+  const getVerseCount = useCallback(async (bookId: number, chapter: number) => {
+    try {
+      await bibleDatabaseService.initDatabase();
+      const { rows } = await bibleDatabaseService.executeQuery<{ count: number | null }>(
+        'SELECT MAX(verse_number) as count FROM Verses WHERE book_id = ? AND chapter = ?',
+        [bookId, chapter]
+      );
+
+      const count = rows[0]?.count ?? 0;
+      return typeof count === 'number' ? count : 0;
+    } catch (error) {
+      console.error('Error getting verse count:', error);
+      return 0;
+    }
+  }, []);
+
   // Get a specific verse
   const getVerse = useCallback(
     async (bookId: number, chapter: number, verseNumber: number) => {
@@ -181,6 +197,7 @@ export const useBibleData = () => {
     error,
     loadBooks,
     loadVerses,
+    getVerseCount,
     getVerse,
     searchVerses,
     getCrossReferences,

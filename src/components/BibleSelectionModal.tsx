@@ -1,36 +1,32 @@
 import React, { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import {
-  Modal,
   View,
   Text,
   Pressable,
   StyleSheet,
-  ScrollView,
-  Dimensions,
   TextInput,
+  SectionList,
+  FlatList,
 } from 'react-native';
 import { useBibleData } from '../hooks/useBibleData';
 
 type SelectionStep = 'book' | 'chapter' | 'verse';
 
 interface BibleSelectionModalOptimizedProps {
-  visible: boolean;
   onClose: () => void;
   onBibleSelect: (bookId: number, bookName: string, chapter: number, verse: number) => void;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
-
 const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> = ({
-  visible,
   onClose,
   onBibleSelect,
 }) => {
-  const { books, isLoading } = useBibleData();
+  const { books, isLoading, getVerseCount } = useBibleData();
   const [currentStep, setCurrentStep] = useState<SelectionStep>('book');
   const [selectedBook, setSelectedBook] = useState<{ id: number; name: string; chapters: number } | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [verseCount, setVerseCount] = useState(0);
 
   // Memoize filtered books
   const filteredBooks = useMemo(() => {
@@ -55,11 +51,32 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     return Array.from({ length: selectedBook.chapters }, (_, i) => i + 1);
   }, [selectedBook]);
 
-  // Generate verse numbers
+  useEffect(() => {
+    let cancelled = false;
+
+    if (currentStep !== 'verse' || !selectedBook || selectedChapter === null) {
+      setVerseCount(0);
+      return;
+    }
+
+    (async () => {
+      const count = await getVerseCount(selectedBook.id, selectedChapter);
+      if (!cancelled) {
+        setVerseCount(count);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep, getVerseCount, selectedBook, selectedChapter]);
+
   const verses = useMemo(() => {
-    if (!selectedChapter) return [];
-    return Array.from({ length: 30 }, (_, i) => i + 1); // Max 30 verses per chapter
-  }, [selectedChapter]);
+    if (selectedChapter === null || verseCount <= 0) {
+      return [];
+    }
+    return Array.from({ length: verseCount }, (_, i) => i + 1);
+  }, [selectedChapter, verseCount]);
 
   const handleBookPress = useCallback((bookId: number, bookName: string, chapters: number) => {
     setSelectedBook({ id: bookId, name: bookName, chapters });
@@ -83,6 +100,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     setSelectedBook(null);
     setSelectedChapter(null);
     setSearchQuery('');
+    setVerseCount(0);
     onClose();
   }, [onClose]);
 
@@ -107,132 +125,117 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     }
   }, [currentStep, selectedBook, selectedChapter]);
 
-  if (!visible) return null;
+  const sections = [
+    { title: 'Testamenta Taloha', data: oldTestament },
+    { title: 'Testamenta Vaovao', data: newTestament },
+  ];
 
   return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      onRequestClose={handleClose}
-      transparent
-    >
-      <Pressable style={styles.modalOverlay} onPress={handleClose}>
-        <View style={styles.modalContent}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>←</Text>
-            </Pressable>
-            <Text style={styles.headerTitle}>{getStepTitle()}</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>×</Text>
-            </Pressable>
-          </View>
+    <View style={styles.screen}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.backButtonText}>←</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+        <Pressable style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeButtonText}>×</Text>
+        </Pressable>
+      </View>
 
-          {/* Search input for book selection */}
-          {currentStep === 'book' && (
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Rechercher un livre..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          )}
-
-          {/* Content */}
-          <ScrollView 
-            style={styles.content}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {currentStep === 'book' && (
-              <View>
-                {/* Old Testament */}
-                <View style={styles.testamentSection}>
-                  <Text style={styles.testamentTitle}>Ancien Testament</Text>
-                  <View style={styles.bookGrid}>
-                    {oldTestament.map(book => (
-                      <Pressable
-                        key={book.id}
-                        style={styles.bookButton}
-                        onPress={() => handleBookPress(book.id, book.name, book.chapters)}
-                      >
-                        <Text style={styles.bookButtonText}>{book.name}</Text>
-                        <Text style={styles.bookChapters}>{book.chapters} chap.</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-
-                {/* New Testament */}
-                <View style={styles.testamentSection}>
-                  <Text style={styles.testamentTitle}>Nouveau Testament</Text>
-                  <View style={styles.bookGrid}>
-                    {newTestament.map(book => (
-                      <Pressable
-                        key={book.id}
-                        style={styles.bookButton}
-                        onPress={() => handleBookPress(book.id, book.name, book.chapters)}
-                      >
-                        <Text style={styles.bookButtonText}>{book.name}</Text>
-                        <Text style={styles.bookChapters}>{book.chapters} chap.</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {currentStep === 'chapter' && selectedBook && (
-              <View style={styles.chapterGrid}>
-                {chapters.map(chapter => (
-                  <Pressable
-                    key={chapter}
-                    style={styles.chapterButton}
-                    onPress={() => handleChapterPress(chapter)}
-                  >
-                    <Text style={styles.chapterNumber}>{chapter}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-
-            {currentStep === 'verse' && selectedBook && selectedChapter !== null && (
-              <View style={styles.verseGrid}>
-                {verses.map(verse => (
-                  <Pressable
-                    key={verse}
-                    style={styles.verseButton}
-                    onPress={() => handleVersePress(verse)}
-                  >
-                    <Text style={styles.verseNumber}>{verse}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </ScrollView>
+      {/* Search input for book selection */}
+      {currentStep === 'book' && (
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Mitady boky..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor={styles.searchPlaceholder.color}
+          />
         </View>
-      </Pressable>
-    </Modal>
+      )}
+
+      {/* Content */}
+      {currentStep === 'book' ? (
+        <SectionList
+          key="book-list"
+          sections={sections}
+          keyExtractor={(item) => item.id.toString()}
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          renderSectionHeader={({ section }) => (
+            <Text style={styles.testamentTitle}>{section.title}</Text>
+          )}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.bookRow}
+              onPress={() => handleBookPress(item.id, item.name, item.chapters)}
+            >
+              <Text style={styles.bookName}>{item.name}</Text>
+            </Pressable>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          SectionSeparatorComponent={() => <View style={styles.sectionSpacer} />}
+          ListEmptyComponent={
+            isLoading ? (
+              <Text style={styles.infoText}>Mitady...</Text>
+            ) : (
+              <Text style={styles.infoText}>Tsy misy valiny.</Text>
+            )
+          }
+        />
+      ) : currentStep === 'chapter' && selectedBook ? (
+        <FlatList
+          key={`chapter-grid-${selectedBook.id}`}
+          data={chapters}
+          keyExtractor={(item) => item.toString()}
+          style={styles.content}
+          contentContainerStyle={styles.gridContentContainer}
+          numColumns={6}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.chapterButton}
+              onPress={() => handleChapterPress(item)}
+            >
+              <Text style={styles.chapterNumber}>{item}</Text>
+            </Pressable>
+          )}
+        />
+      ) : currentStep === 'verse' && selectedBook && selectedChapter !== null ? (
+        <FlatList
+          key={`verse-grid-${selectedBook.id}-${selectedChapter}`}
+          data={verses}
+          keyExtractor={(item) => item.toString()}
+          style={styles.content}
+          contentContainerStyle={styles.gridContentContainer}
+          numColumns={7}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={styles.infoText}>
+              {verseCount === 0 ? 'Mitady...' : 'Tsy misy andininy.'}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.verseButton}
+              onPress={() => handleVersePress(item)}
+            >
+              <Text style={styles.verseNumber}>{item}</Text>
+            </Pressable>
+          )}
+        />
+      ) : null}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  screen: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: screenWidth * 0.9,
-    maxWidth: 500,
-    maxHeight: '80%',
-    backgroundColor: '#2c3e50',
-    borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -240,20 +243,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#34495e',
+    borderBottomColor: 'rgba(0,0,0,0.08)',
   },
   backButton: {
     padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#34495e',
+    borderRadius: 10,
+    backgroundColor: 'rgba(77, 150, 255, 0.12)',
   },
   backButtonText: {
-    color: '#ecf0f1',
+    color: '#1982C4',
     fontSize: 16,
     fontWeight: '700',
   },
   headerTitle: {
-    color: '#ecf0f1',
+    color: '#111111',
     fontSize: 18,
     fontWeight: '700',
     flex: 1,
@@ -261,102 +264,93 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#e74c3c',
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   closeButtonText: {
-    color: '#ecf0f1',
+    color: '#111111',
     fontSize: 16,
     fontWeight: '700',
   },
   searchContainer: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: 'rgba(0,0,0,0.08)',
   },
   searchInput: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#111111',
+  },
+  searchPlaceholder: {
+    color: 'rgba(0,0,0,0.45)',
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
-  },
-  testamentSection: {
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   testamentTitle: {
-    color: '#3498db',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
+    color: '#1982C4',
+    fontSize: 17,
+    fontWeight: '800',
+    paddingTop: 10,
+    paddingBottom: 8,
   },
-  bookGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  bookRow: {
+    paddingVertical: 14,
   },
-  bookButton: {
-    width: '48%',
-    backgroundColor: '#34495e',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    alignItems: 'center',
-    minHeight: 60,
+  bookName: {
+    fontSize: 18,
+    color: '#111111',
+    fontWeight: '500',
   },
-  bookButtonText: {
-    color: '#ecf0f1',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 4,
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
-  bookChapters: {
-    color: '#95a5a6',
-    fontSize: 12,
+  sectionSpacer: {
+    height: 14,
+  },
+  infoText: {
+    paddingVertical: 18,
+    color: 'rgba(0,0,0,0.55)',
     textAlign: 'center',
   },
-  chapterGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  gridContentContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    rowGap: 10,
   },
   chapterButton: {
-    width: '18%',
-    backgroundColor: '#34495e',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
+    flex: 1,
+    margin: 6,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     minHeight: 50,
   },
   chapterNumber: {
-    color: '#ecf0f1',
+    color: '#111111',
     fontSize: 16,
     fontWeight: '700',
   },
-  verseGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
   verseButton: {
-    width: '12%',
-    backgroundColor: '#34495e',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+    flex: 1,
+    margin: 6,
+    backgroundColor: 'rgba(77, 150, 255, 0.12)',
+    paddingVertical: 12,
+    borderRadius: 14,
     alignItems: 'center',
     minHeight: 45,
   },
   verseNumber: {
-    color: '#ecf0f1',
+    color: '#3A86FF',
     fontSize: 14,
     fontWeight: '700',
   },

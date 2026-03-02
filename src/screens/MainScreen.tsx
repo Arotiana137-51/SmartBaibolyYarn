@@ -5,6 +5,7 @@ import TopBar from '../components/TopBar';
 import ReaderView from '../components/ReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
 import HymnSelectionModal from '../components/HymnSelectionModal';
+import BibleSelectionModal from '../components/BibleSelectionModal';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
 import { useHymnsData } from '../hooks/useHymnsData';
 import HamburgerMenuPopover, {
@@ -41,6 +42,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   
   const [currentBook, setCurrentBook] = useState<{ id: number; name: string } | null>(null);
   const [currentChapter, setCurrentChapter] = useState(119);
+  const [selectedVerseNumber, setSelectedVerseNumber] = useState<number | null>(null);
+  const [bibleSelectionVisible, setBibleSelectionVisible] = useState(false);
 
   const { books, verses, loadVerses, isLoading, getCrossReferences } = useBibleData();
   const {
@@ -97,6 +100,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       loadVerses(currentBook.id, currentChapter);
     }
   }, [mode, currentBook, currentChapter, loadVerses]);
+
+  useEffect(() => {
+    if (mode !== 'bible') {
+      setBibleSelectionVisible(false);
+      setSelectedVerseNumber(null);
+    }
+  }, [mode]);
 
   const title =
     mode === 'bible'
@@ -197,6 +207,11 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const handleTitlePress = () => {
     if (mode === 'hymnal') {
       setHymnSelectionVisible(true);
+      return;
+    }
+
+    if (mode === 'bible') {
+      setBibleSelectionVisible(visible => !visible);
     }
   };
 
@@ -212,14 +227,28 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onNextPress={handleNextChapter}
       />
       <View style={styles.readerContainer}>
-        <ReaderView
-          appMode={mode}
-          verses={verses}
-          hymnVerses={hymnVerses}
-          isLoading={mode === 'bible' ? isLoading : isHymnsLoading}
-          fontScale={fontScale}
-          onVersePress={mode === 'bible' ? openCrossReferences : undefined}
-        />
+        {mode === 'bible' && bibleSelectionVisible ? (
+          <BibleSelectionModal
+            onClose={() => setBibleSelectionVisible(false)}
+            onBibleSelect={(bookId, bookName, chapter, verse) => {
+              setMode('bible');
+              setCurrentBook({ id: bookId, name: bookName });
+              setCurrentChapter(chapter);
+              setSelectedVerseNumber(verse);
+              setBibleSelectionVisible(false);
+            }}
+          />
+        ) : (
+          <ReaderView
+            appMode={mode}
+            verses={verses}
+            hymnVerses={hymnVerses}
+            isLoading={mode === 'bible' ? isLoading : isHymnsLoading}
+            fontScale={fontScale}
+            onVersePress={mode === 'bible' ? openCrossReferences : undefined}
+            selectedVerseNumber={mode === 'bible' ? selectedVerseNumber : null}
+          />
+        )}
       </View>
       <CustomBottomNav activeMode={mode} onTabPress={setMode} />
 
