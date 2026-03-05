@@ -18,24 +18,32 @@ const BibleReaderScreen = () => {
   const [fontSize, setFontSize] = useState(16);
   const flatListRef = useRef<FlatList>(null);
 
+  const scrollToVerse = (targetVerse: number) => {
+    if (!flatListRef.current) {
+      return;
+    }
+
+    const verseIndex = verses.findIndex(v => v.verse_number === targetVerse);
+    if (verseIndex < 0) {
+      return;
+    }
+
+    flatListRef.current.scrollToIndex({
+      index: verseIndex,
+      animated: true,
+      viewPosition: 0.25,
+    });
+  };
+
   useEffect(() => {
     loadVerses(bookId, chapter);
   }, [bookId, chapter, loadVerses]);
 
   // Auto-scroll to selected verse when verses are loaded
   useEffect(() => {
-    if (verses.length > 0 && verse && flatListRef.current) {
-      const verseIndex = verse - 1; // Array is 0-indexed, verses are 1-indexed
-      if (verseIndex >= 0 && verseIndex < verses.length) {
-        // Small delay to ensure the list is fully rendered
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({
-            index: verseIndex,
-            animated: true,
-            viewPosition: 0.25, // Position the verse at 25% from the top
-          });
-        }, 100);
-      }
+    if (verses.length > 0 && typeof verse === 'number') {
+      const timeoutId = setTimeout(() => scrollToVerse(verse), 120);
+      return () => clearTimeout(timeoutId);
     }
   }, [verses, verse]);
 
@@ -69,6 +77,20 @@ const BibleReaderScreen = () => {
           ref={flatListRef}
           data={verses}
           keyExtractor={item => `${item.book_id}-${item.chapter}-${item.verse_number}`}
+          onScrollToIndexFailed={(info) => {
+            // Retry after a short delay once the list has computed item measurements
+            setTimeout(() => {
+              if (typeof verse === 'number') {
+                scrollToVerse(verse);
+              } else {
+                flatListRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: true,
+                  viewPosition: 0.25,
+                });
+              }
+            }, 200);
+          }}
           renderItem={({item}) => (
             <Text style={[styles.verseText, {fontSize}]}> 
               {`${item.verse_number}. ${item.text}`}

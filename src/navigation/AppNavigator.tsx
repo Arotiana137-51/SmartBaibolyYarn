@@ -8,7 +8,7 @@ import HymnsHomeScreen from '../screens/HymnsHomeScreen';
 import {t} from '../i18n/strings';
 
 type BibleStackParamList = {
-  BibleBooks: undefined;
+  BibleBooks: {verse?: number} | undefined;
   BibleChapters: {bookId: number; bookName: string; chapters: number; verse?: number};
   BibleReader: {bookId: number; bookName: string; chapter: number; verse?: number};
 };

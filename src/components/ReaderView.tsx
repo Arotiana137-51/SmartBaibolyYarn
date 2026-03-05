@@ -102,6 +102,15 @@ const ReaderView: React.FC<ReaderViewProps> = ({
         data={verses}
         keyExtractor={(item) => item.id.toString()}
         getItemLayout={getItemLayout}
+        onScrollToIndexFailed={(info) => {
+          setTimeout(() => {
+            flatListRef?.current?.scrollToIndex({
+              index: info.index,
+              animated: true,
+              viewPosition: 0.2,
+            });
+          }, 220);
+        }}
         renderItem={({ item }) => {
           const formatted = formatBibleText(item.text);
           const lines = formatted.length > 0 ? formatted.split('\n') : [];

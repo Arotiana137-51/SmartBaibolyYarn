@@ -377,6 +377,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               setCurrentBook({ id: bookId, name: bookName });
               setCurrentChapter(chapter);
               setSelectedVerseNumber(verse);
+              setShouldScrollToVerse(verse);
               setBibleSelectionVisible(false);
             }}
           />
