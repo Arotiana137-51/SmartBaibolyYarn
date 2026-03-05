@@ -3,6 +3,7 @@ import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppMode} from '../screens/MainScreen';
 import AnimatedHamburger from './AnimatedHamburger';
+import {useTheme} from '../contexts/ThemeContext';
 
 const HYMNAL_CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },
@@ -33,6 +34,7 @@ const TopBar: React.FC<TopBarProps> = ({
   currentHymnalCategory,
   onHymnalCategoryChange,
 }) => {
+  const {theme} = useTheme();
   const insets = useSafeAreaInsets();
   const menuAnim = useRef(new Animated.Value(isMenuOpen ? 1 : 0)).current;
 
@@ -69,9 +71,9 @@ const TopBar: React.FC<TopBarProps> = ({
     : title;
 
   return (
-    <View style={styles.container}>
-      <Pressable style={styles.button} accessibilityLabel="Previous chapter" onPress={onPreviousPress}>
-        <Text style={styles.buttonText}>{'‹‹'}</Text>
+    <View style={[styles.container, {backgroundColor: theme.colors.navBackground}]}>
+      <Pressable style={[styles.button, styles.coloredButton, {backgroundColor: theme.colors.navBackground}]} accessibilityLabel="Previous chapter" onPress={onPreviousPress}>
+        <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>‹‹</Text>
       </Pressable>
       
       {appMode === 'hymnal' && onHymnalCategoryChange ? (
@@ -98,12 +100,12 @@ const TopBar: React.FC<TopBarProps> = ({
       ) : (
         // Normal title for other modes
         <Pressable style={styles.titleContainer} onPress={handleTitlePress}>
-          <Text style={styles.title}>{displayTitle}</Text>
+          <Text style={[styles.title, {color: '#FFFFFF'}]}>{displayTitle}</Text>
         </Pressable>
       )}
       
-      <Pressable style={styles.button} accessibilityLabel="Next chapter" onPress={onNextPress}>
-        <Text style={styles.buttonText}>{'››'}</Text>
+      <Pressable style={[styles.button, styles.coloredButton, {backgroundColor: theme.colors.navBackground}]} accessibilityLabel="Next chapter" onPress={onNextPress}>
+        <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>{'››'}</Text>
       </Pressable>
 
       {/* Hamburger menu - always present */}
@@ -138,9 +140,12 @@ const styles = StyleSheet.create({
   alignItems: 'center',
   justifyContent: 'center',
 },
+  coloredButton: {
+    borderRadius: 4,
+  },
   buttonText: {
     color: 'white',
-    fontSize: 31,
+    fontSize: 36,
     fontWeight: '900',
   },
   titleContainer: {

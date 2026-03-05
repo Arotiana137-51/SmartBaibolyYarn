@@ -9,6 +9,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useBibleData } from '../hooks/useBibleData';
+import {useTheme} from '../contexts/ThemeContext';
 
 type SelectionStep = 'book' | 'chapter' | 'verse';
 
@@ -21,6 +22,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   onClose,
   onBibleSelect,
 }) => {
+  const {theme} = useTheme();
   const { books, isLoading, getVerseCount } = useBibleData();
   const [currentStep, setCurrentStep] = useState<SelectionStep>('book');
   const [selectedBook, setSelectedBook] = useState<{ id: number; name: string; chapters: number } | null>(null);
@@ -131,27 +133,33 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   ];
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, {backgroundColor: theme.colors.backgroundSecondary}]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {borderBottomColor: theme.colors.divider}]}>
         <Pressable style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>←</Text>
+          <Text style={[styles.backButtonText, {color: theme.colors.accentBlue}]}>←</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+        <Text style={[styles.headerTitle, {color: theme.colors.textPrimary}]}>{getStepTitle()}</Text>
         <Pressable style={styles.closeButton} onPress={handleClose}>
-          <Text style={styles.closeButtonText}>×</Text>
+          <Text style={[styles.closeButtonText, {color: theme.colors.textPrimary}]}>×</Text>
         </Pressable>
       </View>
 
       {/* Search input for book selection */}
       {currentStep === 'book' && (
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, {borderBottomColor: theme.colors.divider}]}> 
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              {
+                backgroundColor: theme.colors.backgroundTertiary,
+                color: theme.colors.textPrimary,
+              },
+            ]}
             placeholder="Mitady boky..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor={styles.searchPlaceholder.color}
+            placeholderTextColor={theme.colors.textSecondary}
           />
         </View>
       )}
@@ -166,23 +174,25 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
           renderSectionHeader={({ section }) => (
-            <Text style={styles.testamentTitle}>{section.title}</Text>
+            <Text style={[styles.testamentTitle, {color: theme.colors.textSecondary}]}>
+              {section.title}
+            </Text>
           )}
           renderItem={({ item }) => (
             <Pressable
               style={styles.bookRow}
               onPress={() => handleBookPress(item.id, item.name, item.chapters)}
             >
-              <Text style={styles.bookName}>{item.name}</Text>
+              <Text style={[styles.bookName, {color: theme.colors.textPrimary}]}> {item.name} </Text>
             </Pressable>
           )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={() => <View style={[styles.separator, {backgroundColor: theme.colors.divider}]} />}
           SectionSeparatorComponent={() => <View style={styles.sectionSpacer} />}
           ListEmptyComponent={
             isLoading ? (
-              <Text style={styles.infoText}>Mitady...</Text>
+              <Text style={[styles.infoText, {color: theme.colors.textSecondary}]}>Mitady...</Text>
             ) : (
-              <Text style={styles.infoText}>Tsy misy valiny.</Text>
+              <Text style={[styles.infoText, {color: theme.colors.textSecondary}]}>Tsy misy valiny.</Text>
             )
           }
         />
@@ -197,10 +207,10 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <Pressable
-              style={styles.chapterButton}
+              style={[styles.chapterButton, {backgroundColor: theme.colors.backgroundTertiary}]}
               onPress={() => handleChapterPress(item)}
             >
-              <Text style={styles.chapterNumber}>{item}</Text>
+              <Text style={[styles.chapterNumber, {color: theme.colors.textPrimary}]}>{item}</Text>
             </Pressable>
           )}
         />
@@ -214,16 +224,16 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           numColumns={7}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text style={styles.infoText}>
+            <Text style={[styles.infoText, {color: theme.colors.textSecondary}]}>
               {verseCount === 0 ? 'Mitady...' : 'Tsy misy andininy.'}
             </Text>
           }
           renderItem={({ item }) => (
             <Pressable
-              style={styles.verseButton}
+              style={[styles.verseButton, {backgroundColor: theme.colors.backgroundTertiary}]}
               onPress={() => handleVersePress(item)}
             >
-              <Text style={styles.verseNumber}>{item}</Text>
+              <Text style={[styles.verseNumber, {color: theme.colors.textPrimary}]}>{item}</Text>
             </Pressable>
           )}
         />

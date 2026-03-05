@@ -4,6 +4,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {DatabaseProvider, useDatabase} from './src/contexts/DatabaseContext';
 import {ActivityIndicator, View, Text, StyleSheet} from 'react-native';
 import RootNavigator from './src/navigation/RootNavigator';
+import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 
 // Splash screen component
 const SplashScreen = () => (
@@ -16,8 +17,9 @@ const SplashScreen = () => (
 // Main App component
 const AppContent = () => {
   const {isInitialized} = useDatabase();
+  const {isReady} = useTheme();
 
-  if (!isInitialized) {
+  if (!isReady || !isInitialized) {
     return <SplashScreen />;
   }
 
@@ -28,11 +30,13 @@ const AppContent = () => {
 const App = () => {
   return (
     <SafeAreaProvider>
-      <DatabaseProvider>
-        <NavigationContainer>
-          <AppContent />
-        </NavigationContainer>
-      </DatabaseProvider>
+      <ThemeProvider>
+        <DatabaseProvider>
+          <NavigationContainer>
+            <AppContent />
+          </NavigationContainer>
+        </DatabaseProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 };

@@ -4,10 +4,12 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
 import {t} from '../i18n/strings';
+import {useTheme} from '../contexts/ThemeContext';
 
 export type HamburgerMenuItemKey =
   | 'favorites'
@@ -20,6 +22,8 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSelect: (key: HamburgerMenuItemKey) => void;
+  isDarkMode: boolean;
+  onToggleDarkMode: (enabled: boolean) => void;
   topInset?: number;
   menuTop?: number;
   menuRight?: number;
@@ -34,6 +38,8 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   visible,
   onClose,
   onSelect,
+  isDarkMode,
+  onToggleDarkMode,
   topInset = 0,
   menuTop,
   menuRight = 12,
@@ -43,6 +49,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   onIncreaseFont,
   onDecreaseFont,
 }) => {
+  const {theme} = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
 
@@ -150,19 +157,45 @@ const HamburgerMenuPopover: React.FC<Props> = ({
               transform: [{scale}],
             },
           ]}>
-          <View style={[styles.caret, {marginRight: caretRightOffset}]} />
-          <View style={styles.menuCard}>
+          <View
+            style={[
+              styles.caret,
+              {marginRight: caretRightOffset, borderBottomColor: theme.colors.backgroundSecondary},
+            ]}
+          />
+          <View
+            style={[
+              styles.menuCard,
+              {
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderColor: theme.colors.divider,
+              },
+            ]}>
             {items.map(item => (
               <Pressable
                 key={item.key}
                 onPress={() => onSelect(item.key)}
                 style={({pressed}) => [
                   styles.menuItem,
-                  pressed ? styles.menuItemPressed : null,
+                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null
                 ]}>
-                <Text style={styles.menuItemText}>{item.label}</Text>
+                <Text style={[styles.menuItemText, {color: theme.colors.navBackground}]}>
+                  {item.label}
+                </Text>
               </Pressable>
             ))}
+
+            <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
+
+            <Pressable style={styles.switchRow} onPress={() => onToggleDarkMode(!isDarkMode)}>
+              <Text style={[styles.menuItemText, {color: isDarkMode ? theme.colors.textPrimary : theme.colors.navBackground}]}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</Text>
+              <Switch
+                value={isDarkMode}
+                onValueChange={onToggleDarkMode}
+                trackColor={{false: theme.colors.backgroundTertiary, true: theme.colors.accentBlue}}
+                thumbColor={isDarkMode ? '#FFFFFF' : theme.colors.navBackground}
+              />
+            </Pressable>
           </View>
         </Animated.View>
       </View>
@@ -237,6 +270,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2c7fb8',
   },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+  },
+  switchRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   menuItem: {
     paddingVertical: 14,
     paddingHorizontal: 18,
@@ -247,7 +291,7 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 20,
     color: '#2c7fb8',
-    fontWeight: '600',
+    fontWeight: '400',
   },
 });
 

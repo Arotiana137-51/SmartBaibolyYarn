@@ -6,11 +6,18 @@ import ReaderView from '../components/ReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
 import HymnSelectionModal from '../components/HymnSelectionModal';
 import BibleSelectionModal from '../components/BibleSelectionModal';
+import VerseActionPopover from '../components/VerseActionPopover';
+import HymnActionPopover from '../components/HymnActionPopover';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
-import { useHymnsData } from '../hooks/useHymnsData';
+import { useHymnsData, Hymn } from '../hooks/useHymnsData';
+import { useFavorites } from '../hooks/useFavorites';
+import { useHymnFavorites } from '../hooks/useHymnFavorites';
+import { useBibleHistory } from '../hooks/useBibleHistory';
+import { useHymnHistory } from '../hooks/useHymnHistory';
 import HamburgerMenuPopover, {
   HamburgerMenuItemKey,
 } from '../components/HamburgerMenuPopover';
+import {useTheme} from '../contexts/ThemeContext';
 
 export type AppMode = 'bible' | 'hymnal';
 
@@ -19,6 +26,7 @@ type MainScreenProps = {
 };
 
 const MainScreen = ({navigation}: MainScreenProps) => {
+  const {theme, isDarkMode, setDarkMode} = useTheme();
   const insets = useSafeAreaInsets();
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   
@@ -52,11 +60,22 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     loadHymnVerses,
     isLoading: isHymnsLoading,
   } = useHymnsData();
+  const { addToFavorites: addToBibleFavorites } = useFavorites();
+  const { addToFavorites: addToHymnFavorites } = useHymnFavorites();
+  const { logAccess: logBibleAccess } = useBibleHistory();
+  const { logAccess: logHymnAccess } = useHymnHistory();
 
   const [crossRefModalVisible, setCrossRefModalVisible] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
   const [crossRefs, setCrossRefs] = useState<BibleCrossReference[]>([]);
   const [isCrossRefsLoading, setIsCrossRefsLoading] = useState(false);
+
+  // Verse action popover state
+  const [verseActionVisible, setVerseActionVisible] = useState(false);
+  const [selectedVerseForAction, setSelectedVerseForAction] = useState<BibleVerse | null>(null);
+
+  // Hymn action popover state
+  const [hymnActionVisible, setHymnActionVisible] = useState(false);
 
   const [currentHymnId, setCurrentHymnId] = useState<string | null>(null);
   const [currentHymnNumber, setCurrentHymnNumber] = useState<number | null>(null);
@@ -98,8 +117,24 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   useEffect(() => {
     if (mode === 'bible' && currentBook) {
       loadVerses(currentBook.id, currentChapter);
+    } else if (mode === 'hymnal' && currentHymnId) {
+      loadHymnVerses(currentHymnId);
     }
-  }, [mode, currentBook, currentChapter, loadVerses]);
+  }, [mode, currentBook, currentChapter, currentHymnId, loadVerses, loadHymnVerses]);
+
+  useEffect(() => {
+    if (mode === 'bible' && currentBook && verses.length > 0) {
+      logBibleAccess(
+        { book_id: currentBook.id, chapter: currentChapter, verse_number: 1, text: '', id: 0 } as BibleVerse,
+        currentBook.name
+      );
+    } else if (mode === 'hymnal' && currentHymnId && hymnVerses.length > 0) {
+      const currentHymn = hymns.find(h => h.id === currentHymnId);
+      if (currentHymn) {
+        logHymnAccess(currentHymn);
+      }
+    }
+  }, [mode, currentBook, currentChapter, currentHymnId, verses, hymnVerses, hymns, logBibleAccess, logHymnAccess]);
 
   useEffect(() => {
     if (mode !== 'bible') {
@@ -146,10 +181,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
     switch (key) {
       case 'favorites':
-        navigation.navigate('Favorites');
+        navigation.navigate('Favorites', { mode });
         return;
       case 'history':
-        navigation.navigate('History');
+        navigation.navigate('History', { mode });
         return;
       case 'search':
         navigation.navigate('Search');
@@ -165,6 +200,50 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         return _exhaustiveCheck;
       }
     }
+  };
+
+  const handleHymnLongPress = () => {
+    setHymnActionVisible(true);
+  };
+
+  const handleAddHymnToFavorites = () => {
+    if (currentHymnId) {
+      const currentHymn = hymns.find(h => h.id === currentHymnId);
+      if (currentHymn) {
+        addToHymnFavorites(currentHymn);
+      }
+    }
+  };
+
+  const getCurrentHymn = (): Hymn | null => {
+    if (currentHymnId) {
+      return hymns.find(h => h.id === currentHymnId) || null;
+    }
+    return null;
+  };
+
+  const closeHymnAction = () => {
+    setHymnActionVisible(false);
+  };
+
+  const handleVerseLongPress = (verse: BibleVerse) => {
+    setSelectedVerseForAction(verse);
+    setVerseActionVisible(true);
+  };
+
+  const handleViewCorrespondence = (verse: BibleVerse) => {
+    openCrossReferences(verse);
+  };
+
+  const handleAddToFavorites = (verse: BibleVerse) => {
+    if (currentBook) {
+      addToBibleFavorites(verse, currentBook.name);
+    }
+  };
+
+  const closeVerseAction = () => {
+    setVerseActionVisible(false);
+    setSelectedVerseForAction(null);
   };
 
   const openCrossReferences = async (verse: BibleVerse) => {
@@ -216,7 +295,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}>
       <TopBar
         appMode={mode}
         title={title}
@@ -246,6 +325,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             isLoading={mode === 'bible' ? isLoading : isHymnsLoading}
             fontScale={fontScale}
             onVersePress={mode === 'bible' ? openCrossReferences : undefined}
+            onVerseLongPress={mode === 'bible' ? handleVerseLongPress : undefined}
+            onHymnLongPress={mode === 'hymnal' ? handleHymnLongPress : undefined}
             selectedVerseNumber={mode === 'bible' ? selectedVerseNumber : null}
           />
         )}
@@ -258,8 +339,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         animationType="fade"
         onRequestClose={closeCrossReferences}
       >
-        <Pressable style={styles.modalBackdrop} onPress={closeCrossReferences}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
+        <Pressable style={[styles.modalBackdrop]} onPress={closeCrossReferences}>
+          <Pressable
+            style={[
+              styles.modalCard,
+              {backgroundColor: theme.colors.backgroundSecondary},
+            ]}
+            onPress={() => {}}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {selectedVerse
@@ -305,6 +391,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onSelect={handleMenuSelect}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={setDarkMode}
         topInset={insets.top + 50}
         menuTop={insets.top + 50 + 8}
         menuRight={12}
@@ -326,6 +414,22 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         currentNumber={currentHymnNumber}
         onClose={() => setHymnSelectionVisible(false)}
         onHymnSelect={handleHymnSelect}
+      />
+
+      <VerseActionPopover
+        visible={verseActionVisible}
+        verse={selectedVerseForAction}
+        verseBookName={currentBook?.name}
+        onClose={closeVerseAction}
+        onViewCorrespondence={handleViewCorrespondence}
+        onAddToFavorites={handleAddToFavorites}
+      />
+
+      <HymnActionPopover
+        visible={hymnActionVisible}
+        hymn={getCurrentHymn()}
+        onClose={closeHymnAction}
+        onAddToFavorites={handleAddHymnToFavorites}
       />
     </SafeAreaView>
   );

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, FlatList, Pressa
 import { AppMode } from '../screens/MainScreen';
 import { BibleVerse } from '../hooks/useBibleData';
 import { HymnVerse } from '../hooks/useHymnsData';
+import {useTheme} from '../contexts/ThemeContext';
 
 interface ReaderViewProps {
   appMode: AppMode;
@@ -11,6 +12,8 @@ interface ReaderViewProps {
   isLoading: boolean;
   fontScale?: number;
   onVersePress?: (verse: BibleVerse) => void;
+  onVerseLongPress?: (verse: BibleVerse) => void;
+  onHymnLongPress?: () => void;
   selectedVerseNumber?: number | null;
 }
 
@@ -70,8 +73,11 @@ const ReaderView: React.FC<ReaderViewProps> = ({
   isLoading,
   fontScale = 1,
   onVersePress,
+  onVerseLongPress,
+  onHymnLongPress,
   selectedVerseNumber,
 }) => {
+  const {theme} = useTheme();
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -104,7 +110,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({
             <Pressable
               style={[styles.bibleVerseBlock, isSelected && styles.selectedVerseBlock]}
               onPress={() => onVersePress?.(item)}
-              disabled={!onVersePress}
+              onLongPress={() => onVerseLongPress?.(item)}
+              disabled={!onVersePress && !onVerseLongPress}
             >
               {introLines.map((line, idx) => (
                 <Text
@@ -127,6 +134,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                     {
                       fontSize: styles.verseText.fontSize * fontScale,
                       lineHeight: styles.verseText.lineHeight * fontScale,
+                      color: theme.colors.textPrimary,
                     },
                   ]}>
                   <Text
@@ -142,6 +150,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                               fontScale,
                           },
                         ],
+                        color: theme.colors.verseNumber,
                       },
                     ]}>
                     {item.verse_number}{' '}
@@ -158,6 +167,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                     {
                       fontSize: styles.verseText.fontSize * fontScale,
                       lineHeight: styles.verseText.lineHeight * fontScale,
+                      color: theme.colors.textPrimary,
                     },
                   ]}>
                   {renderBibleLine(line)}
@@ -166,7 +176,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({
             </Pressable>
           );
         }}
-        style={styles.container}
+        style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}
       />
     );
   }
@@ -193,12 +203,17 @@ const ReaderView: React.FC<ReaderViewProps> = ({
       data={hymnStanzas}
       keyExtractor={(item) => item.verseNumber.toString()}
       renderItem={({ item }) => (
-        <View style={styles.hymnStanza}>
+        <Pressable
+          style={styles.hymnStanza}
+          onLongPress={onHymnLongPress}
+          disabled={!onHymnLongPress}
+        >
           <Text
             style={[
               styles.hymnNumber,
               {
                 fontSize: styles.hymnNumber.fontSize * fontScale,
+                color: theme.colors.verseNumber,
               },
             ]}>
             {item.verseNumber}
@@ -212,15 +227,16 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                   {
                     fontSize: styles.hymnText.fontSize * fontScale,
                     lineHeight: styles.hymnText.lineHeight * fontScale,
+                    color: theme.colors.textPrimary,
                   },
                 ]}>
                 {line.text}
               </Text>
             ))}
           </View>
-        </View>
+        </Pressable>
       )}
-      style={styles.container}
+      style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}
     />
   );
 };
@@ -261,7 +277,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   selectedVerseBlock: {
-    backgroundColor: 'rgba(77, 150, 255, 0.10)',
+    backgroundColor: 'rgba(10, 132, 255, 0.16)',
     borderRadius: 12,
     padding: 10,
   },

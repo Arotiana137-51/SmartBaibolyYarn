@@ -10,8 +10,8 @@ import AboutScreen from '../screens/AboutScreen';
 
 export type RootStackParamList = {
   Home: undefined;
-  Favorites: undefined;
-  History: undefined;
+  Favorites: { mode: 'bible' | 'hymnal' };
+  History: { mode: 'bible' | 'hymnal' };
   Search: undefined;
   Misc: undefined;
   About: undefined;

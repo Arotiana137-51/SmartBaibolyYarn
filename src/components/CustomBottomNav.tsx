@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppMode } from '../screens/MainScreen';
+import {useTheme} from '../contexts/ThemeContext';
 
 interface CustomBottomNavProps {
   activeMode: AppMode;
@@ -10,18 +11,39 @@ interface CustomBottomNavProps {
 
 const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress }) => {
   const insets = useSafeAreaInsets();
+  const {theme} = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {backgroundColor: theme.colors.backgroundSecondary, borderTopColor: theme.colors.divider}]}>
       <Pressable 
-        style={[styles.tab, activeMode === 'bible' && styles.tabActive]} 
+        style={[
+          styles.tab,
+          activeMode === 'bible' && {backgroundColor: theme.colors.backgroundTertiary},
+        ]}
         onPress={() => onTabPress('bible')}>
-        <Text style={[styles.tabText, activeMode === 'bible' && styles.tabTextActive]}>Baiboly</Text>
+        <Text
+          style={[
+            styles.tabText,
+            {color: theme.colors.textSecondary},
+            activeMode === 'bible' && {color: theme.colors.textPrimary, fontWeight: 'bold'},
+          ]}>
+          Baiboly
+        </Text>
       </Pressable>
       <Pressable 
-        style={[styles.tab, activeMode === 'hymnal' && styles.tabActive]} 
+        style={[
+          styles.tab,
+          activeMode === 'hymnal' && {backgroundColor: theme.colors.backgroundTertiary},
+        ]}
         onPress={() => onTabPress('hymnal')}>
-        <Text style={[styles.tabText, activeMode === 'hymnal' && styles.tabTextActive]}>Fihirana</Text>
+        <Text
+          style={[
+            styles.tabText,
+            {color: theme.colors.textSecondary},
+            activeMode === 'hymnal' && {color: theme.colors.textPrimary, fontWeight: 'bold'},
+          ]}>
+          Fihirana
+        </Text>
       </Pressable>
     </View>
   );
@@ -40,16 +62,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabActive: {
-    backgroundColor: '#e0e0e0', // Placeholder for active tab style
-  },
   tabText: {
     fontSize: 16,
     color: '#888',
-  },
-  tabTextActive: {
-    color: '#000',
-    fontWeight: 'bold',
   },
 });
 
