@@ -147,6 +147,12 @@ const SearchScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
+        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>
+          {mode === 'bible' ? 'Recherche Bible' : 'Recherche Hymnes'}
+        </Text>
+      </View>
+      
       <View style={styles.searchContainer}>
         <View style={[styles.searchInputContainer, { 
           backgroundColor: theme.colors.backgroundSecondary,
@@ -203,6 +209,15 @@ const SearchScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
   },
   title: {
     fontSize: 22,

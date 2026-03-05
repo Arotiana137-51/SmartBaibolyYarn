@@ -3,7 +3,8 @@ import {Modal, Pressable, StyleSheet, Text, View, Dimensions, FlatList, Platform
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import TopBar from '../components/TopBar';
-import ReaderView from '../components/ReaderView';
+import BibleReaderView from '../components/BibleReaderView';
+import HymnReaderView from '../components/HymnReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
 import HymnSelectionModal from '../components/HymnSelectionModal';
 import BibleSelectionModal from '../components/BibleSelectionModal';
@@ -21,6 +22,10 @@ import HamburgerMenuPopover, {
 import {useTheme} from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
+
+const TOP_BAR_TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
+const TOP_BAR_EXTRA_TOP_PADDING = 6;
+const HAMBURGER_CARET_HEIGHT = 12;
 
 export type AppMode = 'bible' | 'hymnal';
 
@@ -358,7 +363,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}>
+    <SafeAreaView
+      edges={['left', 'right', 'bottom']}
+      style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}
+    >
       <TopBar
         appMode={mode}
         title={title}
@@ -382,18 +390,24 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             }}
           />
         ) : (
-          <ReaderView
-            appMode={mode}
-            verses={verses}
-            hymnVerses={hymnVerses}
-            isLoading={isLoading}
-            fontScale={fontScale}
-            onVersePress={handleVerseLongPress}
-            onVerseLongPress={handleVerseLongPress}
-            onHymnLongPress={handleHymnLongPress}
-            selectedVerseNumber={selectedVerseNumber}
-            flatListRef={flatListRef}
-          />
+          mode === 'bible' ? (
+            <BibleReaderView
+              verses={verses}
+              isLoading={isLoading}
+              fontScale={fontScale}
+              onVersePress={handleVerseLongPress}
+              onVerseLongPress={handleVerseLongPress}
+              selectedVerseNumber={selectedVerseNumber}
+              flatListRef={flatListRef}
+            />
+          ) : (
+            <HymnReaderView
+              hymnVerses={hymnVerses}
+              isLoading={isHymnsLoading}
+              fontScale={fontScale}
+              onHymnLongPress={handleHymnLongPress}
+            />
+          )
         )}
       </View>
       <CustomBottomNav activeMode={mode} onTabPress={setMode} />
@@ -458,11 +472,16 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onSelect={handleMenuSelect}
         isDarkMode={isDarkMode}
         onToggleDarkMode={setDarkMode}
-        topInset={insets.top + 50}
-        menuTop={insets.top + 50 + 8}
+        topInset={insets.top + TOP_BAR_EXTRA_TOP_PADDING + TOP_BAR_TOOLBAR_HEIGHT}
+        menuTop={
+          insets.top +
+          TOP_BAR_EXTRA_TOP_PADDING +
+          TOP_BAR_TOOLBAR_HEIGHT -
+          HAMBURGER_CARET_HEIGHT
+        }
         menuRight={12}
         caretRightOffset={12}
-        fontControlsTop={insets.top}
+        fontControlsTop={insets.top + TOP_BAR_EXTRA_TOP_PADDING}
         fontControlsRight={56}
         onIncreaseFont={() =>
           setFontScale(scale => Math.min(1.6, Math.round((scale + 0.1) * 10) / 10))

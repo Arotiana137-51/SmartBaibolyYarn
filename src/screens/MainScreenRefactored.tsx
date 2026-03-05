@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TopBar from '../components/TopBar';
-import ReaderView from '../components/ReaderView';
+import BibleReaderView from '../components/BibleReaderView';
+import HymnReaderView from '../components/HymnReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
 import HamburgerMenuPopover from '../components/HamburgerMenuPopover';
 import HymnSelectionModal from '../components/HymnSelectionModal';
@@ -18,6 +19,7 @@ import { BibleCrossReference, BibleVerse } from '../hooks/useBibleData';
 import { Hymn } from '../hooks/useHymnsData';
 import { useNavigationServices } from '../hooks/useNavigationServices';
 import { useModalState } from '../hooks/useModalState';
+import { useTheme } from '../contexts/ThemeContext';
 import { AppMode } from './MainScreen';
 import { CompositeNavigationManager } from '../services/navigation/NavigationService';
 
@@ -27,6 +29,7 @@ type MainScreenProps = {
 
 const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { theme, isDarkMode, setDarkMode } = useTheme();
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   
   // UI State
@@ -145,14 +148,21 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
       />
       
       <View style={styles.readerContainer}>
-        <ReaderView
-          appMode={mode}
-          verses={currentVerses}
-          hymnVerses={currentHymnVerses}
-          isLoading={isLoading}
-          fontScale={fontScale}
-          onVersePress={mode === 'bible' ? openCrossReferences : undefined}
-        />
+        {mode === 'bible' ? (
+          <BibleReaderView
+            verses={currentVerses}
+            isLoading={bibleLoading}
+            fontScale={fontScale}
+            onVersePress={openCrossReferences}
+            onVerseLongPress={openCrossReferences}
+          />
+        ) : (
+          <HymnReaderView
+            hymnVerses={currentHymnVerses}
+            isLoading={hymnsLoading}
+            fontScale={fontScale}
+          />
+        )}
       </View>
       
       <CustomBottomNav 
@@ -199,6 +209,8 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
         onDecreaseFont={() =>
           setFontScale(scale => Math.max(0.8, Math.round((scale - 0.1) * 10) / 10))
         }
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={setDarkMode}
       />
       
       {/* Hymn Selection Modal */}

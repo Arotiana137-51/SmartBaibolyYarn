@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBibleSearch, BibleVerseResult } from '../hooks/useBibleSearch';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { renderBibleLine, processNTags, processBibleTextWithMetadata } from '../utils/bibleTextUtils';
 
 type VerseListScreenRouteProp = RouteProp<RootStackParamList, 'VerseList'>;
 type VerseListScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -20,49 +21,6 @@ const VerseListScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { getVersesForBook, error } = useBibleSearch();
-
-  const renderBibleLine = (line: string) => {
-    const parts = line.split(/(\[[^\]]+\])/g);
-    return parts
-      .filter(p => p.length > 0)
-      .map((part, index) => {
-        if (part.startsWith('[') && part.endsWith(']')) {
-          const inner = part.slice(1, -1);
-          return (
-            <Text key={`verse-bracket-${index}`} style={{ fontStyle: 'italic', color: '#3a3a3a' }}>
-              {inner}
-            </Text>
-          );
-        }
-        return (
-          <Text key={`verse-text-${index}`} style={{ color: theme.colors.textPrimary }}>
-            {part}
-          </Text>
-        );
-      });
-  };
-
-  const renderBibleLineWithHighlight = (line: string, searchQuery: string) => {
-    const parts = line.split(/(\[[^\]]+\])/g);
-    return parts
-      .filter(p => p.length > 0)
-      .map((part, index) => {
-        if (part.startsWith('[') && part.endsWith(']')) {
-          const inner = part.slice(1, -1);
-          return (
-            <Text key={`verse-bracket-${index}`} style={{ fontStyle: 'italic', color: '#3a3a3a' }}>
-              {inner}
-            </Text>
-          );
-        }
-        // Apply search highlighting to regular text
-        return (
-          <Text key={`verse-text-${index}`}>
-            {highlightText(part, searchQuery)}
-          </Text>
-        );
-      });
-  };
 
   useEffect(() => {
     const loadVerses = async () => {
@@ -90,37 +48,11 @@ const VerseListScreen = () => {
     });
   };
 
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text;
-
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    const lowerQuery = query.toLowerCase();
-
-    return parts.map((part, index) => {
-      const isMatch = part.toLowerCase() === lowerQuery;
-      return (
-        <Text
-          key={index}
-          style={
-            isMatch
-              ? [styles.highlightedText, { color: theme.colors.accentBlue }]
-              : [styles.verseText, { color: theme.colors.textPrimary }]
-          }
-        >
-          {part}
-        </Text>
-      );
-    });
-  };
-
 const renderVerse = ({ item }: { item: BibleVerseResult }) => {
-  // Format the verse text to handle bracketed text like the regular reader
-  const formattedLines = item.text.split('\n').map((line, lineIndex) => (
-    <Text key={lineIndex} style={{ fontSize: 16, lineHeight: 24, marginBottom: 4 }}>
-      {renderBibleLineWithHighlight(line, query)}
-    </Text>
-  ));
-
+  // Process <n> tags first, then format the verse text with metadata
+  const processedText = processNTags(item.text);
+  const { lines, italicLines } = processBibleTextWithMetadata(processedText);
+  
   return (
     <Pressable
       style={[styles.verseItem, { backgroundColor: theme.colors.backgroundSecondary }]}
@@ -132,7 +64,23 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
         </Text>
       </View>
       <View style={styles.verseContent}>
-        {formattedLines}
+        {lines.map((line, lineIndex) => (
+          <Text
+            key={lineIndex}
+            style={{
+              fontSize: 16,
+              lineHeight: 24,
+              marginBottom: 4,
+              textAlign: 'justify',
+              fontStyle: italicLines.has(lineIndex) ? 'italic' : 'normal',
+              color: italicLines.has(lineIndex)
+                ? theme.colors.textWatermark
+                : theme.colors.textPrimary,
+            }}
+          >
+            {renderBibleLine(line, { lineHeight: 24 })}
+          </Text>
+        ))}
       </View>
     </Pressable>
   );
@@ -140,11 +88,11 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
+        <Text style={[styles.title, { color: '#FFFFFF' }]}>
           {bookName}
         </Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.subtitle, { color: '#FFFFFF' }]}>
           Recherche: "{query}"
         </Text>
       </View>

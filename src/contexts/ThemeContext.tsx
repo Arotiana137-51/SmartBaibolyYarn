@@ -8,6 +8,7 @@ interface ThemeColors {
   backgroundTertiary: string;
   textPrimary: string;
   textSecondary: string;
+  textWatermark: string;
   divider: string;
   accentBlue: string;
   accentGold: string;
@@ -37,6 +38,7 @@ const darkColors: ThemeColors = {
   backgroundTertiary: '#2C2C2E',
   textPrimary: '#F2F2F7',
   textSecondary: '#8E8E93',
+  textWatermark: '#7A7A80',
   divider: '#3A3A3C',
   accentBlue: '#0A84FF',
   accentGold: '#FFD60A',
@@ -51,6 +53,7 @@ const lightColors: ThemeColors = {
   backgroundTertiary: '#ffffff',
   textPrimary: '#111111',
   textSecondary: '#666666',
+  textWatermark: '#8C8C90',
   divider: '#e5e5e5',
   accentBlue: '#3A86FF',
   accentGold: '#FFD60A',

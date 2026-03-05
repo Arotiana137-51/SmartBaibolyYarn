@@ -67,17 +67,17 @@ const RootNavigator = () => {
       <Stack.Screen
         name="VerseList"
         component={VerseListScreen}
-        options={{title: 'Résultats de recherche'}}
+        options={{title: 'Résultats de recherche', ...headerOptions}}
       />
       <Stack.Screen
         name="Misc"
         component={MiscScreen}
-        options={{title: t('menu.misc')}}
+        options={{title: t('menu.misc'), ...headerOptions}}
       />
       <Stack.Screen
         name="About"
         component={AboutScreen}
-        options={{title: t('menu.about')}}
+        options={{title: t('menu.about'), ...headerOptions}}
       />
     </Stack.Navigator>
   );

@@ -70,8 +70,8 @@ const HistoryScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
+        <Text style={[styles.title, { color: '#FFFFFF' }]}>
           {mode === 'bible' ? 'Historique Bible' : 'Historique Hymnes'}
         </Text>
         {history.length > 0 && (

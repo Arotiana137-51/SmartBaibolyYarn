@@ -93,7 +93,7 @@ const FavoritesScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
         <Text style={[TEXT_STYLES.heading, { color: '#FFFFFF' }]}>
           {mode === 'bible' ? 'Favoris Bible' : 'Favoris Hymnes'}
         </Text>

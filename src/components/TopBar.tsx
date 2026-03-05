@@ -1,10 +1,13 @@
 import React, {useEffect, useRef} from 'react';
-import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Animated, Pressable, StyleSheet, Text, View, StatusBar, Platform} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppMode} from '../screens/MainScreen';
 import AnimatedHamburger from './AnimatedHamburger';
 import {useTheme} from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
+
+const TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
+const EXTRA_TOP_PADDING = 6;
 
 const HYMNAL_CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },
@@ -72,7 +75,20 @@ const TopBar: React.FC<TopBarProps> = ({
     : title;
 
   return (
-    <View style={[styles.container, {backgroundColor: theme.colors.navBackground}]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.navBackground,
+          paddingTop: insets.top + EXTRA_TOP_PADDING,
+          height: TOOLBAR_HEIGHT + insets.top + EXTRA_TOP_PADDING,
+        },
+      ]}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.colors.navBackground}
+      />
       <Pressable style={[styles.button, styles.coloredButton, {backgroundColor: theme.colors.navBackground}]} accessibilityLabel="Previous chapter" onPress={onPreviousPress}>
         <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>‹‹</Text>
       </Pressable>
@@ -159,6 +175,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    textAlign: 'center',
+    width: '100%',
   },
   categoryTabsContainer: {
     flex: 1,
