@@ -6,6 +6,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useHymnFavorites } from '../hooks/useHymnFavorites';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 
 type FavoritesScreenRouteProp = RouteProp<RootStackParamList, 'Favorites'>;
 
@@ -93,7 +94,7 @@ const FavoritesScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+        <Text style={[TEXT_STYLES.heading, { color: '#FFFFFF' }]}>
           {mode === 'bible' ? 'Favoris Bible' : 'Favoris Hymnes'}
         </Text>
       </View>

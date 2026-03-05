@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState, useRef} from 'react';
 import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useRoute} from '@react-navigation/native';
 import {t} from '../i18n/strings';
@@ -8,17 +8,36 @@ type RouteParams = {
   bookId: number;
   bookName: string;
   chapter: number;
+  verse?: number;
 };
 
 const BibleReaderScreen = () => {
   const route = useRoute();
-  const {bookId, bookName, chapter} = route.params as RouteParams;
+  const {bookId, bookName, chapter, verse} = route.params as RouteParams;
   const {verses, loadVerses, isLoading} = useBibleData();
   const [fontSize, setFontSize] = useState(16);
+  const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
     loadVerses(bookId, chapter);
   }, [bookId, chapter, loadVerses]);
+
+  // Auto-scroll to selected verse when verses are loaded
+  useEffect(() => {
+    if (verses.length > 0 && verse && flatListRef.current) {
+      const verseIndex = verse - 1; // Array is 0-indexed, verses are 1-indexed
+      if (verseIndex >= 0 && verseIndex < verses.length) {
+        // Small delay to ensure the list is fully rendered
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({
+            index: verseIndex,
+            animated: true,
+            viewPosition: 0.25, // Position the verse at 25% from the top
+          });
+        }, 100);
+      }
+    }
+  }, [verses, verse]);
 
   const title = useMemo(
     () => t('bible.readerTitle', {book: bookName, chapter}),
@@ -47,6 +66,7 @@ const BibleReaderScreen = () => {
         <Text style={styles.infoText}>{t('bible.loading')}</Text>
       ) : (
         <FlatList
+          ref={flatListRef}
           data={verses}
           keyExtractor={item => `${item.book_id}-${item.chapter}-${item.verse_number}`}
           renderItem={({item}) => (

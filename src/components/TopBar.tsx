@@ -4,6 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppMode} from '../screens/MainScreen';
 import AnimatedHamburger from './AnimatedHamburger';
 import {useTheme} from '../contexts/ThemeContext';
+import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 
 const HYMNAL_CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },

@@ -7,7 +7,7 @@ import {t} from '../i18n/strings';
 type BibleStackParamList = {
   BibleBooks: undefined;
   BibleChapters: {bookId: number; bookName: string; chapters: number};
-  BibleReader: {bookId: number; bookName: string; chapter: number};
+  BibleReader: {bookId: number; bookName: string; chapter: number; verse?: number};
 };
 
 type NavigationProp = NativeStackNavigationProp<BibleStackParamList, 'BibleChapters'>;
@@ -16,12 +16,13 @@ type RouteParams = {
   bookId: number;
   bookName: string;
   chapters: number;
+  verse?: number;
 };
 
 const BibleChaptersScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const {bookId, bookName, chapters} = route.params as RouteParams;
+  const {bookId, bookName, chapters, verse} = route.params as RouteParams;
 
   const chapterList = useMemo(
     () => Array.from({length: chapters}, (_, index) => index + 1),
@@ -42,6 +43,7 @@ const BibleChaptersScreen = () => {
                 bookId,
                 bookName,
                 chapter: item,
+                verse,
               })
             }>
             <Text style={styles.chapterText}>{item}</Text>

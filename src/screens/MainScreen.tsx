@@ -1,6 +1,7 @@
-import React, {useEffect, useState} from 'react';
-import {Modal, Pressable, StyleSheet, Text, View, Dimensions} from 'react-native';
+import React, {useEffect, useState, useRef} from 'react';
+import {Modal, Pressable, StyleSheet, Text, View, Dimensions, FlatList, Platform} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import TopBar from '../components/TopBar';
 import ReaderView from '../components/ReaderView';
 import CustomBottomNav from '../components/CustomBottomNav';
@@ -18,6 +19,8 @@ import HamburgerMenuPopover, {
   HamburgerMenuItemKey,
 } from '../components/HamburgerMenuPopover';
 import {useTheme} from '../contexts/ThemeContext';
+import { RootStackParamList } from '../navigation/RootNavigator';
+import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 
 export type AppMode = 'bible' | 'hymnal';
 
@@ -26,10 +29,13 @@ type MainScreenProps = {
 };
 
 const MainScreen = ({navigation}: MainScreenProps) => {
+  const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const {theme, isDarkMode, setDarkMode} = useTheme();
   const insets = useSafeAreaInsets();
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
-  
+  const flatListRef = useRef<FlatList>(null);
+  const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
+
   // Calculate adaptive safe area padding (1.5% of screen height, but only if inset is significant)
   const maxPadding = screenHeight * 0.015;
   const minSignificantInset = 20; // Only apply padding if inset is more than 20px
@@ -44,14 +50,58 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     return () => subscription?.remove();
   }, []);
 
-  const [mode, setMode] = useState<AppMode>('bible');
+  const [mode, setMode] = useState<AppMode>(route.params?.mode || 'bible');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   
-  const [currentBook, setCurrentBook] = useState<{ id: number; name: string } | null>(null);
-  const [currentChapter, setCurrentChapter] = useState(119);
-  const [selectedVerseNumber, setSelectedVerseNumber] = useState<number | null>(null);
+  const [currentBook, setCurrentBook] = useState<{ id: number; name: string } | null>(
+    route.params?.selectedBook || null
+  );
+  const [currentChapter, setCurrentChapter] = useState<number>(
+    route.params?.selectedChapter || 119
+  );
+  const [selectedVerseNumber, setSelectedVerseNumber] = useState<number | null>(
+    route.params?.selectedVerse || null
+  );
   const [bibleSelectionVisible, setBibleSelectionVisible] = useState(false);
+
+  const [currentHymnId, setCurrentHymnId] = useState<string | null>(
+    route.params?.selectedHymnId || null
+  );
+  const [currentHymnNumber, setCurrentHymnNumber] = useState<number | null>(null);
+  const [currentHymnCategory, setCurrentHymnCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = route.params;
+    if (!params) {
+      return;
+    }
+
+    if (params.mode) {
+      setMode(params.mode);
+    }
+
+    if (params.selectedBook) {
+      setMode('bible');
+      setCurrentBook(params.selectedBook);
+    }
+
+    if (typeof params.selectedChapter === 'number') {
+      setMode('bible');
+      setCurrentChapter(params.selectedChapter);
+    }
+
+    if (typeof params.selectedVerse === 'number') {
+      setMode('bible');
+      setSelectedVerseNumber(params.selectedVerse);
+      setShouldScrollToVerse(params.selectedVerse);
+    }
+
+    if (params.selectedHymnId) {
+      setMode('hymnal');
+      setCurrentHymnId(params.selectedHymnId);
+    }
+  }, [route.params]);
 
   const { books, verses, loadVerses, isLoading, getCrossReferences } = useBibleData();
   const {
@@ -76,10 +126,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
-
-  const [currentHymnId, setCurrentHymnId] = useState<string | null>(null);
-  const [currentHymnNumber, setCurrentHymnNumber] = useState<number | null>(null);
-  const [currentHymnCategory, setCurrentHymnCategory] = useState<string | null>(null);
 
   // Hymn selection modal state
   const [hymnSelectionVisible, setHymnSelectionVisible] = useState(false);
@@ -121,6 +167,23 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       loadHymnVerses(currentHymnId);
     }
   }, [mode, currentBook, currentChapter, currentHymnId, loadVerses, loadHymnVerses]);
+
+  // Auto-scroll to selected verse when verses are loaded
+  useEffect(() => {
+    if (shouldScrollToVerse !== null && verses.length > 0) {
+      const verseIndex = verses.findIndex(verse => verse.verse_number === shouldScrollToVerse);
+      if (verseIndex !== -1 && flatListRef.current) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToIndex({
+            index: verseIndex,
+            viewPosition: 0.2, // Position verse at 20% from top
+            animated: true,
+          });
+          setShouldScrollToVerse(null); // Reset after scrolling
+        }, 100);
+      }
+    }
+  }, [verses, shouldScrollToVerse]);
 
   useEffect(() => {
     if (mode === 'bible' && currentBook && verses.length > 0) {
@@ -187,7 +250,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         navigation.navigate('History', { mode });
         return;
       case 'search':
-        navigation.navigate('Search');
+        navigation.navigate('Search', { mode });
         return;
       case 'misc':
         navigation.navigate('Misc');
@@ -322,12 +385,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             appMode={mode}
             verses={verses}
             hymnVerses={hymnVerses}
-            isLoading={mode === 'bible' ? isLoading : isHymnsLoading}
+            isLoading={isLoading}
             fontScale={fontScale}
-            onVersePress={mode === 'bible' ? openCrossReferences : undefined}
-            onVerseLongPress={mode === 'bible' ? handleVerseLongPress : undefined}
-            onHymnLongPress={mode === 'hymnal' ? handleHymnLongPress : undefined}
-            selectedVerseNumber={mode === 'bible' ? selectedVerseNumber : null}
+            onVersePress={handleVerseLongPress}
+            onVerseLongPress={handleVerseLongPress}
+            onHymnLongPress={handleHymnLongPress}
+            selectedVerseNumber={selectedVerseNumber}
+            flatListRef={flatListRef}
           />
         )}
       </View>

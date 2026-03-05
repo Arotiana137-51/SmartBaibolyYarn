@@ -1,20 +1,26 @@
 import React, {useMemo, useState} from 'react';
 import {View, Text, StyleSheet, TextInput, FlatList, Pressable} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useBibleData} from '../hooks/useBibleData';
 import {t} from '../i18n/strings';
 
 type BibleStackParamList = {
   BibleBooks: undefined;
-  BibleChapters: {bookId: number; bookName: string; chapters: number};
-  BibleReader: {bookId: number; bookName: string; chapter: number};
+  BibleChapters: {bookId: number; bookName: string; chapters: number; verse?: number};
+  BibleReader: {bookId: number; bookName: string; chapter: number; verse?: number};
 };
 
 type NavigationProp = NativeStackNavigationProp<BibleStackParamList, 'BibleBooks'>;
 
+type RouteParams = {
+  verse?: number;
+};
+
 const BibleBooksScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute();
+  const {verse} = route.params as RouteParams;
   const {books, isLoading} = useBibleData();
   const [query, setQuery] = useState('');
 
@@ -38,6 +44,7 @@ const BibleBooksScreen = () => {
           bookId: book.id,
           bookName: book.name,
           chapters: book.chapters,
+          verse,
         })
       }>
       <Text style={styles.bookName}>{book.name}</Text>

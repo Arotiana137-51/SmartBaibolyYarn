@@ -4,6 +4,7 @@ import { AppMode } from '../screens/MainScreen';
 import { BibleVerse } from '../hooks/useBibleData';
 import { HymnVerse } from '../hooks/useHymnsData';
 import {useTheme} from '../contexts/ThemeContext';
+import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 
 interface ReaderViewProps {
   appMode: AppMode;
@@ -15,6 +16,7 @@ interface ReaderViewProps {
   onVerseLongPress?: (verse: BibleVerse) => void;
   onHymnLongPress?: () => void;
   selectedVerseNumber?: number | null;
+  flatListRef?: React.RefObject<FlatList<any> | null>;
 }
 
 const formatBibleText = (text: string) => {
@@ -76,6 +78,7 @@ const ReaderView: React.FC<ReaderViewProps> = ({
   onVerseLongPress,
   onHymnLongPress,
   selectedVerseNumber,
+  flatListRef,
 }) => {
   const {theme} = useTheme();
   if (isLoading) {
@@ -87,10 +90,18 @@ const ReaderView: React.FC<ReaderViewProps> = ({
   }
 
   if (appMode === 'bible') {
+    const getItemLayout = (data: any, index: number) => ({
+      length: 80, // Approximate height of each verse item
+      offset: 80 * index,
+      index,
+    });
+
     return (
       <FlatList
+        ref={flatListRef}
         data={verses}
         keyExtractor={(item) => item.id.toString()}
+        getItemLayout={getItemLayout}
         renderItem={({ item }) => {
           const formatted = formatBibleText(item.text);
           const lines = formatted.length > 0 ? formatted.split('\n') : [];
@@ -117,10 +128,11 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                 <Text
                   key={`bible-intro-${item.id}-${idx}`}
                   style={[
-                    styles.verseText,
+                    TEXT_STYLES.body,
                     {
-                      fontSize: styles.verseText.fontSize * fontScale,
-                      lineHeight: styles.verseText.lineHeight * fontScale,
+                      fontSize: scaleFontSize(TEXT_STYLES.body.fontSize, fontScale),
+                      lineHeight: scaleFontSize(TEXT_STYLES.body.lineHeight, fontScale),
+                      color: theme.colors.textSecondary,
                     },
                   ]}>
                   {renderBibleLine(line)}
@@ -130,19 +142,19 @@ const ReaderView: React.FC<ReaderViewProps> = ({
               {restLines.length > 0 ? (
                 <Text
                   style={[
-                    styles.verseText,
+                    TEXT_STYLES.body,
                     {
-                      fontSize: styles.verseText.fontSize * fontScale,
-                      lineHeight: styles.verseText.lineHeight * fontScale,
+                      fontSize: scaleFontSize(TEXT_STYLES.body.fontSize, fontScale),
+                      lineHeight: scaleFontSize(TEXT_STYLES.body.lineHeight, fontScale),
                       color: theme.colors.textPrimary,
                     },
                   ]}>
                   <Text
                     style={[
-                      styles.verseNumber,
+                      TEXT_STYLES.verseNumber,
                       {
-                        fontSize: styles.verseNumber.fontSize * fontScale,
-                        lineHeight: styles.verseNumber.lineHeight * fontScale,
+                        fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize, fontScale),
+                        lineHeight: scaleFontSize(TEXT_STYLES.verseNumber.lineHeight, fontScale),
                         transform: [
                           {
                             translateY:
@@ -150,7 +162,6 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                               fontScale,
                           },
                         ],
-                        color: theme.colors.verseNumber,
                       },
                     ]}>
                     {item.verse_number}{' '}
@@ -163,10 +174,10 @@ const ReaderView: React.FC<ReaderViewProps> = ({
                 <Text
                   key={`bible-rest-${item.id}-${idx}`}
                   style={[
-                    styles.verseText,
+                    TEXT_STYLES.body,
                     {
-                      fontSize: styles.verseText.fontSize * fontScale,
-                      lineHeight: styles.verseText.lineHeight * fontScale,
+                      fontSize: scaleFontSize(TEXT_STYLES.body.fontSize, fontScale),
+                      lineHeight: scaleFontSize(TEXT_STYLES.body.lineHeight, fontScale),
                       color: theme.colors.textPrimary,
                     },
                   ]}>
@@ -244,7 +255,8 @@ const ReaderView: React.FC<ReaderViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   centered: {
     flex: 1,
@@ -257,29 +269,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
-  verseText: {
-    fontSize: 18,
-    lineHeight: 28,
-    marginBottom: 10,
-  },
   verseNumber: {
-    fontWeight: 'bold',
-    color: '#005a9e', // Blue color for verse numbers
-    fontSize: 12,
-    lineHeight: 18,
-    transform: [{translateY: -4}],
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    color: '#3A86FF',
+    transform: [{translateY: -3}],
   },
   bracketText: {
     fontStyle: 'italic',
     color: '#3a3a3a',
   },
   bibleVerseBlock: {
-    marginBottom: 10,
+    marginBottom: 14,
   },
   selectedVerseBlock: {
     backgroundColor: 'rgba(10, 132, 255, 0.16)',
     borderRadius: 12,
-    padding: 10,
+    padding: 12,
   },
   hymnStanza: {
     flexDirection: 'row',

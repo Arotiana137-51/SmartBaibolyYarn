@@ -9,8 +9,8 @@ import {t} from '../i18n/strings';
 
 type BibleStackParamList = {
   BibleBooks: undefined;
-  BibleChapters: {bookId: number; bookName: string; chapters: number};
-  BibleReader: {bookId: number; bookName: string; chapter: number};
+  BibleChapters: {bookId: number; bookName: string; chapters: number; verse?: number};
+  BibleReader: {bookId: number; bookName: string; chapter: number; verse?: number};
 };
 
 type RootTabParamList = {
