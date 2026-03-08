@@ -18,7 +18,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
       <Pressable 
         style={[
           styles.tab,
-          activeMode === 'bible' && {backgroundColor: theme.colors.backgroundTertiary},
+          activeMode === 'bible' && {backgroundColor: theme.colors.readerBackground},
         ]}
         onPress={() => onTabPress('bible')}>
         <Text
@@ -33,7 +33,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
       <Pressable 
         style={[
           styles.tab,
-          activeMode === 'hymnal' && {backgroundColor: theme.colors.backgroundTertiary},
+          activeMode === 'hymnal' && {backgroundColor: theme.colors.readerBackground},
         ]}
         onPress={() => onTabPress('hymnal')}>
         <Text

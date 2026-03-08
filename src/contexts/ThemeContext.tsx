@@ -6,6 +6,8 @@ interface ThemeColors {
   backgroundPrimary: string;
   backgroundSecondary: string;
   backgroundTertiary: string;
+  readerBackground: string;
+  readerText: string;
   textPrimary: string;
   textSecondary: string;
   textWatermark: string;
@@ -36,6 +38,8 @@ const darkColors: ThemeColors = {
   backgroundPrimary: '#000000',
   backgroundSecondary: '#1C1C1E',
   backgroundTertiary: '#2C2C2E',
+  readerBackground: '#0B0B0C',
+  readerText: '#B3B3B3',
   textPrimary: '#F2F2F7',
   textSecondary: '#8E8E93',
   textWatermark: '#7A7A80',
@@ -51,6 +55,8 @@ const lightColors: ThemeColors = {
   backgroundPrimary: '#ffffff',
   backgroundSecondary: '#f0f0f0',
   backgroundTertiary: '#ffffff',
+  readerBackground: '#FDFBF7',
+  readerText: '#111111',
   textPrimary: '#111111',
   textSecondary: '#666666',
   textWatermark: '#8C8C90',

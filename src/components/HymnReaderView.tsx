@@ -81,7 +81,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
                         fontScale *
                         HYMN_LINE_HEIGHT_MULTIPLIER
                     ),
-                    color: theme.colors.textPrimary,
+                    color: theme.colors.readerText,
                   },
                 ]}>
                 {line.text}
@@ -90,7 +90,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
           </View>
         </Pressable>
       )}
-      style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}
+      style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />
   );
 };

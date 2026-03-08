@@ -3,11 +3,106 @@ import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platfor
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
-import { renderBibleLine, processNTags, processBibleTextWithMetadata } from '../utils/bibleTextUtils';
+import { renderBibleLine, processBibleTextWithMetadata } from '../utils/bibleTextUtils';
 
 // Bible-specific spacing configuration
-const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.6;
-const BIBLE_VERSE_BLOCK_MARGIN = 18;
+const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
+const BIBLE_VERSE_BLOCK_MARGIN = 7;
+
+const VerseItem = React.memo(
+  ({
+    item,
+    theme,
+    fontScale,
+    selectedVerseNumber,
+    onVersePress,
+    onVerseLongPress,
+  }: {
+    item: BibleVerse;
+    theme: any;
+    fontScale: number;
+    selectedVerseNumber?: number | null;
+    onVersePress?: (verse: BibleVerse) => void;
+    onVerseLongPress?: (verse: BibleVerse) => void;
+  }) => {
+    const { lines, italicLines } = processBibleTextWithMetadata(item.text);
+
+    const isSelected =
+      typeof selectedVerseNumber === 'number' && item.verse_number === selectedVerseNumber;
+
+    const verseFontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
+    const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER);
+
+    return (
+      <Pressable
+        style={[styles.bibleVerseBlock, isSelected && styles.selectedVerseBlock]}
+        onPress={() => onVersePress?.(item)}
+        onLongPress={() => onVerseLongPress?.(item)}
+        disabled={!onVersePress && !onVerseLongPress}
+      >
+        <Text
+          style={[
+            TEXT_STYLES.body,
+            {
+              fontSize: verseFontSize,
+              lineHeight: verseLineHeight,
+              textAlign: 'justify',
+              color: theme.colors.readerText,
+              ...(Platform.OS === 'android' ? { includeFontPadding: true } : null),
+            },
+          ]}
+        >
+          <Text
+            style={[
+              TEXT_STYLES.verseNumber,
+              {
+                fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize, fontScale),
+                lineHeight: verseLineHeight,
+                color: theme.colors.verseNumber,
+                transform: [
+                  {
+                    translateY: (styles.verseNumber.transform?.[0] as any)?.translateY * fontScale,
+                  },
+                ],
+              },
+            ]}
+          >
+            {item.verse_number}{' '}
+          </Text>
+
+          {lines.map((line, idx) => {
+            const isBlockItalic = italicLines.has(idx);
+            return (
+              <Text
+                key={`bible-line-${item.id}-${idx}`}
+                style={
+                  isBlockItalic
+                    ? {
+                        color: theme.colors.textWatermark,
+                        fontStyle: 'italic',
+                        lineHeight: verseLineHeight,
+                      }
+                    : { lineHeight: verseLineHeight }
+                }
+              >
+                {idx === 0 ? '' : '\n'}
+                {renderBibleLine(line, { lineHeight: verseLineHeight })}
+              </Text>
+            );
+          })}
+        </Text>
+      </Pressable>
+    );
+  },
+  (prev, next) =>
+    prev.item.id === next.item.id &&
+    prev.item.text === next.item.text &&
+    prev.item.verse_number === next.item.verse_number &&
+    prev.fontScale === next.fontScale &&
+    prev.selectedVerseNumber === next.selectedVerseNumber &&
+    prev.theme.colors.textPrimary === next.theme.colors.textPrimary &&
+    prev.theme.colors.textWatermark === next.theme.colors.textWatermark
+);
 
 interface BibleReaderViewProps {
   verses: BibleVerse[];
@@ -38,18 +133,11 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     );
   }
 
-  const getItemLayout = (data: any, index: number) => ({
-    length: 80, // Approximate height of each verse item
-    offset: 80 * index,
-    index,
-  });
-
   return (
     <FlatList
       ref={flatListRef}
       data={verses}
       keyExtractor={(item) => item.id.toString()}
-      getItemLayout={getItemLayout}
       onScrollToIndexFailed={(info) => {
         setTimeout(() => {
           flatListRef?.current?.scrollToIndex({
@@ -59,78 +147,22 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           });
         }, 220);
       }}
-      renderItem={({ item }) => {
-        // Process <n> tags first, then format the text with metadata
-        const processedText = processNTags(item.text);
-        const { lines, italicLines } = processBibleTextWithMetadata(processedText);
-
-        const isSelected =
-          typeof selectedVerseNumber === 'number' &&
-          item.verse_number === selectedVerseNumber;
-
-        const verseFontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
-        const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER);
-
-        return (
-          <Pressable
-            style={[styles.bibleVerseBlock, isSelected && styles.selectedVerseBlock]}
-            onPress={() => onVersePress?.(item)}
-            onLongPress={() => onVerseLongPress?.(item)}
-            disabled={!onVersePress && !onVerseLongPress}
-          >
-            <Text
-              style={[
-                TEXT_STYLES.body,
-                {
-                  fontSize: verseFontSize,
-                  lineHeight: verseLineHeight,
-                  textAlign: 'justify',
-                  color: theme.colors.textPrimary,
-                  ...(Platform.OS === 'android'
-                    ? { includeFontPadding: true }
-                    : null),
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  TEXT_STYLES.verseNumber,
-                  {
-                    fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize, fontScale),
-                    lineHeight: verseLineHeight,
-                    transform: [
-                      {
-                        translateY:
-                          (styles.verseNumber.transform?.[0] as any)?.translateY * fontScale,
-                      },
-                    ],
-                  },
-                ]}
-              >
-                {item.verse_number}{' '}
-              </Text>
-
-              {lines.map((line, idx) => {
-                const isBlockItalic = italicLines.has(idx);
-                return (
-                  <Text
-                    key={`bible-line-${item.id}-${idx}`}
-                    style={
-                      isBlockItalic
-                        ? { color: theme.colors.textWatermark, fontStyle: 'italic', lineHeight: verseLineHeight }
-                        : { lineHeight: verseLineHeight }
-                    }
-                  >
-                    {idx === 0 ? '' : '\n'}
-                    {renderBibleLine(line, { lineHeight: verseLineHeight })}
-                  </Text>
-                );
-              })}
-            </Text>
-          </Pressable>
-        );
-      }}
-      style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}
+      renderItem={({ item }) => (
+        <VerseItem
+          item={item}
+          theme={theme}
+          fontScale={fontScale}
+          selectedVerseNumber={selectedVerseNumber}
+          onVersePress={onVersePress}
+          onVerseLongPress={onVerseLongPress}
+        />
+      )}
+      initialNumToRender={18}
+      maxToRenderPerBatch={12}
+      updateCellsBatchingPeriod={40}
+      windowSize={10}
+      removeClippedSubviews={Platform.OS === 'android'}
+      style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />
   );
 };

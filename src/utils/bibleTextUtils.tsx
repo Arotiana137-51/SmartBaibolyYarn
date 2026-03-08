@@ -35,7 +35,8 @@ const normalizeTextPreservingMarkers = (input: string) => {
   // 4b. Ensure exactly one space AFTER punctuation when followed by a letter/number.
   // Example: "teny,izany" -> "teny, izany"
   // (We run this before quote/paren normalization, then collapse spaces later.)
-  s = s.replace(/([,.;:!?])(?=(\p{L}|\p{N}))/gu, '$1 ');
+  // NOTE: Avoid \p{..} for compatibility with Hermes/older JS runtimes.
+  s = s.replace(/([,.;:!?])(?=[A-Za-z0-9À-ÿ])/g, '$1 ');
 
   // 5. Normalize quotes and apostrophes spacing
   // Remove space before closing quotes/apostrophes
@@ -45,7 +46,7 @@ const normalizeTextPreservingMarkers = (input: string) => {
 
   // 5b. Remove spaces around apostrophes inside words.
   // Example: "an ' i" -> "an'i" (common in Malagasy)
-  s = s.replace(/(\p{L})\s*'\s*(\p{L})/gu, "$1'$2");
+  s = s.replace(/([A-Za-zÀ-ÿ])\s*'\s*([A-Za-zÀ-ÿ])/g, "$1'$2");
 
   // 6. Normalize parentheses and brackets spacing
   s = s.replace(/\s*\(\s*/g, ' (');
@@ -55,7 +56,7 @@ const normalizeTextPreservingMarkers = (input: string) => {
 
   // 6b. Remove spaces around hyphens inside words.
   // Example: "roa - polo" -> "roa-polo"
-  s = s.replace(/(\p{L})\s*-\s*(\p{L})/gu, '$1-$2');
+  s = s.replace(/([A-Za-zÀ-ÿ])\s*-\s*([A-Za-zÀ-ÿ])/g, '$1-$2');
 
   // 7. Clean up any double spaces that might have been created
   s = s.replace(/[ ]{2,}/g, ' ');
