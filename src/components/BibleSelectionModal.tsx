@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useBibleData } from '../hooks/useBibleData';
 import {useTheme} from '../contexts/ThemeContext';
+import {getBibleBookShortName} from '../utils/bibleBookNames';
 
 type SelectionStep = 'book' | 'chapter' | 'verse';
 
@@ -30,12 +31,19 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   const [searchQuery, setSearchQuery] = useState('');
   const [verseCount, setVerseCount] = useState(0);
 
+  const selectedBookShortName = useMemo(() => {
+    return selectedBook ? getBibleBookShortName(selectedBook.name, selectedBook.id) : '';
+  }, [selectedBook]);
+
   // Memoize filtered books
   const filteredBooks = useMemo(() => {
     if (!searchQuery.trim()) return books;
-    return books.filter(book => 
-      book.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const q = searchQuery.toLowerCase();
+    return books.filter(book => {
+      const longName = book.name.toLowerCase();
+      const shortName = getBibleBookShortName(book.name, book.id).toLowerCase();
+      return longName.includes(q) || shortName.includes(q);
+    });
   }, [books, searchQuery]);
 
   // Separate old and new testament books
@@ -119,13 +127,13 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
       case 'book':
         return 'Sélectionner un Livre';
       case 'chapter':
-        return `Sélectionner un Chapitre${selectedBook ? ` - ${selectedBook.name}` : ''}`;
+        return `Sélectionner un Chapitre${selectedBook ? ` - ${selectedBookShortName}` : ''}`;
       case 'verse':
-        return `Sélectionner un Verset${selectedBook && selectedChapter !== null ? ` - ${selectedBook.name} ${selectedChapter}` : ''}`;
+        return `Sélectionner un Verset${selectedBook && selectedChapter !== null ? ` - ${selectedBookShortName} ${selectedChapter}` : ''}`;
       default:
         return 'Sélectionner un Livre';
     }
-  }, [currentStep, selectedBook, selectedChapter]);
+  }, [currentStep, selectedBook, selectedBookShortName, selectedChapter]);
 
   const sections = [
     { title: 'Testamenta Taloha', data: oldTestament },
@@ -183,7 +191,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
               style={styles.bookRow}
               onPress={() => handleBookPress(item.id, item.name, item.chapters)}
             >
-              <Text style={[styles.bookName, {color: theme.colors.textPrimary}]}> {item.name} </Text>
+              <Text style={[styles.bookName, {color: theme.colors.textPrimary}]}> {getBibleBookShortName(item.name, item.id)} </Text>
             </Pressable>
           )}
           ItemSeparatorComponent={() => <View style={[styles.separator, {backgroundColor: theme.colors.divider}]} />}

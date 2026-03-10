@@ -1,7 +1,8 @@
 import React, {useEffect, useState, useRef} from 'react';
-import {Modal, Pressable, StyleSheet, Text, View, Dimensions, FlatList, Platform} from 'react-native';
+import {Modal, Pressable, StyleSheet, Text, View, Dimensions, FlatList, Platform, AppState} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
 import BibleReaderView from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
@@ -10,6 +11,7 @@ import HymnSelectionModal from '../components/HymnSelectionModal';
 import BibleSelectionModal from '../components/BibleSelectionModal';
 import VerseActionPopover from '../components/VerseActionPopover';
 import HymnActionPopover from '../components/HymnActionPopover';
+import ReportIssueModal from '../components/ReportIssueModal';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
 import { useHymnsData, Hymn } from '../hooks/useHymnsData';
 import { useFavorites } from '../hooks/useFavorites';
@@ -22,6 +24,12 @@ import HamburgerMenuPopover, {
 import {useTheme} from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
+import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
+import {
+  enqueueIssueReport,
+  flushIssueReports,
+  IssueReport,
+} from '../services/reporting/issueReportQueue';
 
 const TOP_BAR_TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
@@ -40,6 +48,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const flatListRef = useRef<FlatList>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
+
+  const appState = useRef(AppState.currentState);
 
   // Calculate adaptive safe area padding (1.5% of screen height, but only if inset is significant)
   const maxPadding = screenHeight * 0.015;
@@ -131,6 +141,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
+
+  const [selectedHymnStanzaNumber, setSelectedHymnStanzaNumber] = useState<number | null>(null);
+  const [selectedHymnStanzaText, setSelectedHymnStanzaText] = useState<string | null>(null);
+
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportReference, setReportReference] = useState('');
+  const [reportText, setReportText] = useState('');
+  const [reportType, setReportType] = useState<'bible' | 'hymn'>('bible');
 
   // Hymn selection modal state
   const [hymnSelectionVisible, setHymnSelectionVisible] = useState(false);
@@ -270,7 +288,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   };
 
-  const handleHymnLongPress = () => {
+  const handleHymnStanzaLongPress = (stanzaNumber: number, stanzaText: string) => {
+    setSelectedHymnStanzaNumber(stanzaNumber);
+    setSelectedHymnStanzaText(stanzaText);
     setHymnActionVisible(true);
   };
 
@@ -293,6 +313,63 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const closeHymnAction = () => {
     setHymnActionVisible(false);
   };
+
+  const closeReportModal = () => {
+    setReportModalVisible(false);
+  };
+
+  const openBibleReportModal = (verse: BibleVerse) => {
+    const ref = `${currentBook?.name ?? ''} ${verse.chapter}:${verse.verse_number}`.trim();
+    setReportType('bible');
+    setReportReference(ref);
+    setReportText(verse.text);
+    setReportModalVisible(true);
+  };
+
+  const openHymnReportModal = (payload: { stanzaNumber: number; stanzaText: string }) => {
+    const hymn = getCurrentHymn();
+    const titleRef = `Fihirana ${hymn?.number ?? ''}${hymn?.category ? ` (${hymn.category.toUpperCase()})` : ''}`.trim();
+    const ref = `${titleRef} - Couplet ${payload.stanzaNumber}`.trim();
+
+    setReportType('hymn');
+    setReportReference(ref);
+    setReportText(payload.stanzaText);
+    setReportModalVisible(true);
+  };
+
+  const maybeFlushReports = async () => {
+    if (!ISSUE_REPORT_ENDPOINT_URL || ISSUE_REPORT_ENDPOINT_URL.includes('PUT_YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
+      return;
+    }
+
+    try {
+      await flushIssueReports(ISSUE_REPORT_ENDPOINT_URL);
+    } catch (e) {
+      // Keep queue for later retry
+      console.log('flushIssueReports failed:', e);
+    }
+  };
+
+  useEffect(() => {
+    const unsub = NetInfo.addEventListener((state: NetInfoState) => {
+      if (state.isConnected) {
+        maybeFlushReports();
+      }
+    });
+
+    const appStateSub = AppState.addEventListener('change', nextAppState => {
+      const prev = appState.current;
+      appState.current = nextAppState;
+      if (prev.match(/inactive|background/) && nextAppState === 'active') {
+        maybeFlushReports();
+      }
+    });
+
+    return () => {
+      unsub();
+      appStateSub.remove();
+    };
+  }, []);
 
   const handleVerseLongPress = (verse: BibleVerse) => {
     setSelectedVerseForAction(verse);
@@ -399,18 +476,40 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onVerseLongPress={handleVerseLongPress}
               selectedVerseNumber={selectedVerseNumber}
               flatListRef={flatListRef}
+              headerText={currentChapter === 1 ? currentBook?.name ?? null : null}
             />
           ) : (
             <HymnReaderView
               hymnVerses={hymnVerses}
               isLoading={isHymnsLoading}
               fontScale={fontScale}
-              onHymnLongPress={handleHymnLongPress}
+              onHymnLongPress={handleHymnStanzaLongPress}
             />
           )
         )}
       </View>
       <CustomBottomNav activeMode={mode} onTabPress={setMode} />
+
+      <ReportIssueModal
+        visible={reportModalVisible}
+        reference={reportReference}
+        text={reportText}
+        onClose={closeReportModal}
+        onSubmit={async (comment) => {
+          const report: IssueReport = {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            createdAt: new Date().toISOString(),
+            type: reportType,
+            reference: reportReference,
+            text: reportText,
+            comment,
+          };
+
+          closeReportModal();
+          await enqueueIssueReport(report);
+          await maybeFlushReports();
+        }}
+      />
 
       <Modal
         visible={crossRefModalVisible}
@@ -426,20 +525,20 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             ]}
             onPress={() => {}}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, {color: theme.colors.textPrimary}]}> 
                 {selectedVerse
                   ? `${currentBook?.name ?? ''} ${selectedVerse.chapter}:${selectedVerse.verse_number}`
                   : 'Cross references'}
               </Text>
               <Pressable onPress={closeCrossReferences}>
-                <Text style={styles.modalClose}>HIDY</Text>
+                <Text style={[styles.modalClose, {color: theme.colors.accentBlue}]}>HIDY</Text>
               </Pressable>
             </View>
 
             {isCrossRefsLoading ? (
-              <Text style={styles.modalHint}>Mitady...</Text>
+              <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Mitady...</Text>
             ) : crossRefs.length === 0 ? (
-              <Text style={styles.modalHint}>Tsy misy cross-reference.</Text>
+              <Text style={[styles.modalHint, {color: theme.colors.readerText}]}>Tsy misy cross-reference.</Text>
             ) : (
               <View>
                 {crossRefs.slice(0, 200).map(ref => {
@@ -450,13 +549,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                   return (
                     <Pressable
                       key={ref.id}
-                      style={styles.crossRefRow}
+                      style={[styles.crossRefRow, {borderTopColor: theme.colors.divider}]}
                       onPress={() => handleCrossRefPress(ref)}
                     >
-                      <Text style={styles.crossRefText}>
+                      <Text style={[styles.crossRefText, {color: theme.colors.readerText}]}> 
                         {ref.to_book_name} {ref.to_chapter}:{rangeText}
                       </Text>
-                      <Text style={styles.crossRefVotes}>{ref.votes}</Text>
+                      <Text style={[styles.crossRefVotes, {color: theme.colors.textSecondary}]}>{ref.votes}</Text>
                     </Pressable>
                   );
                 })}
@@ -507,13 +606,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onClose={closeVerseAction}
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}
+        onReportIssue={openBibleReportModal}
       />
 
       <HymnActionPopover
         visible={hymnActionVisible}
         hymn={getCurrentHymn()}
+        stanzaNumber={selectedHymnStanzaNumber}
+        stanzaText={selectedHymnStanzaText}
         onClose={closeHymnAction}
         onAddToFavorites={handleAddHymnToFavorites}
+        onReportIssue={openHymnReportModal}
       />
     </SafeAreaView>
   );

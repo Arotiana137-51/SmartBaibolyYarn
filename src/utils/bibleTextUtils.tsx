@@ -91,25 +91,37 @@ const normalizeTextPreservingMarkers = (input: string) => {
  * Processes Bible text and returns formatted lines with metadata about which lines should be italic
  * This is the main function that should be used for Bible text processing
  */
-export const processBibleTextWithMetadata = (text: string): { lines: string[], italicLines: Set<number> } => {
+const processBibleTextWithMetadataInternal = (
+  text: string,
+  options: { bracketMode: 'strict_n' | 'all' }
+): { lines: string[]; italicLines: Set<number> } => {
   if (typeof text !== 'string') {
     return { lines: [], italicLines: new Set() };
   }
 
-  // 1) Convert <n>...</n> to inline-italic markers (no brackets involved).
-  const withInlineItalics = text.replace(
+  // 1) Convert the specific marker <n>[ ... ]</n> into its own line, mark as block-italic,
+  //    and remove the brackets.
+  const withBlockItalic = text.replace(
+    /<\s*n\s*>\s*\[(.*?)\]\s*<\s*\/\s*n\s*>/gis,
+    (match, content) => `\n${BLOCK_ITALIC_PREFIX}${String(content).trim()}\n`
+  );
+
+  // 2) Convert other <n>...</n> to inline-italic markers.
+  const withInlineItalics = withBlockItalic.replace(
     /<\s*n\s*>(.*?)<\s*\/\s*n\s*>/gis,
     `${INLINE_ITALIC_START}$1${INLINE_ITALIC_END}`
   );
 
-  // 2) Convert [bracketed] to its own line, mark as block-italic, and remove brackets.
-  const withBlockItalic = withInlineItalics.replace(
-    /\[([^\]]+)\]/g,
-    (match, content) => `\n${BLOCK_ITALIC_PREFIX}${String(content).trim()}\n`
-  );
+  const withOptionalBracketBlocks =
+    options.bracketMode === 'all'
+      ? withInlineItalics.replace(
+          /\[([^\]]+)\]/g,
+          (match, content) => `\n${BLOCK_ITALIC_PREFIX}${String(content).trim()}\n`
+        )
+      : withInlineItalics;
 
   // 3) Convert other HTML tags to newlines.
-  const withLineBreaks = withBlockItalic
+  const withLineBreaks = withOptionalBracketBlocks
     .replace(/<\s*br\s*\/\s*>/gi, '\n')
     .replace(/<\s*br\s*>/gi, '\n')
     .replace(/<\s*\/\s*p\s*>/gi, '\n')
@@ -155,6 +167,14 @@ export const processBibleTextWithMetadata = (text: string): { lines: string[], i
   return { lines, italicLines };
 };
 
+export const processBibleTextWithMetadata = (text: string): { lines: string[]; italicLines: Set<number> } => {
+  return processBibleTextWithMetadataInternal(text, { bracketMode: 'strict_n' });
+};
+
+export const processBibleTextWithMetadataForReader = (text: string): { lines: string[]; italicLines: Set<number> } => {
+  return processBibleTextWithMetadataInternal(text, { bracketMode: 'all' });
+};
+
 /**
  * Formats Bible text by handling HTML tags appropriately
  * - <n></n> tags are removed (content will be italicized in render functions)
@@ -168,16 +188,19 @@ export const formatBibleText = (text: string): string => {
     return '';
   }
 
-  // Remove <n> and </n> tags completely (their content will be italicized during rendering)
-  const withoutNTags = text
+  // Convert the specific marker <n>[ ... ]</n> to be on separate lines WITHOUT brackets
+  const withBracketedLines = text.replace(
+    /<\s*n\s*>\s*\[(.*?)\]\s*<\s*\/\s*n\s*>/gis,
+    (match, content) => `\n${String(content).trim()}\n`
+  );
+
+  // Remove remaining <n> and </n> tags completely (their content will be italicized during rendering)
+  const withoutNTags = withBracketedLines
     .replace(/<\s*n\s*>/gi, '')
     .replace(/<\s*\/\s*n\s*>/gi, '');
 
-  // Convert bracketed content to be on separate lines WITHOUT brackets
-  const withBracketedLines = withoutNTags.replace(/\[([^\]]+)\]/g, '\n$1\n');
-
   // Convert other HTML tags to newlines
-  const withLineBreaks = withBracketedLines
+  const withLineBreaks = withoutNTags
     .replace(/<\s*br\s*\/\s*>/gi, '\n')
     .replace(/<\s*br\s*>/gi, '\n')
     .replace(/<\s*\/\s*p\s*>/gi, '\n')
@@ -281,7 +304,8 @@ export const renderBibleLineWithHighlight = (line: string, searchQuery: string, 
 
   const lowerQuery = searchQuery.toLowerCase();
   const raw = line;
-  const chunks = raw.split(new RegExp(`(${searchQuery})`, 'gi'));
+  const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const chunks = raw.split(new RegExp(`(${escapedQuery})`, 'gi'));
   return chunks.map((chunk, idx) => {
     const isMatch = chunk.toLowerCase() === lowerQuery;
     return (
@@ -297,6 +321,57 @@ export const renderBibleLineWithHighlight = (line: string, searchQuery: string, 
       </Text>
     );
   });
+};
+
+/**
+ * Renders a short Bible preview snippet that respects:
+ * - <n>...</n> as inline italics
+ * - [bracketed] segments as watermark italic lines (no brackets)
+ * And applies search-term highlighting.
+ */
+export const renderBibleSnippetWithHighlight = (text: string, searchQuery: string, theme: any) => {
+  const { lines, italicLines } = processBibleTextWithMetadata(text);
+  if (lines.length === 0) {
+    return null;
+  }
+
+  // In preview we show only the first non-empty processed line.
+  const idx = 0;
+  const line = lines[idx];
+  const isWatermark = italicLines.has(idx);
+
+  const baseStyle = isWatermark
+    ? { color: theme.colors.textWatermark, fontStyle: 'italic' as const }
+    : { color: theme.colors.textSecondary ?? theme.colors.textPrimary };
+
+  if (!searchQuery) {
+    return <Text style={baseStyle}>{renderBibleLine(line, undefined)}</Text>;
+  }
+
+  // Highlight against the already-processed line; inline italics markers are preserved.
+  const lowerQuery = searchQuery.toLowerCase();
+  const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = line.split(new RegExp(`(${escapedQuery})`, 'gi'));
+
+  return (
+    <Text style={baseStyle}>
+      {parts.map((part, i) => {
+        const isMatch = part.toLowerCase() === lowerQuery;
+        return (
+          <Text
+            key={`snip-${i}`}
+            style={
+              isMatch
+                ? { color: theme.colors.accentBlue || '#4D96FF', fontWeight: '600' }
+                : undefined
+            }
+          >
+            {renderInlineItalicSegments(part, undefined)}
+          </Text>
+        );
+      })}
+    </Text>
+  );
 };
 
 /**

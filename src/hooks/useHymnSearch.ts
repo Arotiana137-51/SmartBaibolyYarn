@@ -26,23 +26,53 @@ export const useHymnSearch = () => {
     try {
       await hymnsDatabaseService.initDatabase();
       
-      // Use FTS to search across hymn verses
-      const searchQuery = `
+      const ftsSearchQuery = `
         SELECT DISTINCT
           h.id,
           h.number,
           h.category,
           h.title,
           h.authors,
-          hv.text as matched_verse,
-          hv.verse_number
-        FROM hymns h
-        JOIN hymn_verses hv ON h.id = hv.hymn_id
-        WHERE hv.text MATCH ?
-        ORDER BY h.number, hv.verse_number
+          v.text as matched_verse,
+          v.verse_number
+        FROM HymnVersesFts f
+        JOIN HymnVerses v ON v.rowid = f.rowid
+        JOIN Hymns h ON h.id = f.hymn_id
+        WHERE HymnVersesFts MATCH ?
+        ORDER BY h.number, v.verse_number
+        LIMIT 200
       `;
 
-      const results = await hymnsDatabaseService.executeQuery(searchQuery, [query]);
+      const likeSearchQuery = `
+        SELECT DISTINCT
+          h.id,
+          h.number,
+          h.category,
+          h.title,
+          h.authors,
+          v.text as matched_verse,
+          v.verse_number
+        FROM Hymns h
+        JOIN HymnVerses v ON h.id = v.hymn_id
+        WHERE lower(v.text) LIKE lower(?)
+           OR lower(h.title) LIKE lower(?)
+           OR lower(h.authors) LIKE lower(?)
+        ORDER BY h.number, v.verse_number
+        LIMIT 200
+      `;
+
+      let results: { rows: any[] };
+      try {
+        results = await hymnsDatabaseService.executeQuerySilent(ftsSearchQuery, [query]);
+      } catch (e: any) {
+        const message = typeof e?.message === 'string' ? e.message : '';
+        if (message.toLowerCase().includes('no such module: fts5')) {
+          const likeParam = `%${query}%`;
+          results = await hymnsDatabaseService.executeQuery(likeSearchQuery, [likeParam, likeParam, likeParam]);
+        } else {
+          throw e;
+        }
+      }
       const searchResults: HymnSearchResult[] = [];
 
       for (const row of results.rows as any[]) {

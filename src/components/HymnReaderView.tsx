@@ -11,7 +11,7 @@ interface HymnReaderViewProps {
   hymnVerses: HymnVerse[];
   isLoading: boolean;
   fontScale?: number;
-  onHymnLongPress?: () => void;
+  onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
 }
 
 const HymnReaderView: React.FC<HymnReaderViewProps> = ({
@@ -52,12 +52,15 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     <FlatList
       data={hymnStanzas}
       keyExtractor={(item) => item.verseNumber.toString()}
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.hymnStanza}
-          onLongPress={onHymnLongPress}
-          disabled={!onHymnLongPress}
-        >
+      renderItem={({ item }) => {
+        const stanzaText = item.lines.map(line => line.text).join('\n');
+
+        return (
+          <Pressable
+            style={styles.hymnStanza}
+            onLongPress={() => onHymnLongPress?.(item.verseNumber, stanzaText)}
+            disabled={!onHymnLongPress}
+          >
           <Text
             style={[
               styles.hymnNumber,
@@ -88,8 +91,9 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
               </Text>
             ))}
           </View>
-        </Pressable>
-      )}
+          </Pressable>
+        );
+      }}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />
   );

@@ -10,6 +10,7 @@ interface VerseActionPopoverProps {
   onClose: () => void;
   onViewCorrespondence: (verse: BibleVerse) => void;
   onAddToFavorites: (verse: BibleVerse) => void;
+  onReportIssue: (verse: BibleVerse) => void;
 }
 
 const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
@@ -19,6 +20,7 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
   onClose,
   onViewCorrespondence,
   onAddToFavorites,
+  onReportIssue,
 }) => {
   const { theme } = useTheme();
 
@@ -31,6 +33,11 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
 
   const handleAddToFavorites = () => {
     onAddToFavorites(verse);
+    onClose();
+  };
+
+  const handleReportIssue = () => {
+    onReportIssue(verse);
     onClose();
   };
 
@@ -63,11 +70,20 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
             </Pressable>
             
             <Pressable
-              style={styles.menuItem}
+              style={[styles.menuItem, { borderBottomColor: theme.colors.divider }]}
               onPress={handleAddToFavorites}
             >
               <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
                 Ajouter aux favoris
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.menuItem, { borderBottomWidth: 0 }]}
+              onPress={handleReportIssue}
+            >
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
+                Signaler
               </Text>
             </Pressable>
           </View>

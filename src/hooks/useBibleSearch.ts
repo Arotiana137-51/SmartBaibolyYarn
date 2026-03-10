@@ -5,6 +5,9 @@ export interface BibleSearchResult {
   bookId: number;
   bookName: string;
   verseCount: number;
+  matchedChapter?: number;
+  matchedVerseNumber?: number;
+  matchedText?: string;
 }
 
 export interface BibleVerseResult {
@@ -35,15 +38,37 @@ export const useBibleSearch = () => {
         SELECT 
           b.id as book_id,
           b.name as book_name,
-          COUNT(v.id) as verse_count
-        FROM books b
-        JOIN verses v ON b.id = v.book_id
+          COUNT(v.id) as verse_count,
+          (
+            SELECT v2.chapter
+            FROM verses v2
+            WHERE v2.book_id = b.id AND v2.text LIKE ?
+            ORDER BY v2.chapter, v2.verse_number
+            LIMIT 1
+          ) as matched_chapter,
+          (
+            SELECT v2.verse_number
+            FROM verses v2
+            WHERE v2.book_id = b.id AND v2.text LIKE ?
+            ORDER BY v2.chapter, v2.verse_number
+            LIMIT 1
+          ) as matched_verse_number,
+          (
+            SELECT v2.text
+            FROM verses v2
+            WHERE v2.book_id = b.id AND v2.text LIKE ?
+            ORDER BY v2.chapter, v2.verse_number
+            LIMIT 1
+          ) as matched_text
+        FROM Books b
+        JOIN Verses v ON b.id = v.book_id
         WHERE v.text LIKE ?
         GROUP BY b.id, b.name
         ORDER BY verse_count DESC, b.name ASC
       `;
 
-      const results = await bibleDatabaseService.executeQuery(searchQuery, [`%${query}%`]);
+      const likeParam = `%${query}%`;
+      const results = await bibleDatabaseService.executeQuery(searchQuery, [likeParam, likeParam, likeParam, likeParam]);
       const searchResults: BibleSearchResult[] = [];
 
       for (const row of results.rows as any[]) {
@@ -51,6 +76,9 @@ export const useBibleSearch = () => {
           bookId: row.book_id,
           bookName: row.book_name,
           verseCount: row.verse_count,
+          matchedChapter: row.matched_chapter,
+          matchedVerseNumber: row.matched_verse_number,
+          matchedText: row.matched_text,
         });
       }
 

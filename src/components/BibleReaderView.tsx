@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platfor
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
-import { renderBibleLine, processBibleTextWithMetadata } from '../utils/bibleTextUtils';
+import { renderBibleLine, processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
 
 // Bible-specific spacing configuration
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
@@ -25,7 +25,7 @@ const VerseItem = React.memo(
     onVersePress?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
   }) => {
-    const { lines, italicLines } = processBibleTextWithMetadata(item.text);
+    const { lines, italicLines } = processBibleTextWithMetadataForReader(item.text);
 
     const isSelected =
       typeof selectedVerseNumber === 'number' && item.verse_number === selectedVerseNumber;
@@ -112,6 +112,7 @@ interface BibleReaderViewProps {
   onVerseLongPress?: (verse: BibleVerse) => void;
   selectedVerseNumber?: number | null;
   flatListRef?: React.RefObject<FlatList<any> | null>;
+  headerText?: string | null;
 }
 
 const BibleReaderView: React.FC<BibleReaderViewProps> = ({
@@ -122,6 +123,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   onVerseLongPress,
   selectedVerseNumber,
   flatListRef,
+  headerText,
 }) => {
   const { theme } = useTheme();
 
@@ -138,6 +140,14 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       ref={flatListRef}
       data={verses}
       keyExtractor={(item) => item.id.toString()}
+      contentContainerStyle={styles.contentContainer}
+      ListHeaderComponent={
+        headerText ? (
+          <View style={styles.headerContainer}>
+            <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>{headerText}</Text>
+          </View>
+        ) : null
+      }
       onScrollToIndexFailed={(info) => {
         setTimeout(() => {
           flatListRef?.current?.scrollToIndex({
@@ -172,6 +182,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  contentContainer: {
+    paddingBottom: 28,
+  },
+  headerContainer: {
+    paddingBottom: 10,
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   centered: {
     flex: 1,

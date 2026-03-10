@@ -6,7 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBibleSearch, BibleVerseResult } from '../hooks/useBibleSearch';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { renderBibleLine, processBibleTextWithMetadata } from '../utils/bibleTextUtils';
+import { renderBibleLine, processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
 
 type VerseListScreenRouteProp = RouteProp<RootStackParamList, 'VerseList'>;
 type VerseListScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -49,7 +49,7 @@ const VerseListScreen = () => {
   };
 
 const renderVerse = ({ item }: { item: BibleVerseResult }) => {
-  const { lines, italicLines } = processBibleTextWithMetadata(item.text);
+  const { lines, italicLines } = processBibleTextWithMetadataForReader(item.text);
   
   return (
     <Pressable

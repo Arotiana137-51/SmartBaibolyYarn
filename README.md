@@ -1,103 +1,117 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# SmartBaibolyYarn
 
-# Getting Started
+SmartBaibolyYarn is a cross-platform **React Native** application for reading and searching:
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+- **Bible** (local SQLite database)
+- **Hymns** (local SQLite database)
 
-## Install dependencies
+Repository:
+
+- https://github.com/Arotiana137-51/SmartBaibolyYarn
+
+## Features
+
+- **Bible reader** (chapters/verses)
+- **Hymns reader**
+- **Search** for Bible and hymns
+- **Offline-first**: content is packaged as SQLite databases under `assets/data/`
+- **About screen** with developer/contact info
+
+## Requirements
+
+- Node.js `>= 20` (see `package.json`)
+- Yarn (recommended)
+- React Native environment:
+  - https://reactnative.dev/docs/set-up-your-environment
+
+## Install
 
 ```sh
 yarn
 ```
 
-## Step 1: Start Metro
+## Databases (Bible + Hymns)
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+This project includes prebuilt SQLite databases in:
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- `assets/data/BibleMG65.db`
+- `assets/data/Hymns.db`
+
+If you modify source data and need to rebuild databases:
+
+```sh
+yarn build:database
+```
+
+To ensure runtime data/assets are set up:
+
+```sh
+yarn setup:data
+```
+
+## Run
+
+Start Metro:
 
 ```sh
 yarn start
 ```
 
-If you run into bundling issues, you can reset the Metro cache:
-
-```sh
-yarn start --reset-cache
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-If you're using a physical Android device, verify it is connected:
-
-```sh
-adb devices
-```
+Android:
 
 ```sh
 yarn android
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+iOS:
 
 ```sh
 yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## Useful scripts
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+- `yarn test`
+- `yarn lint`
+- `yarn build:database`
+- `yarn setup:data`
 
-## Step 3: Modify your app
+## Notes / Troubleshooting
 
-Now that you have successfully run the app, let's make changes!
+### SQLite FTS5
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Some builds/environments may not support SQLite FTS5. The app is designed to fall back to non-FTS search when FTS is unavailable.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### Cross-platform paths
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+If you're working across Windows/macOS/Linux, see:
 
-## Congratulations! :tada:
+- `CROSS_PLATFORM_GUIDE.md`
 
-You've successfully run and modified your React Native App. :partying_face:
+## License
 
-### Now what?
+GPL-3.0-or-later. See `LICENSE`.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Copyright (C) 2026 Arotiana Randrianasolo
 
-# Troubleshooting
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-# Learn More
+## Contributing
 
-To learn more about React Native, take a look at the following resources:
+Contributions are welcome.
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+By submitting a contribution (pull request, patch, etc.), you agree that your work is licensed under **GPL-3.0-or-later**.
+
+Please:
+
+- Keep changes focused and small
+- Follow the existing code style (TypeScript/React Native)
+- Run `yarn test` and `yarn lint` before opening a PR

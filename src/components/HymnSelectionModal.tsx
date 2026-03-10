@@ -209,7 +209,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
               <View style={[styles.inputContainer, { width: keypadWidth }]}>
                 <View style={[styles.inputField, { marginRight: Math.max(8, Math.floor(keypadButtonSize * 0.12)) }]}>
                   <Text style={styles.inputText}>
-                    {inputNumber || (currentHymn ? currentHymn.number.toString() : '')}
+                    {inputNumber}
                   </Text>
                 </View>
                 <Pressable

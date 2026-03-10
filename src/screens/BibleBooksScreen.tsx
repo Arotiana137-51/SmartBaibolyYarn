@@ -4,6 +4,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useBibleData} from '../hooks/useBibleData';
 import {t} from '../i18n/strings';
+import {getBibleBookShortName} from '../utils/bibleBookNames';
 
 type BibleStackParamList = {
   BibleBooks: undefined;
@@ -29,7 +30,11 @@ const BibleBooksScreen = () => {
     if (!normalizedQuery) {
       return books;
     }
-    return books.filter(book => book.name.toLowerCase().includes(normalizedQuery));
+    return books.filter(book => {
+      const longName = book.name.toLowerCase();
+      const shortName = getBibleBookShortName(book.name, book.id).toLowerCase();
+      return longName.includes(normalizedQuery) || shortName.includes(normalizedQuery);
+    });
   }, [books, query]);
 
   const oldTestament = filteredBooks.filter(book => book.testament === 'old');
@@ -47,7 +52,7 @@ const BibleBooksScreen = () => {
           verse,
         })
       }>
-      <Text style={styles.bookName}>{book.name}</Text>
+      <Text style={styles.bookName}>{getBibleBookShortName(book.name, book.id)}</Text>
       <Text style={styles.bookChapters}>{book.chapters}</Text>
     </Pressable>
   );

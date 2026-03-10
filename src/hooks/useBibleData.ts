@@ -44,7 +44,10 @@ export const useBibleData = () => {
         'SELECT id, name, testament, chapters, filename FROM Books ORDER BY id'
       );
       
-      const booksList: BibleBook[] = rows;
+      const booksList: BibleBook[] = rows.map(b => ({
+        ...b,
+        testament: b.id <= 39 ? 'old' : 'new',
+      }));
       
       setBooks(booksList);
       return booksList;

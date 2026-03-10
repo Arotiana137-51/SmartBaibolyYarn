@@ -76,7 +76,9 @@ class DatabaseService {
       return;
     }
     if (this.db) {
-      console.log('Database already initialized');
+      if (__DEV__) {
+        console.log('Database already initialized');
+      }
       return;
     }
 
@@ -136,26 +138,43 @@ class DatabaseService {
   }
 
   // Execute a query with parameters
-  async executeQuery<T>(
+  private async executeQueryInternal<T>(
     query: string,
-    params: any[] = []
-  ): Promise<{rows: T[]; insertId?: number; rowsAffected: number}> {
+    params: any[] = [],
+    logError: boolean
+  ): Promise<{ rows: T[]; insertId?: number; rowsAffected: number }> {
     if (!this.db) {
       throw new Error('Database not initialized');
     }
 
     try {
       const result = this.db.execute(query, params) as QueryResult<T>;
-      
       return {
         rows: result.rows?._array || [],
         insertId: result.insertId,
         rowsAffected: result.rowsAffected || 0,
       };
     } catch (error) {
-      console.error('Database query error:', error, '\nQuery:', query);
+      if (logError) {
+        console.error('Database query error:', error, '\nQuery:', query);
+      }
       throw error;
     }
+  }
+
+  async executeQuery<T>(
+    query: string,
+    params: any[] = []
+  ): Promise<{ rows: T[]; insertId?: number; rowsAffected: number }> {
+    return this.executeQueryInternal<T>(query, params, true);
+  }
+
+  // Execute a query but do not log errors (useful when caller handles expected failures)
+  async executeQuerySilent<T>(
+    query: string,
+    params: any[] = []
+  ): Promise<{ rows: T[]; insertId?: number; rowsAffected: number }> {
+    return this.executeQueryInternal<T>(query, params, false);
   }
 
   // Execute a transaction

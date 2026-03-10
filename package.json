@@ -17,6 +17,7 @@
     },
     "dependencies": {
         "@react-native-async-storage/async-storage": "^1.17.11",
+        "@react-native-community/netinfo": "^12.0.1",
         "@react-native/new-app-screen": "0.83.1",
         "@react-navigation/bottom-tabs": "^7.3.3",
         "@react-navigation/native": "^7.1.27",
@@ -59,5 +60,5 @@
         "node": ">=20"
     },
     "main": "index.js",
-    "license": "MIT"
+    "license": "GPL-3.0-or-later"
 }

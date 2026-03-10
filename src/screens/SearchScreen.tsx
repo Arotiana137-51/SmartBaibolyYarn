@@ -8,6 +8,7 @@ import { useHymnSearch, HymnSearchResult } from '../hooks/useHymnSearch';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { scaleFontSize } from '../constants/Typography';
+import { renderBibleSnippetWithHighlight } from '../utils/bibleTextUtils';
 
 // SF Symbols-style magnifying glass component
 const MagnifyingGlass = ({ color, size = 16 }: { color: string; size?: number }) => (
@@ -85,14 +86,24 @@ const SearchScreen = () => {
         <Text style={[styles.resultCount, { color: theme.colors.textSecondary }]}>
           {item.verseCount} résultat{item.verseCount > 1 ? 's' : ''}
         </Text>
+        {!!item.matchedText && (
+          <Text style={[styles.resultSnippet, { color: theme.colors.textSecondary }]}>
+            {item.matchedChapter != null && item.matchedVerseNumber != null
+              ? `${item.matchedChapter}:${item.matchedVerseNumber} `
+              : ''}
+            {renderBibleSnippetWithHighlight(item.matchedText, searchQuery, theme)}
+          </Text>
+        )}
       </View>
     </Pressable>
   );
 
-  const highlightText = (text: string, query: string) => {
+  const highlightText = (text: string, query: string, baseColor: string) => {
     if (!query.trim()) return text;
 
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    const parts = text.split(regex);
     const lowerQuery = query.toLowerCase();
 
     return parts.map((part, index) => {
@@ -103,7 +114,7 @@ const SearchScreen = () => {
           style={
             isMatch
               ? { color: theme.colors.accentBlue, fontWeight: '600' }
-              : { color: theme.colors.textSecondary }
+              : { color: baseColor }
           }
         >
           {part}
@@ -113,7 +124,10 @@ const SearchScreen = () => {
   };
 
   const renderHymnResult = ({ item }: { item: HymnSearchResult }) => {
-    const highlightedSnippet = item.matchedVerse ? highlightText(item.matchedVerse, searchQuery) : null;
+    const highlightedTitle = item.title ? highlightText(item.title, searchQuery, theme.colors.textSecondary) : item.title;
+    const highlightedSnippet = item.matchedVerse
+      ? highlightText(item.matchedVerse, searchQuery, theme.colors.textSecondary)
+      : null;
     
     return (
       <Pressable
@@ -125,7 +139,7 @@ const SearchScreen = () => {
             {item.category ? `${item.category.toUpperCase()} ` : ''}Hymne {item.number}
           </Text>
           <Text style={[styles.resultSubtitle, { color: theme.colors.textSecondary }]}>
-            {item.title}
+            {highlightedTitle}
           </Text>
           {highlightedSnippet && (
             <Text style={[styles.resultSnippet, { color: theme.colors.textSecondary }]}>
@@ -188,7 +202,11 @@ const SearchScreen = () => {
       ) : searchResults.length > 0 ? (
         <FlatList
           data={searchResults}
-          keyExtractor={(item) => mode === 'bible' ? (item as BibleSearchResult).bookId.toString() : (item as HymnSearchResult).id}
+          keyExtractor={(item, index) =>
+            mode === 'bible'
+              ? `${(item as BibleSearchResult).bookId.toString()}:${index}`
+              : `${(item as HymnSearchResult).id}:${(item as HymnSearchResult).verseNumber ?? 'na'}:${index}`
+          }
           renderItem={renderResult}
           style={styles.resultsList}
         />
