@@ -12,7 +12,7 @@ const EXTRA_TOP_PADDING = 6;
 const HYMNAL_CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },
   { key: 'antema', label: 'Antema' },
-  { key: 'ff', label: 'F. Fanampiny' },
+  { key: 'ff', label: 'F.Fanampiny' },
 ];
 
 interface TopBarProps {

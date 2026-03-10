@@ -39,9 +39,12 @@ export class HymnNavigationService extends BaseNavigationService<HymnNavigationS
       return false;
     }
 
+    const currentNumber = this.state.currentHymnNumber;
+    const currentCategory = this.state.currentHymnCategory;
+
     const prevHymn = hymns.find(
-      h => h.category === this.state.currentHymnCategory && 
-           h.number === this.state.currentHymnNumber - 1
+      h => h.category === currentCategory && 
+           h.number === currentNumber - 1
     );
 
     if (prevHymn) {
@@ -58,9 +61,12 @@ export class HymnNavigationService extends BaseNavigationService<HymnNavigationS
       return false;
     }
 
+    const currentNumber = this.state.currentHymnNumber;
+    const currentCategory = this.state.currentHymnCategory;
+
     const nextHymn = hymns.find(
-      h => h.category === this.state.currentHymnCategory && 
-           h.number === this.state.currentHymnNumber + 1
+      h => h.category === currentCategory && 
+           h.number === currentNumber + 1
     );
 
     if (nextHymn) {
@@ -87,12 +93,14 @@ export class HymnNavigationService extends BaseNavigationService<HymnNavigationS
   // Get display title
   getDisplayTitle(): string {
     if (!this.state.currentHymnNumber) return '';
-    
-    const categoryText = this.state.currentHymnCategory 
-      ? ` (${this.state.currentHymnCategory.toUpperCase()})` 
-      : '';
-    
-    return `Fihirana ${this.state.currentHymnNumber}${categoryText}`;
+
+    const categoryPrefix = this.state.currentHymnCategory
+      ? this.state.currentHymnCategory === 'ff'
+        ? 'F.Fanampiny '
+        : `${this.state.currentHymnCategory.toUpperCase()} `
+      : 'Fihirana ';
+
+    return `${categoryPrefix}${this.state.currentHymnNumber}`;
   }
 
   // Check if navigation is possible

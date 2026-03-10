@@ -232,7 +232,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const title =
     mode === 'bible'
       ? `${currentBook?.name ?? ''} ${currentChapter}`.trim()
-      : `Fihirana ${currentHymnNumber ?? ''}${currentHymnCategory ? ` (${currentHymnCategory.toUpperCase()})` : ''}`.trim();
+      : `${
+          currentHymnCategory
+            ? currentHymnCategory === 'ff'
+              ? 'F.Fanampiny '
+              : `${currentHymnCategory.toUpperCase()} `
+            : 'Fihirana '
+        }${currentHymnNumber ?? ''}`.trim();
 
   const handlePreviousChapter = () => {
     if (mode === 'bible' && currentBook && currentChapter > 1) {

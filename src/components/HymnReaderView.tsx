@@ -4,8 +4,8 @@ import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme } from '../contexts/ThemeContext';
 
 // Hymn-specific spacing configuration
-const HYMN_LINE_HEIGHT_MULTIPLIER = 1.8; // More relaxed spacing for hymns
-const HYMN_STANZA_MARGIN = 22;
+const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
+const HYMN_STANZA_MARGIN = 20;
 
 interface HymnReaderViewProps {
   hymnVerses: HymnVerse[];
