@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ISSUE_REPORT_API_KEY } from '../../constants/reporting';
 
 export type IssueReportType = 'bible' | 'hymn';
 
@@ -51,34 +50,7 @@ export const flushIssueReports = async (endpointUrl: string) => {
     return { sent: 0 };
   }
 
-  const hasValidApiKey =
-    !!ISSUE_REPORT_API_KEY &&
-    !ISSUE_REPORT_API_KEY.includes('PUT_A_RANDOM_SECRET_KEY_HERE');
-
-  // Apps Script WebApp doPost(e) does not reliably expose custom request headers.
-  // So we send the API key in the JSON body (and also as a query param fallback).
-  const urlWithKey = (() => {
-    if (!hasValidApiKey) return endpointUrl;
-
-    // Some deployments can behave differently if we accidentally call `/exec/` instead of `/exec`.
-    // Normalize to avoid a trailing slash.
-    const normalizedEndpointUrl = endpointUrl.replace(/\/exec\/?$/, '/exec');
-
-    try {
-      const url = new URL(normalizedEndpointUrl);
-      if (url.searchParams.has('key')) {
-        return url.toString();
-      }
-
-      // Prefer manual append (stable, doesn't introduce `/exec/`)
-      const sep = normalizedEndpointUrl.includes('?') ? '&' : '?';
-      return `${normalizedEndpointUrl}${sep}key=${encodeURIComponent(ISSUE_REPORT_API_KEY)}`;
-    } catch {
-      // If URL parsing fails for any reason, fall back to original URL.
-      const sep = normalizedEndpointUrl.includes('?') ? '&' : '?';
-      return `${normalizedEndpointUrl}${sep}key=${encodeURIComponent(ISSUE_REPORT_API_KEY)}`;
-    }
-  })();
+  const targetUrl = endpointUrl;
 
   if (__DEV__) {
     console.log(
@@ -86,8 +58,7 @@ export const flushIssueReports = async (endpointUrl: string) => {
       JSON.stringify(
         {
           queueLength: queue.length,
-          urlWithKey,
-          hasValidApiKey,
+          targetUrl,
         },
         null,
         2
@@ -95,16 +66,12 @@ export const flushIssueReports = async (endpointUrl: string) => {
     );
   }
 
-  const res = await fetch(urlWithKey, {
+  const res = await fetch(targetUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(hasValidApiKey
-        ? { 'X-API-KEY': ISSUE_REPORT_API_KEY }
-        : null),
     },
     body: JSON.stringify({
-      ...(hasValidApiKey ? { apiKey: ISSUE_REPORT_API_KEY } : null),
       reports: queue,
     }),
   });

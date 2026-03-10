@@ -1,0 +1,10 @@
+{
+  "name": "smartbaiboly-issue-report-worker",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250301.0",
+    "wrangler": "^3.80.0",
+    "typescript": "^5.8.3"
+  }
+}

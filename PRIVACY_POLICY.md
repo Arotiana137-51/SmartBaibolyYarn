@@ -14,6 +14,12 @@ Si vous utilisez la fonctionnalité « Signaler », l’application peut transme
 - Le commentaire que vous saisissez
 - Un identifiant technique de signalement et la date/heure du signalement
 
+Ces signalements sont transmis de manière anonyme :
+- Nous ne vous demandons pas votre nom.
+- Nous ne vous demandons pas votre adresse e-mail.
+- Nous ne vous demandons pas de créer un compte.
+- Nous n’associons pas les signalements à une identité.
+
 Ces informations sont utilisées uniquement pour :
 - Diagnostiquer et corriger les erreurs de contenu
 - Améliorer la qualité des données (texte/affichage)
@@ -25,6 +31,8 @@ Nous ne collectons pas :
 - Vos photos
 - Votre microphone/caméra
 - Un identifiant publicitaire (IDFA/AAID) dans un but de suivi publicitaire
+- Votre nom, prénom, ou identité civile
+- Un compte utilisateur ou identifiant de connexion
 
 ## 3) Partage des données
 Les données de signalement peuvent être envoyées à un service tiers d’hébergement/traitement (par exemple une infrastructure Google Apps Script/Google Sheets si configurée par l’éditeur).
