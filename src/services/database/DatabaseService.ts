@@ -84,48 +84,62 @@ class DatabaseService {
 
     this.initPromise = (async () => {
       try {
-        console.log(`Starting database initialization: ${this.dbName}`);
-      
-      // Check if we need to copy pre-built database from assets
-      // IMPORTANT: The copied DB must be placed in the same directory used by react-native-quick-sqlite.
-      const dbDirectory = getDatabaseDirectory();
-      const dbPath = getDatabasePath(this.dbName);
-      const exists = await fileExistsSafe(dbPath);
-      
-      if (!exists) {
-        console.log('Database not found, copying from assets...');
-        const assetPath = this.assetPath;
-        
-        try {
-          await copyDatabaseFromAssets(assetPath, dbPath);
-          const stats = await FileSystem.stat(dbPath);
-          console.log('Database file size after copy (bytes):', stats.size);
-          console.log('Database copied successfully from assets');
-        } catch (error) {
-          console.error('Failed to copy database from assets:', error);
-          throw error;
+        if (__DEV__) {
+          console.log(`Starting database initialization: ${this.dbName}`);
         }
-      }
-      
-      // Open the database (either copied or existing)
-      this.db = open({
-        name: this.dbName,
-        location: 'default',
-      });
-      console.log('Database opened successfully');
+        
+        // Check if we need to copy pre-built database from assets
+        // IMPORTANT: The copied DB must be placed in the same directory used by react-native-quick-sqlite.
+        const dbDirectory = getDatabaseDirectory();
+        const dbPath = getDatabasePath(this.dbName);
+        const exists = await fileExistsSafe(dbPath);
+        
+        if (!exists) {
+          if (__DEV__) {
+            console.log('Database not found, copying from assets...');
+          }
+          const assetPath = this.assetPath;
+          
+          try {
+            await copyDatabaseFromAssets(assetPath, dbPath);
+            const stats = await FileSystem.stat(dbPath);
+            if (__DEV__) {
+              console.log('Database file size after copy (bytes):', stats.size);
+              console.log('Database copied successfully from assets');
+            }
+          } catch (error) {
+            console.error('Failed to copy database from assets:', error);
+            throw error;
+          }
+        }
+        
+        // Open the database (either copied or existing)
+        this.db = open({
+          name: this.dbName,
+          location: 'default',
+        });
+        if (__DEV__) {
+          console.log('Database opened successfully');
+        }
 
-      await this.executeQuery('PRAGMA foreign_keys = ON');
+        await this.executeQuery('PRAGMA foreign_keys = ON');
 
-      try {
-        const dbList = await this.executeQuery<{ seq: number; name: string; file: string }>(
-          'PRAGMA database_list'
-        );
-        console.log('PRAGMA database_list:', dbList.rows);
-      } catch (error) {
-        console.log('Failed to read PRAGMA database_list');
-      }
+        try {
+          const dbList = await this.executeQuery<{ seq: number; name: string; file: string }>(
+            'PRAGMA database_list'
+          );
+          if (__DEV__) {
+            console.log('PRAGMA database_list:', dbList.rows);
+          }
+        } catch (error) {
+          if (__DEV__) {
+            console.log('Failed to read PRAGMA database_list');
+          }
+        }
 
-      console.log(`Database initialization completed successfully: ${this.dbName}`);
+        if (__DEV__) {
+          console.log(`Database initialization completed successfully: ${this.dbName}`);
+        }
       } catch (error) {
         console.error('Error initializing database:', error);
         throw error;
@@ -212,6 +226,8 @@ class DatabaseService {
     if (this.db) {
       this.db.close();
       this.db = null;
+    }
+    if (__DEV__) {
       console.log('Database connection closed');
     }
   }

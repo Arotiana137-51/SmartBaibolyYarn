@@ -24,7 +24,9 @@ export const DatabaseProvider: React.FC<{children: React.ReactNode}> = ({
         hymnsDatabaseService.initDatabase(),
       ]);
       setIsInitialized(true);
-      console.log('Database initialized successfully');
+      if (__DEV__) {
+        console.log('Database initialized successfully');
+      }
     } catch (error) {
       console.error('Failed to initialize database:', error);
     }
