@@ -40,7 +40,7 @@ const VerseItem = React.memo(
       typeof selectedVerseNumber === 'number' && item.verse_number === selectedVerseNumber;
 
     const verseFontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
-    const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER);
+    const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER) + 3;
 
     return (
       <Pressable

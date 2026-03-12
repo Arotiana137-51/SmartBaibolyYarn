@@ -1,5 +1,16 @@
-import React, {useEffect, useState, useRef} from 'react';
-import {Modal, Pressable, StyleSheet, Text, View, Dimensions, FlatList, Platform, AppState} from 'react-native';
+import React, {useEffect, useMemo, useState, useRef} from 'react';
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  Dimensions,
+  FlatList,
+  Platform,
+  AppState,
+  PanResponder,
+} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
@@ -154,6 +165,66 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Hymn selection modal state
   const [hymnSelectionVisible, setHymnSelectionVisible] = useState(false);
 
+  const swipeResponder = useMemo(() => {
+    const SWIPE_MIN_DX = 60;
+    const SWIPE_ACTIVATION_DX = 18;
+    const SWIPE_MAX_DY = 80;
+
+    const isSwipeEligible = () => {
+      if (isMenuOpen) return false;
+      if (bibleSelectionVisible) return false;
+      if (verseActionVisible) return false;
+      if (hymnActionVisible) return false;
+      if (crossRefModalVisible) return false;
+      if (reportModalVisible) return false;
+      if (hymnSelectionVisible) return false;
+      return true;
+    };
+
+    return PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        if (!isSwipeEligible()) return false;
+
+        const dx = gestureState.dx;
+        const dy = gestureState.dy;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        if (absDy > SWIPE_MAX_DY) return false;
+
+        return absDx > SWIPE_ACTIVATION_DX && absDx > absDy * 1.35;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (!isSwipeEligible()) return;
+
+        const dx = gestureState.dx;
+        const absDy = Math.abs(gestureState.dy);
+        if (absDy > SWIPE_MAX_DY) return;
+
+        if (dx >= SWIPE_MIN_DX) {
+          if (mode !== 'hymnal') setMode('hymnal');
+          return;
+        }
+
+        if (dx <= -SWIPE_MIN_DX) {
+          if (mode !== 'bible') setMode('bible');
+        }
+      },
+      onPanResponderTerminate: () => {
+        return;
+      },
+    });
+  }, [
+    bibleSelectionVisible,
+    crossRefModalVisible,
+    hymnActionVisible,
+    hymnSelectionVisible,
+    isMenuOpen,
+    mode,
+    reportModalVisible,
+    verseActionVisible,
+  ]);
+
   useEffect(() => {
     if (currentBook || books.length === 0) {
       return;
@@ -235,7 +306,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     : `${currentChapter}`.trim();
 
   const bibleTitleLong = currentBook
-    ? `${currentBook.name}\nToko faha-${currentChapter}`.trim()
+    ? (currentBook.id === 19 || currentBook.name === 'Salamo'
+        ? `Salamo faha-${currentChapter}`
+        : `${currentBook.name}\nToko faha-${currentChapter}`
+      ).trim()
     : `${currentChapter}`.trim();
 
   const title =
@@ -468,7 +542,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onPreviousPress={handlePreviousChapter}
         onNextPress={handleNextChapter}
       />
-      <View style={styles.readerContainer}>
+      <View style={styles.readerContainer} {...swipeResponder.panHandlers}>
         {mode === 'bible' && bibleSelectionVisible ? (
           <BibleSelectionModal
             onClose={() => setBibleSelectionVisible(false)}
@@ -503,9 +577,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           )
         )}
 
-        {isDarkMode ? (
-          <View pointerEvents="none" style={styles.sepiaOverlay} />
-        ) : null}
       </View>
       <CustomBottomNav activeMode={mode} onTabPress={setMode} />
 
@@ -650,10 +721,6 @@ const styles = StyleSheet.create({
   readerContainer: {
     flex: 1,
     paddingBottom: 24,
-  },
-  sepiaOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 214, 160, 0.08)',
   },
   modalBackdrop: {
     flex: 1,

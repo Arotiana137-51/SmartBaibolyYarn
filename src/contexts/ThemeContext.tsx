@@ -157,6 +157,9 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
     <ThemeContext.Provider value={value}>
       <View style={styles.root}>
         {children}
+        {isDarkMode ? (
+          <View pointerEvents="none" style={styles.blueLightFilterOverlay} />
+        ) : null}
         <Animated.View
           pointerEvents="none"
           style={[
@@ -186,5 +189,9 @@ const styles = StyleSheet.create({
   },
   transitionOverlay: {
     ...StyleSheet.absoluteFillObject,
+  },
+  blueLightFilterOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 200, 120, 0.05)',
   },
 });
