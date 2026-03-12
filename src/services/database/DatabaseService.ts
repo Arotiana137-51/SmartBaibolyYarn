@@ -235,7 +235,7 @@ class DatabaseService {
 
 export const bibleDatabaseService = new DatabaseService({
   dbName: 'BibleMG65.db',
-  assetPath: 'data/BibleMG65.db',
+  assetPath: 'data/BibleMG65.zip',
 });
 
 export const hymnsDatabaseService = new DatabaseService({

@@ -27,7 +27,7 @@ export const basePaths = {
   
   // Database asset paths
   databaseAssets: {
-    bible: 'data/BibleMG65.db',
+    bible: 'data/BibleMG65.zip',
     hymns: 'data/Hymns.db',
   },
 };
@@ -133,6 +133,58 @@ export const copyDatabaseFromAssets = async (
 ): Promise<void> => {
   const dbDirectory = getDatabaseDirectory();
   await ensureDirectoryExists(dbDirectory);
+
+  if (assetPath.toLowerCase().endsWith('.zip')) {
+    const zipTargetPath = `${targetPath}.zip`;
+    if (isAndroid) {
+      await FileSystem.copyFileAssets(assetPath, zipTargetPath);
+    } else {
+      const assetData = await FileSystem.readFileAssets(assetPath, 'base64');
+      await FileSystem.writeFile(zipTargetPath, assetData, 'base64');
+    }
+
+    try {
+      const zipArchive: any = require('react-native-zip-archive');
+      await zipArchive.unzip(zipTargetPath, dbDirectory);
+
+      const expectedExists = await fileExistsSafe(targetPath);
+      if (!expectedExists) {
+        const expectedFileName = targetPath.split('/').pop();
+
+        if (expectedFileName) {
+          const entries = await FileSystem.readDir(dbDirectory);
+          const directMatch = entries.find(
+            e => e.isFile() && e.name === expectedFileName
+          );
+
+          if (directMatch) {
+            await FileSystem.moveFile(directMatch.path, targetPath);
+          } else {
+            for (const entry of entries) {
+              if (!entry.isDirectory()) {
+                continue;
+              }
+              const subEntries = await FileSystem.readDir(entry.path);
+              const nestedMatch = subEntries.find(
+                e => e.isFile() && e.name === expectedFileName
+              );
+              if (nestedMatch) {
+                await FileSystem.moveFile(nestedMatch.path, targetPath);
+                break;
+              }
+            }
+          }
+        }
+      }
+    } finally {
+      try {
+        await FileSystem.unlink(zipTargetPath);
+      } catch {
+        // ignore
+      }
+    }
+    return;
+  }
   
   if (isAndroid) {
     await FileSystem.copyFileAssets(assetPath, targetPath);
