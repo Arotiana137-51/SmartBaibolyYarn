@@ -32,7 +32,8 @@ type ThemeContextValue = {
   isReady: boolean;
 };
 
-const STORAGE_KEY = 'settings.darkMode';
+const STORAGE_KEY_DARK_MODE = 'settings.darkMode';
+const STORAGE_KEY_THEME_MODE = 'settings.themeMode';
 
 const darkColors: ThemeColors = {
   backgroundPrimary: '#000000',
@@ -52,15 +53,15 @@ const darkColors: ThemeColors = {
 };
 
 const lightColors: ThemeColors = {
-  backgroundPrimary: '#ffffff',
-  backgroundSecondary: '#f0f0f0',
-  backgroundTertiary: '#ffffff',
-  readerBackground: '#FDFBF7',
-  readerText: '#111111',
-  textPrimary: '#111111',
-  textSecondary: '#666666',
-  textWatermark: '#8C8C90',
-  divider: '#e5e5e5',
+  backgroundPrimary: '#FBF3E6',
+  backgroundSecondary: '#F2E6D5',
+  backgroundTertiary: '#FBF3E6',
+  readerBackground: '#F6EBD9',
+  readerText: '#2B2116',
+  textPrimary: '#2B2116',
+  textSecondary: '#6B5A44',
+  textWatermark: '#7C6B56',
+  divider: '#E2D1BB',
   accentBlue: '#3A86FF',
   accentGold: '#FFD60A',
   glow: '#64D2FF',
@@ -79,8 +80,16 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
   useEffect(() => {
     (async () => {
       try {
-        const value = await AsyncStorage.getItem(STORAGE_KEY);
-        if (value === 'true') {
+        const storedThemeMode = await AsyncStorage.getItem(STORAGE_KEY_THEME_MODE);
+        if (storedThemeMode) {
+          if (storedThemeMode === 'dark') {
+            setIsDarkMode(true);
+          }
+          return;
+        }
+
+        const legacyDarkMode = await AsyncStorage.getItem(STORAGE_KEY_DARK_MODE);
+        if (legacyDarkMode === 'true') {
           setIsDarkMode(true);
         }
       } finally {
@@ -91,7 +100,8 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
 
   const persist = useCallback(async (enabled: boolean) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
+      await AsyncStorage.setItem(STORAGE_KEY_DARK_MODE, enabled ? 'true' : 'false');
+      await AsyncStorage.setItem(STORAGE_KEY_THEME_MODE, enabled ? 'dark' : 'light');
     } catch {
       // ignore persistence errors
     }

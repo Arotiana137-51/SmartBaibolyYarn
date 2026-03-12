@@ -128,7 +128,7 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
   const isLoading = mode === 'bible' ? bibleLoading : hymnsLoading;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.container, {backgroundColor: theme.colors.readerBackground}]}>
       <TopBar
         appMode={mode}
         title={title}
@@ -163,6 +163,10 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
             fontScale={fontScale}
           />
         )}
+
+        {isDarkMode ? (
+          <View pointerEvents="none" style={styles.sepiaOverlay} />
+        ) : null}
       </View>
       
       <CustomBottomNav 
@@ -211,6 +215,7 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
         }
         isDarkMode={isDarkMode}
         onToggleDarkMode={setDarkMode}
+        fontScale={fontScale}
       />
       
       {/* Hymn Selection Modal */}
@@ -233,6 +238,11 @@ const styles = StyleSheet.create({
   },
   readerContainer: {
     flex: 1,
+    paddingBottom: 24,
+  },
+  sepiaOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 214, 160, 0.08)',
   },
   modalBackdrop: {
     flex: 1,

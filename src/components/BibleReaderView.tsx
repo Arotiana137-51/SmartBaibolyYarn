@@ -1,13 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { renderBibleLine, processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
 
-// Bible-specific spacing configuration
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
+const BIBLE_BASE_BOTTOM_PADDING = 28;
+
+const FLOATING_BOTTOM_NAV_SPACER = {
+  offsetFromBottom: 15,
+  containerPaddingTop: 8,
+  segmentHeight: 42,
+  trackPaddingVertical: 4 * 2,
+  extraMargin: 16,
+} as const;
 
 const VerseItem = React.memo(
   ({
@@ -126,6 +135,17 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   headerText,
 }) => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  const bottomScrollSpacer =
+    Math.max(insets.bottom, 0) +
+    FLOATING_BOTTOM_NAV_SPACER.offsetFromBottom +
+    FLOATING_BOTTOM_NAV_SPACER.containerPaddingTop +
+    FLOATING_BOTTOM_NAV_SPACER.segmentHeight +
+    FLOATING_BOTTOM_NAV_SPACER.trackPaddingVertical +
+    FLOATING_BOTTOM_NAV_SPACER.extraMargin;
+
+  const bottomScrollSpacerAdjusted = Math.round(bottomScrollSpacer * 0.5) + 7;
 
   if (isLoading) {
     return (
@@ -140,7 +160,10 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       ref={flatListRef}
       data={verses}
       keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[
+        styles.contentContainer,
+        {paddingBottom: BIBLE_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted},
+      ]}
       ListHeaderComponent={
         headerText ? (
           <View style={styles.headerContainer}>
@@ -184,7 +207,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   contentContainer: {
-    paddingBottom: 28,
+    paddingBottom: BIBLE_BASE_BOTTOM_PADDING,
   },
   headerContainer: {
     paddingBottom: 10,

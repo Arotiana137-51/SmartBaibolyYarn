@@ -4,12 +4,12 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
+import ToggleThemeButton from './ToggleThemeButton';
 
 export type HamburgerMenuItemKey =
   | 'favorites'
@@ -24,6 +24,7 @@ type Props = {
   onSelect: (key: HamburgerMenuItemKey) => void;
   isDarkMode: boolean;
   onToggleDarkMode: (enabled: boolean) => void;
+  fontScale?: number;
   topInset?: number;
   menuTop?: number;
   menuRight?: number;
@@ -40,6 +41,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   onSelect,
   isDarkMode,
   onToggleDarkMode,
+  fontScale = 1,
   topInset = 0,
   menuTop,
   menuRight = 12,
@@ -52,6 +54,8 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   const {theme} = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
+
+  const fontPercent = Math.round(fontScale * 100);
 
   useEffect(() => {
     if (visible) {
@@ -124,7 +128,14 @@ const HamburgerMenuPopover: React.FC<Props> = ({
               transform: [{scale}],
             },
           ]}>
-          <View style={styles.fontControlsCard}>
+          <View
+            style={[
+              styles.fontControlsCard,
+              {
+                backgroundColor: theme.colors.navBackground,
+              },
+            ]}
+          >
             <Pressable
               style={({pressed}) => [
                 styles.fontControlButton,
@@ -134,6 +145,24 @@ const HamburgerMenuPopover: React.FC<Props> = ({
               onPress={onIncreaseFont}>
               <Text style={styles.fontControlText}>{t('font.increase')}</Text>
             </Pressable>
+            <View style={styles.fontControlDivider} />
+            <View
+              style={[
+                styles.fontControlValue,
+                {backgroundColor: theme.colors.readerBackground},
+              ]}
+              pointerEvents="none"
+            >
+              <Text
+                style={[
+                  styles.fontControlValueText,
+                  {color: theme.colors.textPrimary},
+                ]}
+                allowFontScaling={false}
+              >
+                {fontPercent}%
+              </Text>
+            </View>
             <View style={styles.fontControlDivider} />
             <Pressable
               style={({pressed}) => [
@@ -187,15 +216,12 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 
             <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
 
-            <Pressable style={styles.switchRow} onPress={() => onToggleDarkMode(!isDarkMode)}>
-              <Text style={[styles.menuItemText, {color: isDarkMode ? theme.colors.textPrimary : theme.colors.navBackground}]}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</Text>
-              <Switch
-                value={isDarkMode}
-                onValueChange={onToggleDarkMode}
-                trackColor={{false: theme.colors.backgroundTertiary, true: theme.colors.accentBlue}}
-                thumbColor={isDarkMode ? '#FFFFFF' : theme.colors.navBackground}
+            <View style={styles.themeRow}>
+              <ToggleThemeButton
+                isDarkMode={isDarkMode}
+                onToggle={onToggleDarkMode}
               />
-            </Pressable>
+            </View>
           </View>
         </Animated.View>
       </View>
@@ -229,11 +255,11 @@ const styles = StyleSheet.create({
   fontControlsCard: {
     flexDirection: 'row',
     height: 50,
-    borderRadius: 2,
+    borderRadius: 999,
     overflow: 'hidden',
     backgroundColor: '#3b72b9',
     borderWidth: 1,
-    borderColor: '#1b4f7a',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   fontControlButton: {
     width: 56,
@@ -241,16 +267,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fontControlButtonPressed: {
-    backgroundColor: '#2f5fa0',
+    backgroundColor: 'rgba(0,0,0,0.14)',
   },
   fontControlDivider: {
     width: 1,
-    backgroundColor: '#1b4f7a',
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   fontControlText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  fontControlValue: {
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fontControlValueText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   caret: {
     width: 0,
@@ -260,11 +297,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 12,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderBottomColor: '#ffffff',
+    borderBottomColor: 'rgba(255,255,255,0.85)',
   },
   menuCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderRadius: 10,
     overflow: 'hidden',
     minWidth: 180,
     borderWidth: 2,
@@ -273,13 +310,12 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: StyleSheet.hairlineWidth,
   },
-  switchRow: {
+  themeRow: {
     paddingVertical: 10,
     paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    justifyContent: 'flex-start',
   },
   menuItem: {
     paddingVertical: 14,

@@ -25,6 +25,7 @@ import {useTheme} from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
+import {getBibleBookShortName} from '../utils/bibleBookNames';
 import {
   enqueueIssueReport,
   flushIssueReports,
@@ -229,9 +230,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   }, [mode]);
 
+  const bibleTitleShort = currentBook
+    ? `${getBibleBookShortName(currentBook.name, currentBook.id)} ${currentChapter}`.trim()
+    : `${currentChapter}`.trim();
+
+  const bibleTitleLong = currentBook
+    ? `${currentBook.name}\nToko faha-${currentChapter}`.trim()
+    : `${currentChapter}`.trim();
+
   const title =
     mode === 'bible'
-      ? `${currentBook?.name ?? ''} ${currentChapter}`.trim()
+      ? bibleTitleShort
       : `${
           currentHymnCategory
             ? currentHymnCategory === 'ff'
@@ -447,8 +456,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   return (
     <SafeAreaView
-      edges={['left', 'right', 'bottom']}
-      style={[styles.container, {backgroundColor: theme.colors.backgroundPrimary}]}
+      edges={['left', 'right']}
+      style={[styles.container, {backgroundColor: theme.colors.readerBackground}]}
     >
       <TopBar
         appMode={mode}
@@ -482,7 +491,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               onVerseLongPress={handleVerseLongPress}
               selectedVerseNumber={selectedVerseNumber}
               flatListRef={flatListRef}
-              headerText={currentChapter === 1 ? currentBook?.name ?? null : null}
+              headerText={mode === 'bible' ? bibleTitleLong : null}
             />
           ) : (
             <HymnReaderView
@@ -493,6 +502,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             />
           )
         )}
+
+        {isDarkMode ? (
+          <View pointerEvents="none" style={styles.sepiaOverlay} />
+        ) : null}
       </View>
       <CustomBottomNav activeMode={mode} onTabPress={setMode} />
 
@@ -577,6 +590,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onSelect={handleMenuSelect}
         isDarkMode={isDarkMode}
         onToggleDarkMode={setDarkMode}
+        fontScale={fontScale}
         topInset={insets.top + TOP_BAR_EXTRA_TOP_PADDING + TOP_BAR_TOOLBAR_HEIGHT}
         menuTop={
           insets.top +
@@ -635,6 +649,11 @@ const styles = StyleSheet.create({
   },
   readerContainer: {
     flex: 1,
+    paddingBottom: 24,
+  },
+  sepiaOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 214, 160, 0.08)',
   },
   modalBackdrop: {
     flex: 1,

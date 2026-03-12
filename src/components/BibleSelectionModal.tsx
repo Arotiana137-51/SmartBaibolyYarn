@@ -8,6 +8,7 @@ import {
   SectionList,
   FlatList,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useBibleData } from '../hooks/useBibleData';
 import {useTheme} from '../contexts/ThemeContext';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
@@ -24,12 +25,23 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   onBibleSelect,
 }) => {
   const {theme} = useTheme();
+  const insets = useSafeAreaInsets();
   const { books, isLoading, getVerseCount } = useBibleData();
   const [currentStep, setCurrentStep] = useState<SelectionStep>('book');
   const [selectedBook, setSelectedBook] = useState<{ id: number; name: string; chapters: number } | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [verseCount, setVerseCount] = useState(0);
+
+  const bottomScrollSpacer =
+    Math.max(insets.bottom, 0) +
+    15 +
+    8 +
+    42 +
+    4 * 2 +
+    16;
+
+  const bottomScrollSpacerAdjusted = Math.round(bottomScrollSpacer * 0.5) + 7;
 
   const selectedBookShortName = useMemo(() => {
     return selectedBook ? getBibleBookShortName(selectedBook.name, selectedBook.id) : '';
@@ -179,7 +191,10 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           sections={sections}
           keyExtractor={(item) => item.id.toString()}
           style={styles.content}
-          contentContainerStyle={styles.contentContainer}
+          contentContainerStyle={[
+            styles.contentContainer,
+            {paddingBottom: 12 + bottomScrollSpacerAdjusted},
+          ]}
           showsVerticalScrollIndicator={false}
           renderSectionHeader={({ section }) => (
             <Text style={[styles.testamentTitle, {color: theme.colors.textSecondary}]}>
@@ -210,7 +225,10 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           data={chapters}
           keyExtractor={(item) => item.toString()}
           style={styles.content}
-          contentContainerStyle={styles.gridContentContainer}
+          contentContainerStyle={[
+            styles.gridContentContainer,
+            {paddingBottom: 16 + bottomScrollSpacerAdjusted},
+          ]}
           numColumns={6}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
@@ -228,7 +246,10 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           data={verses}
           keyExtractor={(item) => item.toString()}
           style={styles.content}
-          contentContainerStyle={styles.gridContentContainer}
+          contentContainerStyle={[
+            styles.gridContentContainer,
+            {paddingBottom: 16 + bottomScrollSpacerAdjusted},
+          ]}
           numColumns={7}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
