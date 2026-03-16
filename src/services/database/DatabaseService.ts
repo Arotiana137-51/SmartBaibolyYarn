@@ -4,7 +4,8 @@ import {
   getDatabaseDirectory, 
   getDatabasePath, 
   copyDatabaseFromAssets,
-  fileExistsSafe
+  fileExistsSafe,
+  getDatabaseAssetPath
 } from '../../utils/paths';
 import * as FileSystem from 'react-native-fs';
 import { Platform } from 'react-native';
@@ -98,7 +99,7 @@ class DatabaseService {
           if (__DEV__) {
             console.log('Database not found, copying from assets...');
           }
-          const assetPath = this.assetPath;
+          const assetPath = __DEV__ ? getDatabaseAssetPath(this.dbName) : (this.assetPath || getDatabaseAssetPath(this.dbName));
           
           try {
             await copyDatabaseFromAssets(assetPath, dbPath);
@@ -235,12 +236,12 @@ class DatabaseService {
 
 export const bibleDatabaseService = new DatabaseService({
   dbName: 'BibleMG65.db',
-  assetPath: 'data/BibleMG65.zip',
+  assetPath: getDatabaseAssetPath('BibleMG65.db'),
 });
 
 export const hymnsDatabaseService = new DatabaseService({
   dbName: 'Hymns.db',
-  assetPath: 'data/Hymns.db',
+  assetPath: getDatabaseAssetPath('Hymns.db'),
 });
 
 export const databaseService = bibleDatabaseService;

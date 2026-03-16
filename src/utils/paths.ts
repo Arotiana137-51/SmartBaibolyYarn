@@ -12,6 +12,13 @@ export const isAndroid = Platform.OS === 'android';
 export const isIOS = Platform.OS === 'ios';
 export const isDevelopment = __DEV__;
 
+export const getDatabaseAssetPath = (dbName: string): string => {
+  if (__DEV__) {
+    return `data/${dbName}`;
+  }
+  return `data/${dbName.replace(/\.db$/i, '.zip')}`;
+};
+
 // Base paths for different platforms
 export const basePaths = {
   // React Native app paths
@@ -27,8 +34,8 @@ export const basePaths = {
   
   // Database asset paths
   databaseAssets: {
-    bible: 'data/BibleMG65.zip',
-    hymns: 'data/Hymns.db',
+    bible: getDatabaseAssetPath('BibleMG65.db'),
+    hymns: getDatabaseAssetPath('Hymns.db'),
   },
 };
 
@@ -136,11 +143,26 @@ export const copyDatabaseFromAssets = async (
 
   if (assetPath.toLowerCase().endsWith('.zip')) {
     const zipTargetPath = `${targetPath}.zip`;
-    if (isAndroid) {
-      await FileSystem.copyFileAssets(assetPath, zipTargetPath);
-    } else {
-      const assetData = await FileSystem.readFileAssets(assetPath, 'base64');
-      await FileSystem.writeFile(zipTargetPath, assetData, 'base64');
+    try {
+      if (isAndroid) {
+        await FileSystem.copyFileAssets(assetPath, zipTargetPath);
+      } else {
+        const assetData = await FileSystem.readFileAssets(assetPath, 'base64');
+        await FileSystem.writeFile(zipTargetPath, assetData, 'base64');
+      }
+    } catch (error) {
+      const fallbackAssetPath = assetPath.replace(/\.zip$/i, '.db');
+      console.warn(
+        `Failed to copy ZIP database asset (${assetPath}). Falling back to DB asset (${fallbackAssetPath}).`,
+        error
+      );
+      if (isAndroid) {
+        await FileSystem.copyFileAssets(fallbackAssetPath, targetPath);
+      } else {
+        const assetData = await FileSystem.readFileAssets(fallbackAssetPath, 'base64');
+        await FileSystem.writeFile(targetPath, assetData, 'base64');
+      }
+      return;
     }
 
     try {
