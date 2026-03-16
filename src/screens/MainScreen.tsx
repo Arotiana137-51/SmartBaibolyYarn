@@ -571,6 +571,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             <HymnReaderView
               hymnVerses={hymnVerses}
               isLoading={isHymnsLoading}
+              hymnTitle={getCurrentHymn()?.title ?? null}
               fontScale={fontScale}
               onHymnLongPress={handleHymnStanzaLongPress}
             />

@@ -37,6 +37,7 @@ const FLOATING_BOTTOM_NAV_SPACER = {
 interface HymnReaderViewProps {
   hymnVerses: HymnVerse[];
   isLoading: boolean;
+  hymnTitle?: string | null;
   fontScale?: number;
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
 }
@@ -44,6 +45,7 @@ interface HymnReaderViewProps {
 const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   hymnVerses,
   isLoading,
+  hymnTitle,
   fontScale = 1,
   onHymnLongPress,
 }) => {
@@ -102,6 +104,23 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       data={hymnStanzas}
       keyExtractor={(item) => item.verseNumber.toString()}
       contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
+      ListHeaderComponent={
+        hymnTitle ? (
+          <View style={styles.headerContainer}>
+            <Text
+              style={[
+                styles.headerTitle,
+                {
+                  color: theme.colors.readerText,
+                  fontSize: styles.headerTitle.fontSize * fontScale,
+                },
+              ]}
+            >
+              {hymnTitle}
+            </Text>
+          </View>
+        ) : null
+      }
       renderItem={({ item }) => {
         const stanzaText = item.lines.map(line => line.text).join('\n');
 
@@ -193,6 +212,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  headerContainer: {
+    paddingHorizontal: 2,
+    paddingTop: 2,
+    paddingBottom: 14,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 28,
   },
   centered: {
     flex: 1,
