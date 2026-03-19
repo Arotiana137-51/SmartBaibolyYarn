@@ -8,6 +8,7 @@ import HistoryScreen from '../screens/HistoryScreen';
 import SearchScreen from '../screens/SearchScreen';
 import VerseListScreen from '../screens/VerseListScreen';
 import MiscScreen from '../screens/MiscScreen';
+import FanekemDetailsScreen from '../screens/FanekemDetailsScreen';
 import AboutScreen from '../screens/AboutScreen';
 
 export type RootStackParamList = {
@@ -25,6 +26,7 @@ export type RootStackParamList = {
   Search: { mode: 'bible' | 'hymnal' };
   VerseList: { bookId: number; bookName: string; query: string; matchWholeWord?: boolean };
   Misc: undefined;
+  FanekemDetails: {title: string; content: string};
   About: undefined;
 };
 
@@ -73,6 +75,14 @@ const RootNavigator = () => {
         name="Misc"
         component={MiscScreen}
         options={{title: t('menu.misc'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="FanekemDetails"
+        component={FanekemDetailsScreen}
+        options={({route}) => ({
+          title: route.params.title,
+          ...headerOptions,
+        })}
       />
       <Stack.Screen
         name="About"
