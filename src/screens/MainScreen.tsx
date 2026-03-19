@@ -306,9 +306,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     : `${currentChapter}`.trim();
 
   const bibleTitleLong = currentBook
-    ? (currentBook.id === 19 || currentBook.name === 'Salamo'
-        ? `Salamo faha-${currentChapter}`
-        : `${currentBook.name}\nToko faha-${currentChapter}`
+    ? (
+        currentBook.id === 18 ||
+        currentBook.id === 19 ||
+        currentBook.id === 20 ||
+        currentBook.id === 21 ||
+        currentBook.id === 22 ||
+        currentBook.id === 25
+          ? `${getBibleBookShortName(currentBook.name, currentBook.id)} faha-${currentChapter}`
+          : `${currentBook.name}\nToko faha-${currentChapter}`
       ).trim()
     : `${currentChapter}`.trim();
 

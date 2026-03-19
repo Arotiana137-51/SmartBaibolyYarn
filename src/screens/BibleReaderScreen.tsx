@@ -3,6 +3,7 @@ import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useRoute} from '@react-navigation/native';
 import {t} from '../i18n/strings';
 import {useBibleData} from '../hooks/useBibleData';
+import {getBibleBookShortName} from '../utils/bibleBookNames';
 
 type RouteParams = {
   bookId: number;
@@ -48,8 +49,8 @@ const BibleReaderScreen = () => {
   }, [verses, verse]);
 
   const title = useMemo(
-    () => t('bible.readerTitle', {book: bookName, chapter}),
-    [bookName, chapter]
+    () => t('bible.readerTitle', {book: getBibleBookShortName(bookName, bookId), chapter}),
+    [bookName, bookId, chapter]
   );
 
   return (

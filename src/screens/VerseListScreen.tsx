@@ -6,7 +6,34 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBibleSearch, BibleVerseResult } from '../hooks/useBibleSearch';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { getBibleBookShortName } from '../utils/bibleBookNames';
 import { renderBibleLine, processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
+
+// Helper function to highlight matching text
+const highlightText = (text: string, query: string, theme: any) => {
+  if (!query.trim()) return <Text>{text}</Text>;
+
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  const parts = text.split(regex);
+  const lowerQuery = query.toLowerCase();
+
+  return (
+    <Text>
+      {parts.map((part, index) => {
+        const isMatch = part.toLowerCase() === lowerQuery;
+        return (
+          <Text
+            key={index}
+            style={isMatch ? { color: theme.colors.accentBlue, fontWeight: '700' } : {}}
+          >
+            {part}
+          </Text>
+        );
+      })}
+    </Text>
+  );
+};
 
 type VerseListScreenRouteProp = RouteProp<RootStackParamList, 'VerseList'>;
 type VerseListScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -14,7 +41,7 @@ type VerseListScreenNavigationProp = NativeStackNavigationProp<RootStackParamLis
 const VerseListScreen = () => {
   const route = useRoute<VerseListScreenRouteProp>();
   const navigation = useNavigation<VerseListScreenNavigationProp>();
-  const { bookId, bookName, query } = route.params;
+  const { bookId, bookName, query, matchWholeWord } = route.params;
   const { theme } = useTheme();
   
   const [verses, setVerses] = useState<BibleVerseResult[]>([]);
@@ -26,7 +53,7 @@ const VerseListScreen = () => {
     const loadVerses = async () => {
       setIsLoading(true);
       try {
-        const results = await getVersesForBook(bookId, query);
+        const results = await getVersesForBook(bookId, query, { matchWholeWord });
         setVerses(results);
       } catch (err) {
         console.error('Error loading verses:', err);
@@ -36,7 +63,7 @@ const VerseListScreen = () => {
     };
 
     loadVerses();
-  }, [bookId, query, getVersesForBook]);
+  }, [bookId, query, getVersesForBook, matchWholeWord]);
 
   const handleVersePress = (verse: BibleVerseResult) => {
     // Navigate back to MainScreen and display the chapter
@@ -58,7 +85,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
     >
       <View style={styles.verseHeader}>
         <Text style={[styles.verseReference, { color: theme.colors.textPrimary }]}>
-          {item.chapter}:{item.verseNumber}
+          {getBibleBookShortName(bookName, bookId)} {item.chapter}:{item.verseNumber}
         </Text>
       </View>
       <View style={styles.verseContent}>
@@ -76,7 +103,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
                 : theme.colors.textPrimary,
             }}
           >
-            {renderBibleLine(line, { lineHeight: 24 })}
+            {highlightText(line, query, theme)}
           </Text>
         ))}
       </View>
@@ -88,7 +115,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
       <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
         <Text style={[styles.title, { color: '#FFFFFF' }]}>
-          {bookName}
+          {getBibleBookShortName(bookName, bookId)}
         </Text>
         <Text style={[styles.subtitle, { color: '#FFFFFF' }]}>
           Recherche: "{query}"
@@ -117,7 +144,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            Aucun verset trouvé pour "{query}" dans {bookName}
+            Aucun verset trouvé pour "{query}" dans {getBibleBookShortName(bookName, bookId)}
           </Text>
         </View>
       )}

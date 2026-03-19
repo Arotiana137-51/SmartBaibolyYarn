@@ -7,6 +7,7 @@ import { useHymnFavorites } from '../hooks/useHymnFavorites';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
+import { getBibleBookShortName } from '../utils/bibleBookNames';
 
 type FavoritesScreenRouteProp = RouteProp<RootStackParamList, 'Favorites'>;
 
@@ -51,7 +52,7 @@ const FavoritesScreen = () => {
         >
           <View style={styles.itemContent}>
             <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>
-              {bibleItem.bookName} {bibleItem.chapter}:{bibleItem.verse_number}
+              {getBibleBookShortName(bibleItem.bookName, bibleItem.book_id)} {bibleItem.chapter}:{bibleItem.verse_number}
             </Text>
             <Text style={[styles.itemText, { color: theme.colors.textSecondary }]}>
               {bibleItem.text.substring(0, 100)}...

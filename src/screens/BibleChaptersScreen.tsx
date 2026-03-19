@@ -3,6 +3,7 @@ import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
+import {getBibleBookShortName} from '../utils/bibleBookNames';
 
 type BibleStackParamList = {
   BibleBooks: undefined;
@@ -31,7 +32,7 @@ const BibleChaptersScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{`${bookName} - ${t('bible.chaptersTitle')}`}</Text>
+      <Text style={styles.title}>{`${getBibleBookShortName(bookName, bookId)} - ${t('bible.chaptersTitle')}`}</Text>
       <FlatList
         data={chapterList}
         keyExtractor={item => `${bookId}-${item}`}

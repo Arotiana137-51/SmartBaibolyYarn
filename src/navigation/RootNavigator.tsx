@@ -23,7 +23,7 @@ export type RootStackParamList = {
   Favorites: { mode: 'bible' | 'hymnal' };
   History: { mode: 'bible' | 'hymnal' };
   Search: { mode: 'bible' | 'hymnal' };
-  VerseList: { bookId: number; bookName: string; query: string };
+  VerseList: { bookId: number; bookName: string; query: string; matchWholeWord?: boolean };
   Misc: undefined;
   About: undefined;
 };

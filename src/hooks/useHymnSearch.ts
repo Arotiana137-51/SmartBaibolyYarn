@@ -1,6 +1,27 @@
 import { useCallback, useState } from 'react';
 import { hymnsDatabaseService } from '../services/database/DatabaseService';
 
+export type HymnSearchOptions = {
+  matchWholeWord?: boolean;
+};
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const makeWholeWordRegex = (query: string) => {
+  const escaped = escapeRegExp(query.trim());
+  return new RegExp(`(^|[^A-Za-z0-9])${escaped}([^A-Za-z0-9]|$)`, 'i');
+};
+
+const makeFtsPrefixQuery = (query: string) => {
+  const tokens = query
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  // token* AND token2* ...
+  return tokens.map(t => `${t}*`).join(' AND ');
+};
+
 export interface HymnSearchResult {
   id: string;
   number: number;
@@ -15,7 +36,7 @@ export const useHymnSearch = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const searchHymns = useCallback(async (query: string): Promise<HymnSearchResult[]> => {
+  const searchHymns = useCallback(async (query: string, options?: HymnSearchOptions): Promise<HymnSearchResult[]> => {
     if (!query.trim()) {
       return [];
     }
@@ -25,6 +46,11 @@ export const useHymnSearch = () => {
 
     try {
       await hymnsDatabaseService.initDatabase();
+
+      const matchWholeWord = options?.matchWholeWord === true;
+
+      // Substring: prefix query per token; Whole word: quoted query.
+      const ftsParam = matchWholeWord ? `"${query}"` : makeFtsPrefixQuery(query);
       
       const ftsSearchQuery = `
         SELECT DISTINCT
@@ -63,7 +89,7 @@ export const useHymnSearch = () => {
 
       let results: { rows: any[] };
       try {
-        results = await hymnsDatabaseService.executeQuerySilent(ftsSearchQuery, [query]);
+        results = await hymnsDatabaseService.executeQuerySilent(ftsSearchQuery, [ftsParam]);
       } catch (e: any) {
         const message = typeof e?.message === 'string' ? e.message : '';
         if (message.toLowerCase().includes('no such module: fts5')) {
@@ -75,7 +101,18 @@ export const useHymnSearch = () => {
       }
       const searchResults: HymnSearchResult[] = [];
 
+      const regex = matchWholeWord ? makeWholeWordRegex(query) : null;
+
       for (const row of results.rows as any[]) {
+        if (regex) {
+          const verse = String(row.matched_verse ?? '');
+          const title = String(row.title ?? '');
+          const authors = String(row.authors ?? '');
+
+          if (!regex.test(verse) && !regex.test(title) && !regex.test(authors)) {
+            continue;
+          }
+        }
         searchResults.push({
           id: row.id,
           number: row.number,
