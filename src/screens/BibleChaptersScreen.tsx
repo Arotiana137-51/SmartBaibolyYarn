@@ -4,6 +4,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import {useTheme} from '../contexts/ThemeContext';
 
 type BibleStackParamList = {
   BibleBooks: undefined;
@@ -21,6 +22,7 @@ type RouteParams = {
 };
 
 const BibleChaptersScreen = () => {
+  const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
   const {bookId, bookName, chapters, verse} = route.params as RouteParams;
@@ -31,14 +33,27 @@ const BibleChaptersScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{`${getBibleBookShortName(bookName, bookId)} - ${t('bible.chaptersTitle')}`}</Text>
+    <View style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
+      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{`${getBibleBookShortName(bookName, bookId)} - ${t('bible.chaptersTitle')}`}</Text>
       <FlatList
         data={chapterList}
         keyExtractor={item => `${bookId}-${item}`}
         renderItem={({item}) => (
           <Pressable
-            style={styles.chapterItem}
+            style={({pressed}) => [
+              styles.chapterItem,
+              { backgroundColor: theme.colors.backgroundSecondary },
+              pressed && {
+                backgroundColor: theme.colors.accentBlue + '20',
+                elevation: 4,
+                shadowOpacity: 0.12,
+                transform: [{scale: 0.995}],
+              },
+            ]}
+            android_ripple={{
+              color: theme.colors.accentBlue + '40',
+              borderless: false,
+            }}
             onPress={() =>
               navigation.navigate('BibleReader', {
                 bookId,
@@ -47,7 +62,7 @@ const BibleChaptersScreen = () => {
                 verse,
               })
             }>
-            <Text style={styles.chapterText}>{item}</Text>
+            <Text style={[styles.chapterText, { color: theme.colors.textPrimary }]}>{item}</Text>
           </Pressable>
         )}
       />
@@ -59,7 +74,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#ffffff',
   },
   title: {
     fontSize: 20,
@@ -67,12 +81,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chapterItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginVertical: 4,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   chapterText: {
     fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: 0.25,
   },
 });
 

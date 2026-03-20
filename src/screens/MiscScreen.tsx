@@ -1,5 +1,12 @@
 import React, {useMemo, useState} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Animated,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -126,87 +133,137 @@ const MiscScreen = () => {
       },
       header: {
         paddingHorizontal: 16,
-        paddingTop: 10,
-        paddingBottom: 10,
+        paddingTop: 16,
+        paddingBottom: 12,
       },
       title: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: 28,
+        fontWeight: '400',
         color: theme.colors.textPrimary,
-        marginBottom: 10,
+        marginBottom: 16,
+        letterSpacing: 0.5,
       },
-      segmentRoot: {
+      // Material Design 3: Surface container with rounded corners
+      tabContainer: {
         flexDirection: 'row',
         backgroundColor: theme.colors.backgroundSecondary,
-        borderRadius: 12,
+        borderRadius: 28,
         padding: 4,
         borderWidth: 1,
         borderColor: theme.colors.divider,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
       },
-      segmentItem: {
+      // Material Design 3: Primary container for selected state
+      tabItem: {
         flex: 1,
-        borderRadius: 10,
-        paddingVertical: 10,
+        borderRadius: 24,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
         alignItems: 'center',
         justifyContent: 'center',
       },
-      segmentItemSelected: {
+      tabItemSelected: {
         backgroundColor: theme.colors.accentBlue,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
       },
-      segmentText: {
+      tabText: {
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '500',
         color: theme.colors.textSecondary,
+        letterSpacing: 0.5,
       },
-      segmentTextSelected: {
+      tabTextSelected: {
         color: '#FFFFFF',
+        fontWeight: '600',
       },
       listContent: {
         paddingHorizontal: 16,
-        paddingBottom: 20,
+        paddingTop: 8,
+        paddingBottom: 24,
       },
+      // Material Design 3: Elevated card with proper shadow
       card: {
         backgroundColor: theme.colors.backgroundSecondary,
-        borderRadius: 14,
-        padding: 14,
-        borderWidth: 1,
-        borderColor: theme.colors.divider,
-        marginBottom: 10,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+      },
+      cardPressed: {
+        elevation: 4,
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        transform: [{scale: 0.98}],
+      },
+      cardDisabled: {
+        opacity: 0.6,
+        elevation: 0,
+        shadowOpacity: 0,
       },
       cardTitle: {
-        fontSize: 15,
-        fontWeight: '700',
+        fontSize: 16,
+        fontWeight: '500',
         color: theme.colors.textPrimary,
+        letterSpacing: 0.25,
+        lineHeight: 24,
+      },
+      emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 48,
       },
       emptyText: {
         marginTop: 12,
         color: theme.colors.textSecondary,
         fontSize: 14,
+        fontWeight: '400',
+        letterSpacing: 0.25,
       },
     });
   }, [theme]);
+
+  const cardRippleConfig = useMemo(() => ({
+    color: theme.colors.accentBlue + '20',
+    borderless: false,
+    foreground: true,
+  }), [theme]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('menu.misc')}</Text>
-        <View style={styles.segmentRoot}>
+        <View style={styles.tabContainer}>
           {CATEGORIES.map(cat => {
             const isSelected = cat === selectedCategory;
             return (
               <Pressable
                 key={cat}
-                accessibilityRole="button"
+                accessibilityRole="tab"
                 accessibilityState={{selected: isSelected}}
+                android_ripple={{
+                  color: theme.colors.accentBlue + '40',
+                  borderless: true,
+                }}
                 onPress={() => setSelectedCategory(cat)}
-                style={({pressed}) => [
-                  styles.segmentItem,
-                  isSelected ? styles.segmentItemSelected : null,
-                  pressed ? {opacity: 0.9} : null,
+                style={[
+                  styles.tabItem,
+                  isSelected ? styles.tabItemSelected : null,
                 ]}
               >
                 <Text
-                  style={[styles.segmentText, isSelected ? styles.segmentTextSelected : null]}
+                  style={[styles.tabText, isSelected ? styles.tabTextSelected : null]}
                   allowFontScaling={false}
                 >
                   {cat}
@@ -219,12 +276,15 @@ const MiscScreen = () => {
 
       <ScrollView contentContainerStyle={styles.listContent}>
         {filteredItems.length === 0 ? (
-          <Text style={styles.emptyText}>Tsy misy mbola ato amin'ity sokajy ity.</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Tsy misy mbola ato amin'ity sokajy ity.</Text>
+          </View>
         ) : (
           filteredItems.map(item => (
             <Pressable
               key={item.id}
               accessibilityRole={item.content ? 'button' : undefined}
+              android_ripple={cardRippleConfig}
               onPress={() => {
                 if (!item.content) {
                   return;
@@ -237,8 +297,8 @@ const MiscScreen = () => {
               }}
               style={({pressed}) => [
                 styles.card,
-                item.content ? null : {opacity: 0.65},
-                pressed && item.content ? {opacity: 0.9} : null,
+                !item.content ? styles.cardDisabled : null,
+                pressed && item.content ? styles.cardPressed : null,
               ]}
             >
               <Text style={styles.cardTitle}>{item.title}</Text>

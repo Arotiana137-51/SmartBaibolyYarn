@@ -128,7 +128,7 @@ export const TEXT_STYLES = {
     lineHeight: LINE_HEIGHTS.tight * TYPOGRAPHY_SCALE.small,
     letterSpacing: LETTER_SPACING.normal,
     fontWeight: '700',
-    color: '#4D96FF', // Use accent blue for verse numbers
+    color: '#007991', // Use mid-tone teal for verse numbers
   },
 } as const;
 

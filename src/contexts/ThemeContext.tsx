@@ -45,11 +45,11 @@ const darkColors: ThemeColors = {
   textSecondary: '#8E8E93',
   textWatermark: '#7A7A80',
   divider: '#3A3A3C',
-  accentBlue: '#0A84FF',
+  accentBlue: '#007991',
   accentGold: '#FFD60A',
-  glow: '#64D2FF',
-  navBackground: '#1982C4',
-  verseNumber: '#4A90E2',
+  glow: '#25A18E',
+  navBackground: '#004E64',
+  verseNumber: '#007991',
 };
 
 const lightColors: ThemeColors = {
@@ -62,11 +62,11 @@ const lightColors: ThemeColors = {
   textSecondary: '#6B5A44',
   textWatermark: '#7C6B56',
   divider: '#E2D1BB',
-  accentBlue: '#3A86FF',
+  accentBlue: '#007991',
   accentGold: '#FFD60A',
-  glow: '#64D2FF',
-  navBackground: '#247BA0',
-  verseNumber: '#4A90E2',
+  glow: '#25A18E',
+  navBackground: '#004E64',
+  verseNumber: '#007991',
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);

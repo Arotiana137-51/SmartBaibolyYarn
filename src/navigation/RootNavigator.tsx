@@ -38,7 +38,16 @@ const RootNavigator = () => {
   const headerOptions = {
     headerStyle: {backgroundColor: theme.colors.navBackground},
     headerTintColor: '#FFFFFF',
-    headerTitleStyle: {color: '#FFFFFF'},
+    headerTitleStyle: {
+      color: '#FFFFFF',
+      fontSize: 18,
+      fontWeight: '700',
+      letterSpacing: 0.15,
+    },
+    headerBackTitleVisible: false,
+    headerShadowVisible: true,
+    statusBarColor: theme.colors.navBackground,
+    statusBarStyle: 'light',
   } as const;
 
   return (

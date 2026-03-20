@@ -1,10 +1,9 @@
-import React, {useEffect, useRef} from 'react';
-import {Animated, Pressable, StyleSheet, Text, View, StatusBar, Platform} from 'react-native';
+import React from 'react';
+import {Pressable, StyleSheet, Text, View, StatusBar, Platform} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {AppMode} from '../screens/MainScreen';
 import AnimatedHamburger from './AnimatedHamburger';
 import {useTheme} from '../contexts/ThemeContext';
-import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 
 const TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
 const EXTRA_TOP_PADDING = 6;
@@ -40,24 +39,6 @@ const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const {theme} = useTheme();
   const insets = useSafeAreaInsets();
-  const menuAnim = useRef(new Animated.Value(isMenuOpen ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(menuAnim, {
-      toValue: isMenuOpen ? 1 : 0,
-      duration: 140,
-      useNativeDriver: true,
-    }).start();
-  }, [isMenuOpen, menuAnim]);
-
-  const burgerOpacity = menuAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-  });
-  const closeOpacity = menuAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
   const handleTitlePress = () => {
     if (appMode === 'hymnal' && onHymnalCategoryChange && currentHymnalCategory) {
       // Cycle through hymnal categories
@@ -89,26 +70,61 @@ const TopBar: React.FC<TopBarProps> = ({
         barStyle="light-content"
         backgroundColor={theme.colors.navBackground}
       />
-      <Pressable style={[styles.button, styles.coloredButton, {backgroundColor: theme.colors.navBackground}]} accessibilityLabel="Previous chapter" onPress={onPreviousPress}>
+      <Pressable
+        accessibilityLabel="Previous chapter"
+        android_ripple={{
+          color: theme.colors.accentBlue + '40',
+          borderless: true,
+          foreground: true,
+        }}
+        style={({pressed}) => [
+          styles.iconButton,
+          pressed && {opacity: 0.85},
+        ]}
+        onPress={onPreviousPress}
+      >
         <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>‹‹</Text>
       </Pressable>
       
       {appMode === 'hymnal' && onHymnalCategoryChange ? (
         // Hymnal category tabs - replace title when in hymnal mode
-        <View style={styles.categoryTabsContainer}>
+        <View
+          style={[
+            styles.categoryTabsContainer,
+            {
+              backgroundColor: theme.colors.navBackground,
+              borderColor: 'rgba(255,255,255,0.28)',
+            },
+          ]}
+        >
           {HYMNAL_CATEGORIES.map((category) => (
             <Pressable
               key={category.key}
-              style={[
+              android_ripple={{
+                color: theme.colors.accentBlue + '40',
+                borderless: true,
+              }}
+              style={({pressed}) => [
                 styles.categoryTab,
-                currentHymnalCategory === category.key && styles.activeCategoryTab,
+                currentHymnalCategory === category.key
+                  ? {backgroundColor: theme.colors.accentBlue}
+                  : {backgroundColor: 'transparent'},
+                pressed && {opacity: 0.92},
               ]}
               onPress={() => onHymnalCategoryChange(category.key)}
             >
-              <Text style={[
-                styles.categoryTabText,
-                currentHymnalCategory === category.key && styles.activeCategoryTabText,
-              ]}>
+              <Text
+                style={[
+                  styles.categoryTabText,
+                  {
+                    color:
+                      currentHymnalCategory === category.key
+                        ? '#FFFFFF'
+                        : 'rgba(255,255,255,0.92)',
+                    fontWeight: currentHymnalCategory === category.key ? '700' : '600',
+                  },
+                ]}
+              >
                 {category.label}
               </Text>
             </Pressable>
@@ -116,12 +132,31 @@ const TopBar: React.FC<TopBarProps> = ({
         </View>
       ) : (
         // Normal title for other modes
-        <Pressable style={styles.titleContainer} onPress={handleTitlePress}>
+        <Pressable
+          android_ripple={{
+            color: theme.colors.accentBlue + '40',
+            borderless: true,
+          }}
+          style={({pressed}) => [styles.titleContainer, pressed && {opacity: 0.92}]}
+          onPress={handleTitlePress}
+        >
           <Text style={[styles.title, {color: '#FFFFFF'}]}>{displayTitle}</Text>
         </Pressable>
       )}
       
-      <Pressable style={[styles.button, styles.coloredButton, {backgroundColor: theme.colors.navBackground}]} accessibilityLabel="Next chapter" onPress={onNextPress}>
+      <Pressable
+        accessibilityLabel="Next chapter"
+        android_ripple={{
+          color: theme.colors.accentBlue + '40',
+          borderless: true,
+          foreground: true,
+        }}
+        style={({pressed}) => [
+          styles.iconButton,
+          pressed && {opacity: 0.85},
+        ]}
+        onPress={onNextPress}
+      >
         <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>{'››'}</Text>
       </Pressable>
 
@@ -145,20 +180,23 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  button: {
-  paddingHorizontal: 12,
-  minWidth: 44,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-  coloredButton: {
-    borderRadius: 4,
+  iconButton: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    overflow: 'hidden',
   },
   buttonText: {
     color: 'white',
@@ -173,8 +211,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.15,
     textAlign: 'center',
     width: '100%',
   },
@@ -183,29 +222,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    padding: 4,
+    marginHorizontal: 6,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   categoryTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 60,
-  },
-  activeCategoryTab: {
-    backgroundColor: 'rgba(52, 152, 219, 0.3)',
-    borderBottomWidth: 2,
-    borderBottomColor: '#3498db',
   },
   categoryTabText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#ecf0f1',
-  },
-  activeCategoryTabText: {
-    color: '#3498db',
-    fontWeight: 'bold',
   },
   iconWrapper: {
     width: 26,

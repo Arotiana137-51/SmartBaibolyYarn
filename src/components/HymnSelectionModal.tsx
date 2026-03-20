@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hymn } from '../hooks/useHymnsData';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface HymnSelectionModalProps {
   visible: boolean;
@@ -43,7 +44,8 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   currentNumber,
   onClose,
   onHymnSelect,
- }) => {
+}) => {
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const tabsTopInset = Platform.OS === 'ios' ? insets.top : 0;
@@ -144,12 +146,21 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
             {row.map((button) => (
               <Pressable
                 key={button}
-                style={[
+                style={({pressed}) => [
                   styles.keypadButton,
-                  { height: keypadButtonSize, borderRadius: Math.max(8, Math.floor(keypadButtonSize * 0.12)) },
-                  button === 'OK' && styles.okButton,
+                  { 
+                    height: keypadButtonSize, 
+                    borderRadius: Math.max(8, Math.floor(keypadButtonSize * 0.12)),
+                    backgroundColor: theme.colors.navBackground,
+                  },
+                  button === 'OK' && { backgroundColor: theme.colors.accentBlue },
                   button === 'OK' && styles.doubleWidthButton,
+                  pressed && { opacity: 0.8 },
                 ]}
+                android_ripple={{
+                  color: theme.colors.accentBlue + '40',
+                  borderless: true,
+                }}
                 onPress={() => {
                   if (button === 'OK') handleOk();
                   else handleNumberInput(button);
@@ -158,6 +169,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                 <Text
                   style={[
                     styles.keypadText,
+                    { color: '#FFFFFF' },
                     button === 'OK' && styles.keypadSpecialText,
                   ]}
                 >
@@ -178,23 +190,29 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <Pressable style={styles.modalBackdrop} onPress={handleClose}>
+      <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.15)' }]} onPress={handleClose}>
         <View style={styles.modalContent} pointerEvents="box-none">
-          <View style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset }]}>
+          <View style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset, backgroundColor: theme.colors.navBackground }]}>
             <View style={styles.categoryTabsRow}>
               {CATEGORIES.map((category) => (
                 <Pressable
                   key={category.key}
-                  style={[
+                  style={({pressed}) => [
                     styles.categoryTab,
-                    selectedCategory === category.key && styles.activeCategoryTab,
+                    { borderRightColor: 'rgba(255,255,255,0.4)' },
+                    selectedCategory === category.key && { backgroundColor: theme.colors.accentBlue },
+                    pressed && { opacity: 0.9 },
                   ]}
+                  android_ripple={{
+                    color: theme.colors.accentBlue + '40',
+                    borderless: true,
+                  }}
                   onPress={() => handleCategoryChange(category.key)}
                 >
                   <Text
                     style={[
                       styles.categoryTabText,
-                      selectedCategory === category.key && styles.activeCategoryTabText,
+                      { color: '#FFFFFF' },
                     ]}
                   >
                     {category.label}
@@ -207,22 +225,35 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
           <View style={[styles.keypadPanel, { top: tabsTopInset + TAB_ROW_HEIGHT }]} pointerEvents="box-none">
             <Pressable style={styles.keypadCard} onPress={() => {}}>
               <View style={[styles.inputContainer, { width: keypadWidth }]}>
-                <View style={[styles.inputField, { marginRight: Math.max(8, Math.floor(keypadButtonSize * 0.12)) }]}>
-                  <Text style={styles.inputText}>
+                <View style={[
+                  styles.inputField, 
+                  { 
+                    marginRight: Math.max(8, Math.floor(keypadButtonSize * 0.12)),
+                    backgroundColor: theme.colors.backgroundPrimary,
+                    borderColor: theme.colors.divider,
+                  }
+                ]}>
+                  <Text style={[styles.inputText, { color: theme.colors.textPrimary }]}>
                     {inputNumber}
                   </Text>
                 </View>
                 <Pressable
-                  style={[
+                  style={({pressed}) => [
                     styles.backspaceButton,
                     {
                       width: Math.round(keypadButtonSize * 1.3),
                       height: keypadButtonSize,
+                      backgroundColor: theme.colors.accentBlue,
                     },
+                    pressed && { opacity: 0.8 },
                   ]}
+                  android_ripple={{
+                    color: theme.colors.accentBlue + '40',
+                    borderless: true,
+                  }}
                   onPress={handleBackspace}
                 >
-                  <Text style={styles.backspaceIcon}>⌫</Text>
+                  <Text style={[styles.backspaceIcon, { color: '#FFFFFF' }]}>⌫</Text>
                 </Pressable>
               </View>
 
@@ -238,14 +269,13 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
     justifyContent: 'flex-start',
   },
   modalContent: {
     flex: 1,
   },
   categoryTabsSafeArea: {
-    backgroundColor: '#1976D2',
+    // backgroundColor set dynamically via theme
   },
   categoryTabsRow: {
     flexDirection: 'row',
@@ -256,20 +286,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: 'rgba(255,255,255,0.4)',
-  },
-  activeCategoryTab: {
-    backgroundColor: '#1565C0',
+    // borderRightColor and backgroundColor set dynamically
   },
   categoryTabText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
     textAlign: 'center',
     textAlignVertical: 'center',
-  },
-  activeCategoryTabText: {
-    color: '#FFFFFF',
   },
   keypadPanel: {
     position: 'absolute',
@@ -283,38 +306,6 @@ const styles = StyleSheet.create({
   keypadCard: {
     alignItems: 'center',
   },
-  hymnListContainer: {
-    maxHeight: 300,
-    backgroundColor: 'rgba(44, 62, 80, 0.95)',
-    marginHorizontal: 10,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  hymnList: {
-    padding: 8,
-  },
-  hymnItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(52, 73, 94, 0.5)',
-  },
-  currentHymnItem: {
-    backgroundColor: 'rgba(52, 152, 219, 0.3)',
-  },
-  hymnNumber: {
-    width: 40,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#3498db',
-  },
-  hymnTitle: {
-    flex: 1,
-    fontSize: 16,
-    color: '#ecf0f1',
-    marginLeft: 12,
-  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,35 +318,35 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     width: '55%',
     height: 56,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 16,
     justifyContent: 'center',
     paddingHorizontal: 14,
-    borderWidth: 2,
-    borderColor: 'rgba(25, 118, 210, 0.35)',
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   inputText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111111',
   },
   backspaceButton: {
     width: 100,
     height: 56,
-    backgroundColor: '#1a608fd7',
-    borderRadius: 10,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   backspaceIcon: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#FFFFFF',
     lineHeight: 28,
   },
   keypadContainer: {
@@ -370,21 +361,17 @@ const styles = StyleSheet.create({
   keypadButton: {
     flex: 1,
     height: 80,
-    backgroundColor: '#1976D2',
-    borderRadius: 10,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  okButton: {
-    backgroundColor: 'rgba(25, 118, 210, 0.55)',
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   doubleWidthButton: {
     flex: 2,
@@ -392,7 +379,6 @@ const styles = StyleSheet.create({
   keypadText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
   },
   keypadSpecialText: {
     fontSize: 20,
