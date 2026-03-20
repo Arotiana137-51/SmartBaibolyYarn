@@ -114,24 +114,10 @@ async function buildDatabase() {
   await buildBibleMG65Database(bibleDevPath);
   await buildHymnsDatabase(hymnsDevPath);
 
-  console.log('📦 Copying to platform assets...');
-  
-  // Copy .db files to dev directories
-  copyFileSafe(bibleDevPath, databasePaths.bible.androidDev);
-  copyFileSafe(hymnsDevPath, databasePaths.hymns.androidDev);
-  copyFileSafe(bibleDevPath, databasePaths.bible.iosDev);
-  copyFileSafe(hymnsDevPath, databasePaths.hymns.iosDev);
-
   // Create ZIP archives for production
   console.log('🗜️ Creating ZIP archives for production...');
   await createZipFromDb(bibleDevPath, bibleProdPath);
   await createZipFromDb(hymnsDevPath, hymnsProdPath);
-  
-  // Copy ZIP files to prod directories
-  copyFileSafe(bibleProdPath, databasePaths.bible.androidProd);
-  copyFileSafe(hymnsProdPath, databasePaths.hymns.androidProd);
-  copyFileSafe(bibleProdPath, databasePaths.bible.iosProd);
-  copyFileSafe(hymnsProdPath, databasePaths.hymns.iosProd);
 
   console.log('✅ Database build completed! (dev + prod)');
   return { 

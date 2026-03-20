@@ -111,6 +111,32 @@ android {
             }
         }
     }
+
+    // Database assets configuration: dev for debug, prod for release
+    sourceSets {
+        debug {
+            assets.srcDirs = ['src/main/assets/data/dev']
+        }
+        release {
+            assets.srcDirs = ['src/main/assets/data/prod']
+        }
+    }
+
+    // Task to build production ZIPs before release build
+    task buildProdZips {
+        doLast {
+            exec {
+                workingDir rootDir
+                commandLine 'node', 'scripts/buildProdZip.js'
+            }
+        }
+    }
+
+    // Hook: build ZIPs before release build
+    tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
+        dependsOn buildProdZips
+    }
+    buildProdZips.onlyIf { gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } }
 }
 
 dependencies {

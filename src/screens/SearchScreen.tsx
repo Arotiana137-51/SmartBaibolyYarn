@@ -288,7 +288,20 @@ const BibleSearchScreenContent = ({
 
   const renderBibleResult = ({ item }: { item: BibleSearchResult }) => (
     <Pressable
-      style={[styles.resultItem, { backgroundColor: theme.colors.backgroundSecondary }]}
+      style={({pressed}) => [
+        styles.resultCard,
+        { backgroundColor: theme.colors.backgroundSecondary },
+        pressed && {
+          elevation: 4,
+          shadowOpacity: 0.12,
+          transform: [{scale: 0.995}],
+        },
+      ]}
+      android_ripple={{
+        color: theme.colors.accentBlue + '20',
+        borderless: false,
+        foreground: true,
+      }}
       onPress={() => handleBookPress(item.bookId, item.bookName)}
     >
       <View style={styles.resultContent}>
@@ -296,32 +309,46 @@ const BibleSearchScreenContent = ({
           <Text style={[styles.resultTitle, { color: theme.colors.textPrimary }]}>
             {getBibleBookShortName(item.bookName, item.bookId)}
           </Text>
-          <Text style={[styles.resultCount, { color: theme.colors.accentBlue, fontWeight: '700' }]}>
+          <Text style={[styles.resultCount, { color: theme.colors.accentBlue }]}>
             {item.verseCount} résultat{item.verseCount > 1 ? 's' : ''}
           </Text>
         </View>
-        <ChevronRight color={theme.colors.textSecondary} size={28} />
+        <ChevronRight color={theme.colors.textSecondary} size={24} />
       </View>
     </Pressable>
   );
 
   return (
     <>
+      {/* Material Design 3: Surface container with rounded corners for toggle buttons */}
       {displayMode === 'grouped' && (
-        <View style={[styles.testamentToggleContainer, { borderColor: theme.colors.divider }]}>
+        <View style={[
+          styles.toggleContainer,
+          { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.divider }
+        ]}>
           <Pressable
             onPress={() => onTestamentChange('old')}
+            android_ripple={{
+              color: theme.colors.accentBlue + '40',
+              borderless: true,
+            }}
             style={[
-              styles.testamentToggleButton,
-              selectedBibleTestament === 'old'
-                ? { backgroundColor: theme.colors.navBackground }
-                : { backgroundColor: theme.colors.backgroundSecondary },
+              styles.toggleButton,
+              selectedBibleTestament === 'old' && {
+                backgroundColor: theme.colors.accentBlue,
+                elevation: 3,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              },
             ]}
           >
             <Text
               style={[
-                styles.testamentToggleText,
+                styles.toggleText,
                 { color: selectedBibleTestament === 'old' ? '#FFFFFF' : theme.colors.textSecondary },
+                selectedBibleTestament === 'old' && { fontWeight: '600' },
               ]}
             >
               Testamenta taloha
@@ -329,17 +356,27 @@ const BibleSearchScreenContent = ({
           </Pressable>
           <Pressable
             onPress={() => onTestamentChange('new')}
+            android_ripple={{
+              color: theme.colors.accentBlue + '40',
+              borderless: true,
+            }}
             style={[
-              styles.testamentToggleButton,
-              selectedBibleTestament === 'new'
-                ? { backgroundColor: theme.colors.navBackground }
-                : { backgroundColor: theme.colors.backgroundSecondary },
+              styles.toggleButton,
+              selectedBibleTestament === 'new' && {
+                backgroundColor: theme.colors.accentBlue,
+                elevation: 3,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              },
             ]}
           >
             <Text
               style={[
-                styles.testamentToggleText,
+                styles.toggleText,
                 { color: selectedBibleTestament === 'new' ? '#FFFFFF' : theme.colors.textSecondary },
+                selectedBibleTestament === 'new' && { fontWeight: '600' },
               ]}
             >
               Testamenta vaovao
@@ -355,10 +392,15 @@ const BibleSearchScreenContent = ({
             {
               backgroundColor: theme.colors.backgroundSecondary,
               borderColor: theme.colors.divider,
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: {width: 0, height: 1},
+              shadowOpacity: 0.08,
+              shadowRadius: 3,
             },
           ]}
         >
-          <MagnifyingGlass color={theme.colors.textSecondary} size={16} />
+          <MagnifyingGlass color={theme.colors.textSecondary} size={18} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.textPrimary }]}
             placeholder="Rechercher dans la Bible..."
@@ -369,18 +411,18 @@ const BibleSearchScreenContent = ({
             autoCorrect={false}
           />
           {searchResults.length > 0 && (
-            <Text style={[styles.searchCountWatermark, { color: theme.colors.textWatermark }]}>
+            <Text style={[styles.searchCountBadge, { backgroundColor: theme.colors.accentBlue }]}>
               {displayMode === 'raw'
-                ? `TT:${oldTestamentCount} | TV:${newTestamentCount}`
+                ? `${totalCount}`
                 : selectedBibleTestament === 'old'
-                  ? `TT:${oldTestamentCount}`
-                  : `TV:${newTestamentCount}`}
+                  ? `${oldTestamentCount}`
+                  : `${newTestamentCount}`}
             </Text>
           )}
         </View>
         {searchResults.length > 0 && (
-          <Text style={[styles.totalCountWatermark, { color: theme.colors.textWatermark }]}>
-            Baiboly manontolo: {totalCount} andininy misy ny teny tadiavina
+          <Text style={[styles.totalCountText, { color: theme.colors.textSecondary }]}>
+            {totalCount} andininy misy ny teny tadiavina
           </Text>
         )}
       </View>
@@ -499,7 +541,7 @@ const HymnSearchScreenContent = ({
 
   const getHymnCategoryGroupTitle = (categoryRaw: string) => {
     const category = (categoryRaw || '').trim().toLowerCase();
-    if (category === 'ffpm' || category === 'ffpm hymns') return 'FFPm hymns';
+    if (category === 'ffpm' || category === 'ffpm hymns') return 'FFPM hymns';
     if (category === 'ff') return 'FF';
     if (category === 'antema') return 'Antema';
     return categoryRaw ? categoryRaw : 'Hymnes';
@@ -529,7 +571,7 @@ const HymnSearchScreenContent = ({
       return acc;
     }, {});
 
-    const order = ['FFPm hymns', 'FF', 'Antema'];
+    const order = ['FFPM hymns', 'FF', 'Antema'];
     const orderedSections = order
       .filter(title => grouped[title]?.length)
       .map(title => ({ title, data: grouped[title] }));
@@ -572,7 +614,20 @@ const HymnSearchScreenContent = ({
 
     return (
       <Pressable
-        style={[styles.resultItem, { backgroundColor: theme.colors.backgroundSecondary }]}
+        style={({ pressed }) => [
+          styles.resultCard,
+          { backgroundColor: theme.colors.backgroundSecondary },
+          pressed && {
+            elevation: 4,
+            shadowOpacity: 0.12,
+            transform: [{ scale: 0.995 }],
+          },
+        ]}
+        android_ripple={{
+          color: theme.colors.accentBlue + '20',
+          borderless: false,
+          foreground: true,
+        }}
         onPress={() => handleHymnPress(item.id)}
       >
         <View style={styles.resultContent}>
@@ -591,38 +646,53 @@ const HymnSearchScreenContent = ({
   return (
     <>
       {displayMode === 'grouped' && (
-        <View style={[styles.categoryToggleContainer, { borderColor: theme.colors.divider }]}>
+        <View style={[
+          styles.toggleContainer,
+          { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.divider }
+        ]}>
           <Pressable
             onPress={() => onCategoryChange('ffpm')}
-            style={[
-              styles.categoryToggleButton,
-              selectedHymnCategory === 'ffpm'
-                ? { backgroundColor: theme.colors.navBackground }
-                : { backgroundColor: theme.colors.backgroundSecondary },
+            style={({pressed}) => [
+              styles.toggleButton,
+              selectedHymnCategory === 'ffpm' ? {
+                backgroundColor: theme.colors.accentBlue,
+                elevation: 3,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              } : null,
             ]}
           >
             <Text
               style={[
-                styles.categoryToggleText,
+                styles.toggleText,
                 { color: selectedHymnCategory === 'ffpm' ? '#FFFFFF' : theme.colors.textSecondary },
+                selectedHymnCategory === 'ffpm' ? { fontWeight: '600' } : null,
               ]}
             >
-              FFPm
+              FFPM
             </Text>
           </Pressable>
           <Pressable
             onPress={() => onCategoryChange('ff')}
-            style={[
-              styles.categoryToggleButton,
-              selectedHymnCategory === 'ff'
-                ? { backgroundColor: theme.colors.navBackground }
-                : { backgroundColor: theme.colors.backgroundSecondary },
+            style={({pressed}) => [
+              styles.toggleButton,
+              selectedHymnCategory === 'ff' ? {
+                backgroundColor: theme.colors.accentBlue,
+                elevation: 3,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              } : null,
             ]}
           >
             <Text
               style={[
-                styles.categoryToggleText,
+                styles.toggleText,
                 { color: selectedHymnCategory === 'ff' ? '#FFFFFF' : theme.colors.textSecondary },
+                selectedHymnCategory === 'ff' ? { fontWeight: '600' } : null,
               ]}
             >
               FF
@@ -630,17 +700,23 @@ const HymnSearchScreenContent = ({
           </Pressable>
           <Pressable
             onPress={() => onCategoryChange('antema')}
-            style={[
-              styles.categoryToggleButton,
-              selectedHymnCategory === 'antema'
-                ? { backgroundColor: theme.colors.navBackground }
-                : { backgroundColor: theme.colors.backgroundSecondary },
+            style={({pressed}) => [
+              styles.toggleButton,
+              selectedHymnCategory === 'antema' ? {
+                backgroundColor: theme.colors.accentBlue,
+                elevation: 3,
+                shadowColor: '#000',
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              } : null,
             ]}
           >
             <Text
               style={[
-                styles.categoryToggleText,
+                styles.toggleText,
                 { color: selectedHymnCategory === 'antema' ? '#FFFFFF' : theme.colors.textSecondary },
+                selectedHymnCategory === 'antema' ? { fontWeight: '600' } : null,
               ]}
             >
               Antema
@@ -670,7 +746,7 @@ const HymnSearchScreenContent = ({
             autoCorrect={false}
           />
           {searchResults.length > 0 && (
-            <Text style={[styles.searchCountWatermark, { color: theme.colors.textWatermark }]}>
+            <Text style={[styles.searchCountBadge, { backgroundColor: theme.colors.accentBlue }]}>
               {searchResults.length}
             </Text>
           )}
@@ -790,28 +866,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
-  searchContainer: {
-    padding: 16,
-  },
-  searchInputContainer: {
+  // Material Design 3: Surface container with rounded corners
+  toggleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    backgroundColor: '#00000000', // Will be set dynamically
+    borderRadius: 28,
+    padding: 4,
     borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  toggleButton: {
+    flex: 1,
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   searchIcon: {
     fontSize: 18,
     marginRight: 8,
   },
-  magnifierIcon: {
-    fontSize: 16,
-    marginRight: 8,
-    fontWeight: '400',
-  },
   magnifyingGlass: {
     position: 'relative',
-    marginRight: 8,
   },
   magnifyingCircle: {
     position: 'absolute',
@@ -825,21 +915,37 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     transform: [{ rotate: '45deg' }],
   },
+  searchContainer: {
+    padding: 16,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+  },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    marginLeft: 12,
   },
-  searchCountWatermark: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  totalCountWatermark: {
+  searchCountBadge: {
     fontSize: 12,
-    fontWeight: '500',
-    marginTop: 6,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  totalCountText: {
+    fontSize: 13,
+    fontWeight: '400',
+    marginTop: 8,
     textAlign: 'center',
+    letterSpacing: 0.25,
   },
   resultsList: {
     flex: 1,
@@ -851,48 +957,37 @@ const styles = StyleSheet.create({
   },
   sectionHeaderText: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '500',
+    letterSpacing: 0.25,
   },
-  testamentToggleContainer: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  testamentToggleButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  testamentToggleText: {
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
+  // Material Design 3: Surface container with rounded corners for hymn category toggle
   categoryToggleContainer: {
+    flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 8,
-    flexDirection: 'row',
+    backgroundColor: '#00000000',
+    borderRadius: 28,
+    padding: 4,
     borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   categoryToggleButton: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   categoryToggleText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
+    letterSpacing: 0.5,
     textAlign: 'center',
   },
   chevronContainer: {
@@ -906,11 +1001,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     transform: [{ rotate: '45deg' }],
   },
-  resultItem: {
+  // Material Design 3: Elevated card for results
+  resultCard: {
     marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
+    marginVertical: 6,
+    borderRadius: 16,
     padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   resultContent: {
     flex: 1,
@@ -923,20 +1024,25 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  resultSubtitle: {
-    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.25,
     marginBottom: 4,
   },
   resultCount: {
     fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.25,
+  },
+  resultSubtitle: {
+    fontSize: 14,
+    marginBottom: 4,
+    letterSpacing: 0.25,
   },
   resultSnippet: {
     fontSize: 13,
     fontStyle: 'italic',
     marginTop: 4,
+    letterSpacing: 0.25,
   },
   loadingContainer: {
     flex: 1,
