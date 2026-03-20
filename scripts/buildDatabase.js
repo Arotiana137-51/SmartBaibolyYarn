@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const readline = require('readline');
+const archiver = require('archiver');
 const { 
   getAssetsPaths, 
   getSourceDataPaths, 
@@ -13,6 +14,46 @@ const {
   getFileStats,
   normalizePathForDisplay 
 } = require('./utils/paths');
+
+// Detect build mode: 'development' or 'production'
+const isProductionBuild = () => {
+  // Check for --production flag in command line arguments
+  const hasProductionFlag = process.argv.includes('--production') || process.argv.includes('--prod');
+  // Check NODE_ENV environment variable
+  const isProdEnv = process.env.NODE_ENV === 'production';
+  return hasProductionFlag || isProdEnv;
+};
+
+const BUILD_MODE = isProductionBuild() ? 'production' : 'development';
+
+// Create ZIP archive from database file
+async function createZipFromDb(dbPath, zipPath) {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    output.on('close', () => {
+      const originalSize = fs.statSync(dbPath).size;
+      const zipSize = fs.statSync(zipPath).size;
+      const ratio = ((1 - zipSize / originalSize) * 100).toFixed(1);
+      console.log(`📦 ZIP created: ${path.basename(zipPath)} (${zipSize} bytes, ${ratio}% smaller)`);
+      resolve(zipPath);
+    });
+
+    archive.on('error', (err) => reject(err));
+    archive.on('warning', (err) => {
+      if (err.code === 'ENOENT') {
+        console.warn('Archive warning:', err);
+      } else {
+        throw err;
+      }
+    });
+
+    archive.pipe(output);
+    archive.file(dbPath, { name: path.basename(dbPath) });
+    archive.finalize();
+  });
+}
 
 // Bible book ID mapping
 const bookIdMap = {
@@ -34,42 +75,69 @@ const bookIdMap = {
 };
 
 async function buildDatabase() {
-  console.log('🚀 Building SQLite database from JSON files...');
+  console.log('🚀 Building SQLite databases (dev + prod)...');
   
   // Get cross-platform paths
   const assetsPaths = getAssetsPaths();
   const databasePaths = getDatabasePaths();
   
-  // Ensure all directories exist
-  ensureDirectory(assetsPaths.root);
-  ensureDirectory(assetsPaths.android);
-  ensureDirectory(assetsPaths.ios);
+  // Ensure all directories exist (dev and prod)
+  ensureDirectory(assetsPaths.dev);
+  ensureDirectory(assetsPaths.prod);
+  ensureDirectory(assetsPaths.android.dev);
+  ensureDirectory(assetsPaths.android.prod);
+  ensureDirectory(assetsPaths.ios.dev);
+  ensureDirectory(assetsPaths.ios.prod);
   
-  const bibleDbPath = databasePaths.bible.root;
-  const hymnsDbPath = databasePaths.hymns.root;
+  const bibleDevPath = databasePaths.bible.dev;
+  const hymnsDevPath = databasePaths.hymns.dev;
+  const bibleProdPath = databasePaths.bible.prod;
+  const hymnsProdPath = databasePaths.hymns.prod;
 
-  for (const p of [bibleDbPath, hymnsDbPath]) {
+  // Clean up existing files
+  const allPaths = [
+    bibleDevPath, hymnsDevPath,
+    bibleProdPath, hymnsProdPath,
+    databasePaths.bible.androidDev, databasePaths.hymns.androidDev,
+    databasePaths.bible.androidProd, databasePaths.hymns.androidProd,
+    databasePaths.bible.iosDev, databasePaths.hymns.iosDev,
+    databasePaths.bible.iosProd, databasePaths.hymns.iosProd,
+  ];
+  
+  for (const p of allPaths) {
     if (fs.existsSync(p)) {
-      console.log('⚠️ Database file already exists!');
-      console.log(`🗑️ Removing existing database: ${normalizePathForDisplay(p)}`);
       fs.unlinkSync(p);
-      console.log('✅ Existing database removed');
     }
   }
 
-  await buildBibleMG65Database(bibleDbPath);
-  await buildHymnsDatabase(hymnsDbPath);
+  // Build databases in dev directory
+  await buildBibleMG65Database(bibleDevPath);
+  await buildHymnsDatabase(hymnsDevPath);
 
-  console.log('📦 Copying databases to platform assets...');
+  console.log('📦 Copying to platform assets...');
   
-  // Copy to all platform directories
-  copyFileSafe(bibleDbPath, databasePaths.bible.android);
-  copyFileSafe(hymnsDbPath, databasePaths.hymns.android);
-  copyFileSafe(bibleDbPath, databasePaths.bible.ios);
-  copyFileSafe(hymnsDbPath, databasePaths.hymns.ios);
+  // Copy .db files to dev directories
+  copyFileSafe(bibleDevPath, databasePaths.bible.androidDev);
+  copyFileSafe(hymnsDevPath, databasePaths.hymns.androidDev);
+  copyFileSafe(bibleDevPath, databasePaths.bible.iosDev);
+  copyFileSafe(hymnsDevPath, databasePaths.hymns.iosDev);
 
-  console.log('✅ Database build completed!');
-  return { bibleDbPath, hymnsDbPath };
+  // Create ZIP archives for production
+  console.log('🗜️ Creating ZIP archives for production...');
+  await createZipFromDb(bibleDevPath, bibleProdPath);
+  await createZipFromDb(hymnsDevPath, hymnsProdPath);
+  
+  // Copy ZIP files to prod directories
+  copyFileSafe(bibleProdPath, databasePaths.bible.androidProd);
+  copyFileSafe(hymnsProdPath, databasePaths.hymns.androidProd);
+  copyFileSafe(bibleProdPath, databasePaths.bible.iosProd);
+  copyFileSafe(hymnsProdPath, databasePaths.hymns.iosProd);
+
+  console.log('✅ Database build completed! (dev + prod)');
+  return { 
+    bibleDevPath, hymnsDevPath,
+    bibleProdPath, hymnsProdPath
+  };
 }
 
 function normalizeVerseText(text) {
@@ -742,24 +810,40 @@ function computeSha256(filePath) {
 }
 
 function verifyDatabaseFiles() {
-  console.log('🔍 Verifying database files...');
+  console.log('🔍 Verifying database files (dev + prod)...');
 
   const databasePaths = getDatabasePaths();
   const files = [
     {
-      name: 'BibleMG65.db',
+      name: 'BibleMG65.db (dev)',
       paths: [
-        databasePaths.bible.root,
-        databasePaths.bible.android,
-        databasePaths.bible.ios,
+        databasePaths.bible.dev,
+        databasePaths.bible.androidDev,
+        databasePaths.bible.iosDev,
       ],
     },
     {
-      name: 'Hymns.db',
+      name: 'Hymns.db (dev)',
       paths: [
-        databasePaths.hymns.root,
-        databasePaths.hymns.android,
-        databasePaths.hymns.ios,
+        databasePaths.hymns.dev,
+        databasePaths.hymns.androidDev,
+        databasePaths.hymns.iosDev,
+      ],
+    },
+    {
+      name: 'BibleMG65.zip (prod)',
+      paths: [
+        databasePaths.bible.prod,
+        databasePaths.bible.androidProd,
+        databasePaths.bible.iosProd,
+      ],
+    },
+    {
+      name: 'Hymns.zip (prod)',
+      paths: [
+        databasePaths.hymns.prod,
+        databasePaths.hymns.androidProd,
+        databasePaths.hymns.iosProd,
       ],
     },
   ];
@@ -791,15 +875,17 @@ function verifyDatabaseFiles() {
       throw new Error(`Database verification failed for ${group.name}: file mismatch detected.`);
     }
 
-    console.log(`✅ ${group.name} verification passed (${reference.size} bytes, sha256 ${reference.hash})`);
+    console.log(`✅ ${group.name} verification passed (${reference.size} bytes, sha256 ${reference.hash.slice(0, 16)}...)`);
   }
 }
 
 // Run the build
 buildDatabase()
-  .then(({ bibleDbPath, hymnsDbPath }) => {
-    console.log(`✅ Bible DB built successfully: ${bibleDbPath}`);
-    console.log(`✅ Hymns DB built successfully: ${hymnsDbPath}`);
+  .then(({ bibleDevPath, hymnsDevPath, bibleProdPath, hymnsProdPath }) => {
+    console.log(`✅ Bible DB (dev): ${bibleDevPath}`);
+    console.log(`✅ Hymns DB (dev): ${hymnsDevPath}`);
+    console.log(`✅ Bible ZIP (prod): ${bibleProdPath}`);
+    console.log(`✅ Hymns ZIP (prod): ${hymnsProdPath}`);
     verifyDatabaseFiles();
     process.exit(0);
   })

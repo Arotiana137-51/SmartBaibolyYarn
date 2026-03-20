@@ -13,10 +13,12 @@ export const isIOS = Platform.OS === 'ios';
 export const isDevelopment = __DEV__;
 
 export const getDatabaseAssetPath = (dbName: string): string => {
-  if (__DEV__) {
-    return `data/${dbName}`;
-  }
-  return `data/${dbName.replace(/\.db$/i, '.zip')}`;
+  // Dev mode: use data/dev/ directory with .db files
+  // Production mode: use data/prod/ directory with .zip files
+  const subdir = __DEV__ ? 'dev' : 'prod';
+  const ext = __DEV__ ? '.db' : '.zip';
+  const fileName = dbName.replace(/\.db$/i, ext);
+  return `data/${subdir}/${fileName}`;
 };
 
 // Base paths for different platforms

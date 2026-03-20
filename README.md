@@ -37,11 +37,23 @@ This project includes prebuilt SQLite databases in:
 - `assets/data/BibleMG65.db`
 - `assets/data/Hymns.db`
 
-If you modify source data and need to rebuild databases:
+### Building Databases
 
+**Development mode** (uncompressed .db files for faster builds):
 ```sh
 yarn build:database
 ```
+
+**Production mode** (compressed .zip files for smaller APK/IPA size):
+```sh
+yarn build:database:prod
+```
+
+The production build creates ZIP archives of the databases:
+- `BibleMG65.zip` (~60% smaller)
+- `Hymns.zip` (~50% smaller)
+
+These are automatically decompressed on first app launch.
 
 To ensure runtime data/assets are set up:
 

@@ -3,17 +3,18 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "android": "yarn react-native run-android",
-        "ios": "yarn react-native run-ios",
+        "android": "node scripts/checkDevDb.js && yarn react-native run-android",
+        "ios": "node scripts/checkDevDb.js && yarn react-native run-ios",
         "start": "yarn react-native start",
         "dev:metro": "node scripts/devMetro.js",
         "dev:android": "node scripts/devAndroid.js",
         "test": "jest",
         "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-        "postinstall": "node -e \"const isMac = process.platform === 'darwin'; console.log('ðŸ” Detected platform:', isMac ? 'macOS (iOS development ready)' : 'Windows (Android development)'); if (isMac) { console.log('ðŸš€ Setting up iOS dependencies...'); try { require('child_process').execSync('cd ios && pod install', { stdio: 'inherit' }); } catch (e) { console.log('âš ï¸  iOS setup completed with warnings'); } }\"",
+        "postinstall": "node -e \"const isMac = process.platform === 'darwin'; console.log('🔍 Detected platform:', isMac ? 'macOS (iOS development ready)' : 'Windows (Android development)'); if (isMac) { console.log('🚀 Setting up iOS dependencies...'); try { require('child_process').execSync('cd ios && pod install', { stdio: 'inherit' }); } catch (e) { console.log('⚠️  iOS setup completed with warnings'); } }\"",
         "setup:data": "node scripts/setupData.js",
         "build:database": "node scripts/buildDatabase.js",
-        "prebuild": "yarn build:database"
+        "prebuild": "yarn build:database",
+        "check:db": "node scripts/checkDevDb.js"
     },
     "dependencies": {
         "@react-native-async-storage/async-storage": "^1.17.11",
@@ -30,7 +31,7 @@
         "react-native-quick-sqlite": "^8.0.0",
         "react-native-safe-area-context": "^5.6.2",
         "react-native-screens": "^4.19.0",
-        "react-native-zip-archive": "^7.2.1"
+        "react-native-zip-archive": "^7.0.2"
     },
     "devDependencies": {
         "@babel/core": "^7.25.2",
@@ -47,6 +48,7 @@
         "@types/jest": "^29.5.13",
         "@types/react": "^19.2.0",
         "@types/react-test-renderer": "^19.1.0",
+        "archiver": "^7.0.1",
         "eslint": "^8.19.0",
         "fs-extra": "^11.3.3",
         "jest": "^29.6.3",
