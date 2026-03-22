@@ -65,17 +65,6 @@ export const useHymnsData = () => {
       
       const versesList: HymnVerse[] = rows;
 
-      if (versesList.length > 0) {
-        console.log('Loaded hymn verses:', {
-          hymnId,
-          count: versesList.length,
-          first: versesList[0]?.verse_number,
-          last: versesList[versesList.length - 1]?.verse_number,
-        });
-      } else {
-        console.log('Loaded hymn verses:', { hymnId, count: 0 });
-      }
-      
       setVerses(versesList);
       return versesList;
     } catch (error) {

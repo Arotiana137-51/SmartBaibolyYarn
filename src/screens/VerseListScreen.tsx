@@ -5,9 +5,10 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBibleSearch, BibleVerseResult } from '../hooks/useBibleSearch';
 import { useTheme } from '../contexts/ThemeContext';
+import { useJesusName } from '../contexts/JesusNameContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
-import { renderBibleLine, processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
+import { processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
 
 // Helper function to highlight matching text
 const highlightText = (text: string, query: string, theme: any) => {
@@ -43,6 +44,7 @@ const VerseListScreen = () => {
   const navigation = useNavigation<VerseListScreenNavigationProp>();
   const { bookId, bookName, query, matchWholeWord } = route.params;
   const { theme } = useTheme();
+  const {transformText} = useJesusName();
   
   const [verses, setVerses] = useState<BibleVerseResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +78,40 @@ const VerseListScreen = () => {
   };
 
 const renderVerse = ({ item }: { item: BibleVerseResult }) => {
-  const { lines, italicLines } = processBibleTextWithMetadataForReader(item.text);
+  const { lines, italicLines } = processBibleTextWithMetadataForReader(transformText(item.text));
+
+  const renderLineWithInlineFootnotes = (line: string) => {
+    const regex = /(\[\*[^\]]+\])/g;
+    const parts = line.split(regex);
+
+    return (
+      <Text>
+        {parts.map((part, idx) => {
+          if (!part) {
+            return null;
+          }
+
+          const isFootnote = part.startsWith('[*') && part.endsWith(']');
+          if (isFootnote) {
+            return (
+              <Text
+                key={`fn-${idx}`}
+                style={{ opacity: 0.72, fontStyle: 'italic', fontSize: 15 }}
+              >
+                {part}
+              </Text>
+            );
+          }
+
+          return (
+            <Text key={`tx-${idx}`}>
+              {highlightText(part, query, theme)}
+            </Text>
+          );
+        })}
+      </Text>
+    );
+  };
   
   return (
     <Pressable
@@ -103,7 +138,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
                 : theme.colors.textPrimary,
             }}
           >
-            {highlightText(line, query, theme)}
+            {renderLineWithInlineFootnotes(line)}
           </Text>
         ))}
       </View>

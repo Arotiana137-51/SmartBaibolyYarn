@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {View, Text, ScrollView, StyleSheet, Button, TextInput, Platform} from 'react-native';
 import * as FileSystem from 'react-native-fs';
 import {bibleDatabaseService, hymnsDatabaseService} from '../services/database/DatabaseService';
+import {useJesusName} from '../contexts/JesusNameContext';
 
 // Utility function to handle errors consistently
 const handleError = (error: unknown, context: string): string => {
@@ -12,6 +13,7 @@ const handleError = (error: unknown, context: string): string => {
 
 export const DatabaseTestScreen = () => {
   const isAndroid = Platform.OS === 'android';
+  const {transformText} = useJesusName();
   const [books, setBooks] = useState<any[]>([]);
   const [hymns, setHymns] = useState<any[]>([]);
   const [verses, setVerses] = useState<any[]>([]);
@@ -264,7 +266,7 @@ export const DatabaseTestScreen = () => {
         <Button title="Search" onPress={searchVerses} />
         {verses.map((verse, index) => (
           <Text key={index}>
-            {verse.book_name} {verse.chapter}:{verse.verse_number} - {verse.text.substring(0, 50)}...
+            {verse.book_name} {verse.chapter}:{verse.verse_number} - {transformText(verse.text).substring(0, 50)}...
           </Text>
         ))}
       </View>

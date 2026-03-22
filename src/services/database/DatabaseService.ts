@@ -77,18 +77,11 @@ class DatabaseService {
       return;
     }
     if (this.db) {
-      if (__DEV__) {
-        console.log('Database already initialized');
-      }
       return;
     }
 
     this.initPromise = (async () => {
       try {
-        if (__DEV__) {
-          console.log(`Starting database initialization: ${this.dbName}`);
-        }
-        
         // Check if we need to copy pre-built database from assets
         // IMPORTANT: The copied DB must be placed in the same directory used by react-native-quick-sqlite.
         const dbDirectory = getDatabaseDirectory();
@@ -96,18 +89,11 @@ class DatabaseService {
         const exists = await fileExistsSafe(dbPath);
         
         if (!exists) {
-          if (__DEV__) {
-            console.log('Database not found, copying from assets...');
-          }
           const assetPath = __DEV__ ? getDatabaseAssetPath(this.dbName) : (this.assetPath || getDatabaseAssetPath(this.dbName));
           
           try {
             await copyDatabaseFromAssets(assetPath, dbPath);
             const stats = await FileSystem.stat(dbPath);
-            if (__DEV__) {
-              console.log('Database file size after copy (bytes):', stats.size);
-              console.log('Database copied successfully from assets');
-            }
           } catch (error) {
             console.error('Failed to copy database from assets:', error);
             throw error;
@@ -119,9 +105,6 @@ class DatabaseService {
           name: this.dbName,
           location: 'default',
         });
-        if (__DEV__) {
-          console.log('Database opened successfully');
-        }
 
         await this.executeQuery('PRAGMA foreign_keys = ON');
 
@@ -129,18 +112,10 @@ class DatabaseService {
           const dbList = await this.executeQuery<{ seq: number; name: string; file: string }>(
             'PRAGMA database_list'
           );
-          if (__DEV__) {
-            console.log('PRAGMA database_list:', dbList.rows);
-          }
         } catch (error) {
-          if (__DEV__) {
-            console.log('Failed to read PRAGMA database_list');
-          }
+          // PRAGMA database_list failed silently
         }
 
-        if (__DEV__) {
-          console.log(`Database initialization completed successfully: ${this.dbName}`);
-        }
       } catch (error) {
         console.error('Error initializing database:', error);
         throw error;
@@ -227,9 +202,6 @@ class DatabaseService {
     if (this.db) {
       this.db.close();
       this.db = null;
-    }
-    if (__DEV__) {
-      console.log('Database connection closed');
     }
   }
 }

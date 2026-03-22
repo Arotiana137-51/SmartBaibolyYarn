@@ -4,6 +4,7 @@ import {useRoute} from '@react-navigation/native';
 import {t} from '../i18n/strings';
 import {useBibleData} from '../hooks/useBibleData';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import {useJesusName} from '../contexts/JesusNameContext';
 
 type RouteParams = {
   bookId: number;
@@ -16,6 +17,7 @@ const BibleReaderScreen = () => {
   const route = useRoute();
   const {bookId, bookName, chapter, verse} = route.params as RouteParams;
   const {verses, loadVerses, isLoading} = useBibleData();
+  const {transformText} = useJesusName();
   const [fontSize, setFontSize] = useState(16);
   const flatListRef = useRef<FlatList>(null);
 
@@ -94,7 +96,7 @@ const BibleReaderScreen = () => {
           }}
           renderItem={({item}) => (
             <Text style={[styles.verseText, {fontSize}]}> 
-              {`${item.verse_number}. ${item.text}`}
+              {`${item.verse_number}. ${transformText(item.text)}`}
             </Text>
           )}
         />

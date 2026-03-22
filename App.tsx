@@ -5,6 +5,7 @@ import {DatabaseProvider, useDatabase} from './src/contexts/DatabaseContext';
 import {ActivityIndicator, View, Text, StyleSheet} from 'react-native';
 import RootNavigator from './src/navigation/RootNavigator';
 import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
+import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
 
 // Splash screen component
 const SplashScreen = () => (
@@ -18,8 +19,9 @@ const SplashScreen = () => (
 const AppContent = () => {
   const {isInitialized} = useDatabase();
   const {isReady} = useTheme();
+  const {isReady: isJesusNameReady} = useJesusName();
 
-  if (!isReady || !isInitialized) {
+  if (!isReady || !isJesusNameReady || !isInitialized) {
     return <SplashScreen />;
   }
 
@@ -31,11 +33,13 @@ const App = () => {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <DatabaseProvider>
-          <NavigationContainer>
-            <AppContent />
-          </NavigationContainer>
-        </DatabaseProvider>
+        <JesusNameProvider>
+          <DatabaseProvider>
+            <NavigationContainer>
+              <AppContent />
+            </NavigationContainer>
+          </DatabaseProvider>
+        </JesusNameProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

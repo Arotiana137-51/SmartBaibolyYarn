@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBibleSearch, BibleSearchResult } from '../hooks/useBibleSearch';
 import { useHymnSearch, HymnSearchResult } from '../hooks/useHymnSearch';
 import { useTheme } from '../contexts/ThemeContext';
+import { useJesusName } from '../contexts/JesusNameContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { scaleFontSize } from '../constants/Typography';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
@@ -630,13 +631,26 @@ const HymnSearchScreenContent = ({
         }}
         onPress={() => handleHymnPress(item.id)}
       >
-        <View style={styles.resultContent}>
-          <Text style={[styles.resultTitle, { color: theme.colors.textPrimary }]}>
-            {item.category ? `${item.category.toUpperCase()} ` : ''}Hymne {item.number}
+        <View style={styles.hymnResultContainer}>
+          <View style={styles.hymnHeaderRow}>
+            <Text style={[styles.hymnNumberBadge, { backgroundColor: theme.colors.accentBlue }]}>
+              {item.number}
+            </Text>
+            {item.category && (
+              <Text style={[styles.hymnCategoryLabel, { color: theme.colors.textSecondary }]}>
+                {item.category.toUpperCase()}
+              </Text>
+            )}
+          </View>
+          <Text style={[styles.hymnTitleText, { color: theme.colors.textPrimary }]} numberOfLines={2}>
+            {highlightedTitle}
           </Text>
-          <Text style={[styles.resultSubtitle, { color: theme.colors.textSecondary }]}>{highlightedTitle}</Text>
           {highlightedSnippet && (
-            <Text style={[styles.resultSnippet, { color: theme.colors.textSecondary }]}>{highlightedSnippet}</Text>
+            <View style={styles.hymnPreviewContainer}>
+              <Text style={[styles.hymnPreviewText, { color: theme.colors.textSecondary }]} numberOfLines={3}>
+                {highlightedSnippet}
+              </Text>
+            </View>
           )}
         </View>
       </Pressable>
@@ -1042,6 +1056,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontStyle: 'italic',
     marginTop: 4,
+    letterSpacing: 0.25,
+  },
+  // Material Design 3: Vertical stack layout for hymn results
+  hymnResultContainer: {
+    flexDirection: 'column',
+  },
+  hymnHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  hymnNumberBadge: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginRight: 8,
+  },
+  hymnCategoryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  hymnTitleText: {
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: 0.25,
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  hymnPreviewContainer: {
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 4,
+  },
+  hymnPreviewText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 18,
     letterSpacing: 0.25,
   },
   loadingContainer: {

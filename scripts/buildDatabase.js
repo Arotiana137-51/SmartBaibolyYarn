@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const readline = require('readline');
 const archiver = require('archiver');
+const yaml = require('js-yaml');
 const { 
   getAssetsPaths, 
   getSourceDataPaths, 
@@ -114,10 +115,24 @@ async function buildDatabase() {
   await buildBibleMG65Database(bibleDevPath);
   await buildHymnsDatabase(hymnsDevPath);
 
+  // Copy dev databases to platform assets
+  console.log('📦 Copying dev databases to platform assets...');
+  copyFileSafe(bibleDevPath, databasePaths.bible.androidDev);
+  copyFileSafe(bibleDevPath, databasePaths.bible.iosDev);
+  copyFileSafe(hymnsDevPath, databasePaths.hymns.androidDev);
+  copyFileSafe(hymnsDevPath, databasePaths.hymns.iosDev);
+
   // Create ZIP archives for production
   console.log('🗜️ Creating ZIP archives for production...');
   await createZipFromDb(bibleDevPath, bibleProdPath);
   await createZipFromDb(hymnsDevPath, hymnsProdPath);
+
+  // Copy prod ZIPs to platform assets
+  console.log('📦 Copying prod archives to platform assets...');
+  copyFileSafe(bibleProdPath, databasePaths.bible.androidProd);
+  copyFileSafe(bibleProdPath, databasePaths.bible.iosProd);
+  copyFileSafe(hymnsProdPath, databasePaths.hymns.androidProd);
+  copyFileSafe(hymnsProdPath, databasePaths.hymns.iosProd);
 
   console.log('✅ Database build completed! (dev + prod)');
   return { 
@@ -159,44 +174,19 @@ function normalizeHymnAuthors(authors) {
 function buildBibleMG65Database(dbPath) {
   const databasePaths = getDatabasePaths();
   const mg65JsonPath = databasePaths.bible.source;
+  const yamlSourceDir = path.join(getSourceDataPaths().bible, 'Yaml_Zo_Source');
+  const yamlBooksFile = path.join(yamlSourceDir, 'bible_book.yaml');
+  const yamlVersesPrefix = 'bible_verse_mg1865_mg_';
+  const yamlHasRequiredFiles =
+    fs.existsSync(yamlSourceDir) &&
+    fs.existsSync(yamlBooksFile) &&
+    fs.existsSync(path.join(yamlSourceDir, 'bible_version.yaml'));
   
-  if (!fs.existsSync(mg65JsonPath)) {
-    throw new Error(`MG65 JSON not found at: ${normalizePathForDisplay(mg65JsonPath)}`);
+  if (!yamlHasRequiredFiles && !fs.existsSync(mg65JsonPath)) {
+    throw new Error(
+      `Bible source not found. Expected YAML at: ${normalizePathForDisplay(yamlSourceDir)} or legacy JSON at: ${normalizePathForDisplay(mg65JsonPath)}`
+    );
   }
-
-  console.log('📖 Building Bible MG65 database (FTS5-enabled)...');
-  const mg65 = JSON.parse(fs.readFileSync(mg65JsonPath, 'utf8'));
-  const tables = (mg65.objects || []).filter(o => o.type === 'table');
-  const booksTable = tables.find(t => t.name === 'books');
-  const versesTable = tables.find(t => t.name === 'verses');
-
-  if (!booksTable || !versesTable) {
-    throw new Error('MG65 JSON missing required tables (books, verses)');
-  }
-
-  const bookCols = (booksTable.columns || []).map(c => c.name);
-  const verseCols = (versesTable.columns || []).map(c => c.name);
-  const bBookNum = bookCols.indexOf('book_number');
-  const bLong = bookCols.indexOf('long_name');
-  const bShort = bookCols.indexOf('short_name');
-  const vBook = verseCols.indexOf('book_number');
-  const vChapter = verseCols.indexOf('chapter');
-  const vVerse = verseCols.indexOf('verse');
-  const vText = verseCols.indexOf('text');
-
-  if ([bBookNum, bLong, bShort, vBook, vChapter, vVerse, vText].some(i => i < 0)) {
-    throw new Error('MG65 JSON schema is missing expected columns');
-  }
-
-  const mg65Books = (booksTable.rows || []).map(r => ({
-    bookNumber: Number(r[bBookNum]),
-    shortName: String(r[bShort] || ''),
-    longName: String(r[bLong] || ''),
-  }));
-
-  const mg65BookNumbersSorted = [...new Set(mg65Books.map(b => b.bookNumber))].sort((a, b) => a - b);
-  const bookNumberToId = new Map(mg65BookNumbersSorted.map((bn, idx) => [bn, idx + 1]));
-  const oldTestamentThreshold = 400;
 
   const crossRefsPath = databasePaths.bible.crossReferences;
 
@@ -377,11 +367,35 @@ function buildBibleMG65Database(dbPath) {
         canonicalMapStmt.run(params, err => (err ? reject2(err) : resolve2()));
       });
 
-    for (let canonical = 1; canonical <= mg65BookNumbersSorted.length; canonical += 1) {
-      const bn = mg65BookNumbersSorted[canonical - 1];
-      const internalId = bookNumberToId.get(bn);
-      if (internalId) {
-        await insertCanonicalMapAsync([canonical, internalId]);
+    if (usingYamlSource) {
+      for (let canonical = 1; canonical <= 66; canonical += 1) {
+        await insertCanonicalMapAsync([canonical, canonical]);
+      }
+    } else {
+      const mg65 = JSON.parse(fs.readFileSync(mg65JsonPath, 'utf8'));
+      const tables = (mg65.objects || []).filter(o => o.type === 'table');
+      const booksTable = tables.find(t => t.name === 'books');
+      if (!booksTable) {
+        throw new Error('MG65 JSON missing required table (books) for canonical mapping');
+      }
+
+      const bookCols = (booksTable.columns || []).map(c => c.name);
+      const bBookNum = bookCols.indexOf('book_number');
+      if (bBookNum < 0) {
+        throw new Error('MG65 JSON schema is missing expected book_number column');
+      }
+
+      const mg65BookNumbersSorted = [...new Set((booksTable.rows || []).map(r => Number(r[bBookNum])))]
+        .filter(n => Number.isFinite(n))
+        .sort((a, b) => a - b);
+      const bookNumberToId = new Map(mg65BookNumbersSorted.map((bn, idx) => [bn, idx + 1]));
+
+      for (let canonical = 1; canonical <= mg65BookNumbersSorted.length; canonical += 1) {
+        const bn = mg65BookNumbersSorted[canonical - 1];
+        const internalId = bookNumberToId.get(bn);
+        if (internalId) {
+          await insertCanonicalMapAsync([canonical, internalId]);
+        }
       }
     }
     await new Promise((resolve2, reject2) => canonicalMapStmt.finalize(err => (err ? reject2(err) : resolve2())));
@@ -494,13 +508,44 @@ function buildBibleMG65Database(dbPath) {
     });
   };
 
-  const maxChapterByBookNumber = new Map();
-  for (const r of (versesTable.rows || [])) {
-    const bn = Number(r[vBook]);
-    const ch = Number(r[vChapter]);
-    const cur = maxChapterByBookNumber.get(bn) || 0;
-    if (ch > cur) {
-      maxChapterByBookNumber.set(bn, ch);
+  const usingYamlSource = yamlHasRequiredFiles;
+
+  const readYamlFile = (filePath) => {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const parsed = yaml.load(content);
+    if (!parsed || typeof parsed !== 'object') {
+      throw new Error(`Invalid YAML structure: ${normalizePathForDisplay(filePath)}`);
+    }
+    return parsed;
+  };
+
+  const parseYamlBookNumber = (bookKeyOrId) => {
+    const raw = String(bookKeyOrId || '').trim();
+    const m = raw.match(/^(?:mg_)?(\d+)$/i);
+    if (!m) {
+      return null;
+    }
+    const num = Number(m[1]);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  let yamlBooksByNumber = null;
+  if (usingYamlSource) {
+    const booksYaml = readYamlFile(yamlBooksFile);
+    yamlBooksByNumber = new Map();
+    for (const [key, value] of Object.entries(booksYaml)) {
+      const bookNumber = parseYamlBookNumber(value?.book_number ?? value?.book_id ?? key);
+      if (!bookNumber) {
+        continue;
+      }
+      const name = String(value?.book_name || '').trim();
+      const chapterCount = Number(value?.book_chapter_count) || 0;
+      yamlBooksByNumber.set(bookNumber, {
+        id: bookNumber,
+        name,
+        chapters: chapterCount,
+        filename: String(value?.book_id || key || ''),
+      });
     }
   }
 
@@ -513,6 +558,7 @@ function buildBibleMG65Database(dbPath) {
   return new Promise((resolve, reject) => {
     db.serialize(async () => {
       try {
+        console.log(`📖 Building Bible database (FTS5-enabled) from ${usingYamlSource ? 'YAML' : 'legacy MG65 JSON'}...`);
         console.log('📝 Creating Bible schema...');
 
         await run(`PRAGMA journal_mode = WAL`);
@@ -533,6 +579,7 @@ function buildBibleMG65Database(dbPath) {
           chapter INTEGER NOT NULL,
           verse_number INTEGER NOT NULL,
           text TEXT NOT NULL,
+          title TEXT,
           FOREIGN KEY (book_id) REFERENCES Books (id) ON DELETE CASCADE,
           UNIQUE(book_id, chapter, verse_number) ON CONFLICT REPLACE
         )`);
@@ -547,26 +594,81 @@ function buildBibleMG65Database(dbPath) {
         )`);
 
         console.log('📚 Importing books...');
-        for (const b of mg65Books) {
-          const id = bookNumberToId.get(b.bookNumber);
-          if (!id) {
-            throw new Error(`Missing book id mapping for book_number=${b.bookNumber}`);
+        if (usingYamlSource) {
+          for (let bookId = 1; bookId <= 66; bookId += 1) {
+            const book = yamlBooksByNumber?.get(bookId);
+            if (!book) {
+              throw new Error(`Missing YAML book metadata for book_number=${bookId}`);
+            }
+            const testament = bookId <= 39 ? 'old' : 'new';
+            await run(
+              `INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename) VALUES (?, ?, ?, ?, ?)`,
+              [book.id, book.name, testament, book.chapters, book.filename]
+            );
           }
-          const testament = b.bookNumber < oldTestamentThreshold ? 'old' : 'new';
-          const chapters = maxChapterByBookNumber.get(b.bookNumber) || 0;
-          const filename = '';
-          await run(
-            `INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename) VALUES (?, ?, ?, ?, ?)`,
-            [id, b.longName, testament, chapters, filename]
-          );
+        } else {
+          console.log('⚠️ YAML source not found, falling back to legacy MG65 JSON import...');
+
+          const mg65 = JSON.parse(fs.readFileSync(mg65JsonPath, 'utf8'));
+          const tables = (mg65.objects || []).filter(o => o.type === 'table');
+          const booksTable = tables.find(t => t.name === 'books');
+          const versesTable = tables.find(t => t.name === 'verses');
+          if (!booksTable || !versesTable) {
+            throw new Error('MG65 JSON missing required tables (books, verses)');
+          }
+
+          const bookCols = (booksTable.columns || []).map(c => c.name);
+          const verseCols = (versesTable.columns || []).map(c => c.name);
+          const bBookNum = bookCols.indexOf('book_number');
+          const bLong = bookCols.indexOf('long_name');
+          const bShort = bookCols.indexOf('short_name');
+          const vBook = verseCols.indexOf('book_number');
+          const vChapter = verseCols.indexOf('chapter');
+          const vVerse = verseCols.indexOf('verse');
+          const vText = verseCols.indexOf('text');
+          if ([bBookNum, bLong, bShort, vBook, vChapter, vVerse, vText].some(i => i < 0)) {
+            throw new Error('MG65 JSON schema is missing expected columns');
+          }
+
+          const mg65Books = (booksTable.rows || []).map(r => ({
+            bookNumber: Number(r[bBookNum]),
+            shortName: String(r[bShort] || ''),
+            longName: String(r[bLong] || ''),
+          }));
+          const mg65BookNumbersSorted = [...new Set(mg65Books.map(b => b.bookNumber))].sort((a, b) => a - b);
+          const bookNumberToId = new Map(mg65BookNumbersSorted.map((bn, idx) => [bn, idx + 1]));
+          const oldTestamentThreshold = 400;
+
+          const maxChapterByBookNumber = new Map();
+          for (const r of (versesTable.rows || [])) {
+            const bn = Number(r[vBook]);
+            const ch = Number(r[vChapter]);
+            const cur = maxChapterByBookNumber.get(bn) || 0;
+            if (ch > cur) {
+              maxChapterByBookNumber.set(bn, ch);
+            }
+          }
+
+          for (const b of mg65Books) {
+            const id = bookNumberToId.get(b.bookNumber);
+            if (!id) {
+              throw new Error(`Missing book id mapping for book_number=${b.bookNumber}`);
+            }
+            const testament = b.bookNumber < oldTestamentThreshold ? 'old' : 'new';
+            const chapters = maxChapterByBookNumber.get(b.bookNumber) || 0;
+            const filename = '';
+            await run(
+              `INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename) VALUES (?, ?, ?, ?, ?)`,
+              [id, b.longName, testament, chapters, filename]
+            );
+          }
         }
 
         console.log('📄 Importing verses (normalized) ...');
         let verseId = 1;
         const insertVerseSql =
-          `INSERT OR REPLACE INTO Verses (id, book_id, chapter, verse_number, text) VALUES (?, ?, ?, ?, ?)`;
-        const insertFtsSql =
-          `INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`;
+          `INSERT OR REPLACE INTO Verses (id, book_id, chapter, verse_number, text, title) VALUES (?, ?, ?, ?, ?, ?)`;
+        const insertFtsSql = `INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`;
         const versesStmt = db.prepare(insertVerseSql);
         const ftsStmt = db.prepare(insertFtsSql);
         const insertVerseAsync = (params) =>
@@ -578,20 +680,81 @@ function buildBibleMG65Database(dbPath) {
             ftsStmt.run(params, err => (err ? reject2(err) : resolve2()));
           });
 
-        for (const r of (versesTable.rows || [])) {
-          const bn = Number(r[vBook]);
-          const id = bookNumberToId.get(bn);
-          if (!id) {
-            throw new Error(`Unknown book_number in verses: ${bn}`);
+        if (usingYamlSource) {
+          for (let bookId = 1; bookId <= 66; bookId += 1) {
+            const versesFile = path.join(yamlSourceDir, `${yamlVersesPrefix}${bookId}.yaml`);
+            if (!fs.existsSync(versesFile)) {
+              throw new Error(`Missing YAML verses file for book ${bookId}: ${normalizePathForDisplay(versesFile)}`);
+            }
+            const versesYaml = readYamlFile(versesFile);
+
+            const verseRows = [];
+            for (const [key, value] of Object.entries(versesYaml)) {
+              const vBook = parseYamlBookNumber(value?.verse_book);
+              const chapter = Number(value?.verse_chapter);
+              const verseNumber = Number(value?.verse_number);
+              const text = String(value?.verse_text || '');
+              const title = value?.verse_title == null ? null : String(value?.verse_title);
+
+              if (vBook !== bookId || !Number.isFinite(chapter) || !Number.isFinite(verseNumber) || !text) {
+                continue;
+              }
+              verseRows.push({ chapter, verseNumber, text, title });
+            }
+
+            verseRows.sort((a, b) => (a.chapter - b.chapter) || (a.verseNumber - b.verseNumber));
+
+            for (const row of verseRows) {
+              const textPlain = normalizeVerseText(row.text);
+              const rowId = verseId;
+              verseId += 1;
+              await insertVerseAsync([rowId, bookId, row.chapter, row.verseNumber, row.text, row.title]);
+              await insertFtsAsync([rowId, textPlain]);
+            }
+
+            if (bookId % 5 === 0) {
+              console.log(`  ↳ verses imported up to book ${bookId} (total rows: ${verseId - 1})`);
+            }
           }
-          const chapter = Number(r[vChapter]);
-          const verseNumber = Number(r[vVerse]);
-          const text = String(r[vText] || '');
-          const textPlain = normalizeVerseText(text);
-          const rowId = verseId;
-          verseId += 1;
-          await insertVerseAsync([rowId, id, chapter, verseNumber, text]);
-          await insertFtsAsync([rowId, textPlain]);
+        } else {
+          const mg65 = JSON.parse(fs.readFileSync(mg65JsonPath, 'utf8'));
+          const tables = (mg65.objects || []).filter(o => o.type === 'table');
+          const versesTable = tables.find(t => t.name === 'verses');
+          if (!versesTable) {
+            throw new Error('MG65 JSON missing required table (verses)');
+          }
+
+          const verseCols = (versesTable.columns || []).map(c => c.name);
+          const vBook = verseCols.indexOf('book_number');
+          const vChapter = verseCols.indexOf('chapter');
+          const vVerse = verseCols.indexOf('verse');
+          const vText = verseCols.indexOf('text');
+          if ([vBook, vChapter, vVerse, vText].some(i => i < 0)) {
+            throw new Error('MG65 JSON schema is missing expected verse columns');
+          }
+
+          const bookNumbers = [];
+          for (const r of (versesTable.rows || [])) {
+            bookNumbers.push(Number(r[vBook]));
+          }
+          const bookNumbersSorted = [...new Set(bookNumbers)].sort((a, b) => a - b);
+          const bookNumberToId = new Map(bookNumbersSorted.map((bn, idx) => [bn, idx + 1]));
+
+          for (const r of (versesTable.rows || [])) {
+            const bn = Number(r[vBook]);
+            const id = bookNumberToId.get(bn);
+            if (!id) {
+              continue;
+            }
+            const chapter = Number(r[vChapter]);
+            const verseNumber = Number(r[vVerse]);
+            const text = String(r[vText] || '');
+            const textPlain = normalizeVerseText(text);
+            const rowId = verseId;
+            verseId += 1;
+            await insertVerseAsync([rowId, id, chapter, verseNumber, text, null]);
+            await insertFtsAsync([rowId, textPlain]);
+          }
         }
 
         await importCrossReferences();

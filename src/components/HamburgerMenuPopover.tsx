@@ -10,6 +10,7 @@ import {
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
 import ToggleThemeButton from './ToggleThemeButton';
+import {useJesusName} from '../contexts/JesusNameContext';
 
 export type HamburgerMenuItemKey =
   | 'favorites'
@@ -52,6 +53,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   onDecreaseFont,
 }) => {
   const {theme} = useTheme();
+  const {variant: jesusNameVariant, setVariant: setJesusNameVariant} = useJesusName();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
 
@@ -216,6 +218,38 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 
             <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
 
+            <View style={styles.variantSection}>
+              <Text style={[styles.variantTitle, {color: theme.colors.textSecondary}]}>
+                Anaran'i Jesosy
+              </Text>
+
+              <Pressable
+                onPress={() => setJesusNameVariant('jesosy')}
+                style={({pressed}) => [
+                  styles.variantRow,
+                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null,
+                ]}>
+                <Text style={[styles.variantLabel, {color: theme.colors.navBackground}]}>Jesosy</Text>
+                <Text style={[styles.variantMark, {color: theme.colors.accentBlue}]}>
+                  {jesusNameVariant === 'jesosy' ? '✓' : ''}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setJesusNameVariant('jesoa')}
+                style={({pressed}) => [
+                  styles.variantRow,
+                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null,
+                ]}>
+                <Text style={[styles.variantLabel, {color: theme.colors.navBackground}]}>Jesoa</Text>
+                <Text style={[styles.variantMark, {color: theme.colors.accentBlue}]}>
+                  {jesusNameVariant === 'jesoa' ? '✓' : ''}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={[styles.menuDivider, {backgroundColor: theme.colors.divider}]} />
+
             <View style={styles.themeRow}>
               <ToggleThemeButton
                 isDarkMode={isDarkMode}
@@ -316,6 +350,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
+  },
+  variantSection: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  variantTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  variantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  variantLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  variantMark: {
+    width: 22,
+    textAlign: 'right',
+    fontSize: 16,
+    fontWeight: '900',
   },
   menuItem: {
     paddingVertical: 14,

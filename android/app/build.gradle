@@ -123,20 +123,18 @@ android {
     }
 
     // Task to build production ZIPs before release build
-    task buildProdZips {
-        doLast {
-            exec {
-                workingDir rootDir
-                commandLine 'node', 'scripts/buildProdZip.js'
-            }
-        }
-    }
-
-    // Hook: build ZIPs before release build
-    tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
-        dependsOn buildProdZips
-    }
-    buildProdZips.onlyIf { gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } }
+    // DISABLED: Zips already exist, run 'yarn build:prod' manually if needed
+    // task buildProdZips(type: Exec) {
+    //     workingDir rootProject.rootDir
+    //     executable 'node'
+    //     args 'scripts/buildProdZip.js'
+    // }
+    //
+    // // Hook: build ZIPs before release build
+    // tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
+    //     dependsOn buildProdZips
+    // }
+    // buildProdZips.onlyIf { gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } }
 }
 
 dependencies {

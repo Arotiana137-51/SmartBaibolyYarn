@@ -5,7 +5,7 @@ const INLINE_ITALIC_START = '\u0002';
 const INLINE_ITALIC_END = '\u0003';
 const BLOCK_ITALIC_PREFIX = '\u0004';
 
-const normalizeTextPreservingMarkers = (input: string) => {
+export const normalizeTextPreservingMarkers = (input: string) => {
   if (!input) {
     return '';
   }
@@ -64,8 +64,11 @@ const normalizeTextPreservingMarkers = (input: string) => {
   // 8. Remove trailing/leading spaces around line breaks
   s = s.replace(/\s*\n\s*/g, '\n');
 
-  // 9. Remove multiple consecutive empty lines
-  s = s.replace(/\n{3,}/g, '\n\n');
+  // 8b. Ensure blank line before list items starting with -
+  s = s.replace(/([),.])\n\n- /g, '$1\n\n\n- ');
+
+  // 9. Remove multiple consecutive empty lines, but preserve triple newlines for list spacing
+  s = s.replace(/\n{4,}/g, '\n\n');
 
   // 10. Normalize numbers and percentages
   s = s.replace(/(\d)\s*%\s*/g, '$1%');
@@ -172,7 +175,32 @@ export const processBibleTextWithMetadata = (text: string): { lines: string[]; i
 };
 
 export const processBibleTextWithMetadataForReader = (text: string): { lines: string[]; italicLines: Set<number> } => {
-  return processBibleTextWithMetadataInternal(text, { bracketMode: 'all' });
+  return processBibleTextWithMetadataInternal(text, { bracketMode: 'strict_n' });
+};
+
+export const extractBracketFootnotes = (
+  text: string
+): { textWithoutFootnotes: string; footnotes: string[] } => {
+  if (typeof text !== 'string' || !text) {
+    return { textWithoutFootnotes: '', footnotes: [] };
+  }
+
+  const footnotes: string[] = [];
+  const regex = /\[\*([^\]]+)\]/g;
+
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const content = String(match[1] ?? '').trim();
+    if (content) {
+      footnotes.push(content);
+    }
+  }
+
+  const textWithoutFootnotes = normalizeTextPreservingMarkers(
+    text.replace(regex, '').replace(/[ ]{2,}/g, ' ').trim()
+  );
+
+  return { textWithoutFootnotes, footnotes };
 };
 
 /**
@@ -288,6 +316,48 @@ const renderInlineItalicSegments = (text: string, baseTextStyle?: any) => {
 export const renderBibleLine = (line: string, baseTextStyle?: any) => {
   // No brackets should ever reach here; only inline-italic markers may exist.
   return renderInlineItalicSegments(line, baseTextStyle);
+};
+
+const renderInlineFootnoteSegments = (text: string, options: { baseTextStyle?: any; footnoteTextStyle?: any }) => {
+  if (!text) {
+    return null;
+  }
+
+  const children: React.ReactNode[] = [];
+  const regex = /(\[\*[^\]]+\])/g;
+  const parts = text.split(regex);
+
+  parts.forEach((part, idx) => {
+    if (!part) {
+      return;
+    }
+    const isFootnote = part.startsWith('[*') && part.endsWith(']');
+    if (isFootnote) {
+      children.push(
+        <Text key={`fn-${idx}`} style={[options.baseTextStyle, options.footnoteTextStyle]}>
+          {renderInlineItalicSegments(part, undefined)}
+        </Text>
+      );
+      return;
+    }
+
+    children.push(
+      <Text key={`tx-${idx}`} style={options.baseTextStyle}>
+        {renderInlineItalicSegments(part, undefined)}
+      </Text>
+    );
+  });
+
+  return children;
+};
+
+export const renderBibleLineForReader = (
+  line: string,
+  options?: { baseTextStyle?: any; footnoteTextStyle?: any }
+) => {
+  const baseTextStyle = options?.baseTextStyle;
+  const footnoteTextStyle = options?.footnoteTextStyle;
+  return renderInlineFootnoteSegments(line, { baseTextStyle, footnoteTextStyle });
 };
 
 /**

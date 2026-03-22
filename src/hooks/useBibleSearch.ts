@@ -1,8 +1,30 @@
 import { useCallback, useState } from 'react';
 import { bibleDatabaseService } from '../services/database/DatabaseService';
 
- export type BibleSearchOptions = {
-   matchWholeWord?: boolean;
+export type BibleSearchOptions = {
+  matchWholeWord?: boolean;
+};
+
+const containsJesusNameVariant = (query: string) => {
+  const q = query.toLowerCase();
+  return q.includes('jesosy') || q.includes('jesoa');
+};
+
+ const makeJesusNameLikeParams = (query: string) => {
+   const safe = query;
+   const qLower = safe.toLowerCase();
+   const variants = [safe];
+
+   if (qLower.includes('jesosy')) {
+     variants.push(safe.replace(/jesosy/gi, 'Jesoa'));
+   }
+
+   if (qLower.includes('jesoa')) {
+     variants.push(safe.replace(/jesoa/gi, 'Jesosy'));
+   }
+
+   const unique = Array.from(new Set(variants));
+   return unique.map(v => `%${v}%`);
  };
 
  const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -12,6 +34,12 @@ import { bibleDatabaseService } from '../services/database/DatabaseService';
    // RN JS engines don't reliably support Unicode property escapes everywhere.
    // This is a pragmatic boundary: non-alphanumeric acts as word boundary.
    return new RegExp(`(^|[^A-Za-z0-9])${escaped}([^A-Za-z0-9]|$)`, 'i');
+ };
+
+ const makeWholeWordRegexForJesusName = () => {
+   const a = escapeRegExp('Jesosy');
+   const b = escapeRegExp('Jesoa');
+   return new RegExp(`(^|[^A-Za-z0-9])(${a}|${b})([^A-Za-z0-9]|$)`, 'i');
  };
 
 export interface BibleSearchResult {
@@ -50,7 +78,11 @@ export const useBibleSearch = () => {
       await bibleDatabaseService.initDatabase();
 
       const matchWholeWord = options?.matchWholeWord === true;
-      const likeParam = `%${query}%`;
+      const shouldExpandJesus = containsJesusNameVariant(query);
+      const expandedLikeParams = shouldExpandJesus ? makeJesusNameLikeParams(query) : [`%${query}%`];
+      const likeWhere = expandedLikeParams.length === 1
+        ? 'v.text LIKE ?'
+        : `(${expandedLikeParams.map(() => 'v.text LIKE ?').join(' OR ')})`;
 
       if (!matchWholeWord) {
         // Substring search (current behavior): SQL does the counting/grouping.
@@ -63,36 +95,37 @@ export const useBibleSearch = () => {
             (
               SELECT v2.chapter
               FROM verses v2
-              WHERE v2.book_id = b.id AND v2.text LIKE ?
+              WHERE v2.book_id = b.id AND (${expandedLikeParams.map(() => 'v2.text LIKE ?').join(' OR ')})
               ORDER BY v2.chapter, v2.verse_number
               LIMIT 1
             ) as matched_chapter,
             (
               SELECT v2.verse_number
               FROM verses v2
-              WHERE v2.book_id = b.id AND v2.text LIKE ?
+              WHERE v2.book_id = b.id AND (${expandedLikeParams.map(() => 'v2.text LIKE ?').join(' OR ')})
               ORDER BY v2.chapter, v2.verse_number
               LIMIT 1
             ) as matched_verse_number,
             (
               SELECT v2.text
               FROM verses v2
-              WHERE v2.book_id = b.id AND v2.text LIKE ?
+              WHERE v2.book_id = b.id AND (${expandedLikeParams.map(() => 'v2.text LIKE ?').join(' OR ')})
               ORDER BY v2.chapter, v2.verse_number
               LIMIT 1
             ) as matched_text
           FROM Books b
           JOIN Verses v ON b.id = v.book_id
-          WHERE v.text LIKE ?
+          WHERE ${likeWhere}
           GROUP BY b.id, b.name, b.testament
           ORDER BY b.id ASC
         `;
 
+        const subParams = [...expandedLikeParams];
         const results = await bibleDatabaseService.executeQuery(searchQuery, [
-          likeParam,
-          likeParam,
-          likeParam,
-          likeParam,
+          ...subParams,
+          ...subParams,
+          ...subParams,
+          ...expandedLikeParams,
         ]);
 
         const searchResults: BibleSearchResult[] = [];
@@ -113,7 +146,10 @@ export const useBibleSearch = () => {
 
       // Whole word search: fetch candidate verses using LIKE then filter in JS.
       // This avoids relying on SQLite REGEXP support.
-      const regex = makeWholeWordRegex(query);
+      const regex =
+        containsJesusNameVariant(query) && ['jesosy', 'jesoa'].includes(query.trim().toLowerCase())
+          ? makeWholeWordRegexForJesusName()
+          : makeWholeWordRegex(query);
       const candidatesQuery = `
         SELECT
           v.book_id,
@@ -124,11 +160,11 @@ export const useBibleSearch = () => {
           v.text
         FROM Verses v
         JOIN Books b ON v.book_id = b.id
-        WHERE v.text LIKE ?
+        WHERE ${likeWhere}
         ORDER BY v.book_id, v.chapter, v.verse_number
       `;
 
-      const candidates = await bibleDatabaseService.executeQuery(candidatesQuery, [likeParam]);
+      const candidates = await bibleDatabaseService.executeQuery(candidatesQuery, [...expandedLikeParams]);
 
       const byBook = new Map<
         number,
@@ -190,7 +226,11 @@ export const useBibleSearch = () => {
       await bibleDatabaseService.initDatabase();
 
       const matchWholeWord = options?.matchWholeWord === true;
-      const likeParam = `%${query}%`;
+      const shouldExpandJesus = containsJesusNameVariant(query);
+      const expandedLikeParams = shouldExpandJesus ? makeJesusNameLikeParams(query) : [`%${query}%`];
+      const likeWhere = expandedLikeParams.length === 1
+        ? 'v.text LIKE ?'
+        : `(${expandedLikeParams.map(() => 'v.text LIKE ?').join(' OR ')})`;
 
       const searchQuery = `
         SELECT 
@@ -201,14 +241,18 @@ export const useBibleSearch = () => {
           v.text
         FROM Verses v
         JOIN Books b ON v.book_id = b.id
-        WHERE v.book_id = ? AND v.text LIKE ?
+        WHERE v.book_id = ? AND ${likeWhere}
         ORDER BY v.chapter, v.verse_number
       `;
 
-      const results = await bibleDatabaseService.executeQuery(searchQuery, [bookId, likeParam]);
+      const results = await bibleDatabaseService.executeQuery(searchQuery, [bookId, ...expandedLikeParams]);
       const verseResults: BibleVerseResult[] = [];
 
-      const regex = matchWholeWord ? makeWholeWordRegex(query) : null;
+      const regex = matchWholeWord
+        ? (containsJesusNameVariant(query) && ['jesosy', 'jesoa'].includes(query.trim().toLowerCase())
+            ? makeWholeWordRegexForJesusName()
+            : makeWholeWordRegex(query))
+        : null;
 
       for (const row of results.rows as any[]) {
         const text = String(row.text ?? '');

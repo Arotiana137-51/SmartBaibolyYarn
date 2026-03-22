@@ -7,6 +7,38 @@
 
 const fs = require('fs');
 const path = require('path');
+
+// Auto-detect and change to project root if not already there
+const currentDir = process.cwd();
+const scriptPath = __filename;
+const expectedScriptPath = path.join('scripts', 'buildProdZip.js');
+
+// Check if we're running from the wrong directory
+if (!fs.existsSync(path.join(currentDir, 'scripts', 'utils', 'paths.js'))) {
+  // Try to find project root by looking for package.json
+  let searchDir = currentDir;
+  let foundRoot = null;
+  
+  while (searchDir !== path.dirname(searchDir)) {
+    if (fs.existsSync(path.join(searchDir, 'package.json')) && 
+        fs.existsSync(path.join(searchDir, 'scripts', 'buildProdZip.js'))) {
+      foundRoot = searchDir;
+      break;
+    }
+    searchDir = path.dirname(searchDir);
+  }
+  
+  if (foundRoot) {
+    process.chdir(foundRoot);
+    if (__DEV__) {
+      console.log('📁 Auto-detected project root:', foundRoot);
+    }
+  } else {
+    console.error('❌ Could not find project root. Make sure package.json exists.');
+    process.exit(1);
+  }
+}
+
 const archiver = require('archiver');
 const { getDatabasePaths, getAssetsPaths, ensureDirectory } = require('./utils/paths');
 

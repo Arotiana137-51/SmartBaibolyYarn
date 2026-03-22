@@ -4,7 +4,12 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
-import { renderBibleLine, processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
+import {
+  extractBracketFootnotes,
+  renderBibleLineForReader,
+  processBibleTextWithMetadataForReader,
+} from '../utils/bibleTextUtils';
+import {useJesusName} from '../contexts/JesusNameContext';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
@@ -23,6 +28,8 @@ const VerseItem = React.memo(
     item,
     theme,
     fontScale,
+    jesusNameVariant,
+    transformText,
     selectedVerseNumber,
     onVersePress,
     onVerseLongPress,
@@ -30,11 +37,14 @@ const VerseItem = React.memo(
     item: BibleVerse;
     theme: any;
     fontScale: number;
+    jesusNameVariant: string;
+    transformText: (text: string) => string;
     selectedVerseNumber?: number | null;
     onVersePress?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
   }) => {
-    const { lines, italicLines } = processBibleTextWithMetadataForReader(item.text);
+    const { textWithoutFootnotes, footnotes } = extractBracketFootnotes(transformText(item.text));
+    const { lines, italicLines } = processBibleTextWithMetadataForReader(textWithoutFootnotes);
 
     const isSelected =
       typeof selectedVerseNumber === 'number' && item.verse_number === selectedVerseNumber;
@@ -95,10 +105,31 @@ const VerseItem = React.memo(
                 }
               >
                 {idx === 0 ? '' : '\n'}
-                {renderBibleLine(line, { lineHeight: verseLineHeight })}
+                {renderBibleLineForReader(line, {
+                  baseTextStyle: { lineHeight: verseLineHeight },
+                  footnoteTextStyle: {
+                    opacity: 0.72,
+                    fontSize: Math.max(10, Math.round(verseFontSize * 0.92)),
+                    fontStyle: 'italic',
+                  },
+                })}
               </Text>
             );
           })}
+
+          {footnotes.map((footnote, idx) => (
+            <Text
+              key={`bible-footnote-${item.id}-${idx}`}
+              style={{
+                color: theme.colors.textWatermark,
+                fontStyle: 'italic',
+                lineHeight: verseLineHeight,
+              }}
+            >
+              {'\n'}
+              {footnote}
+            </Text>
+          ))}
         </Text>
       </Pressable>
     );
@@ -108,6 +139,7 @@ const VerseItem = React.memo(
     prev.item.text === next.item.text &&
     prev.item.verse_number === next.item.verse_number &&
     prev.fontScale === next.fontScale &&
+    prev.jesusNameVariant === next.jesusNameVariant &&
     prev.selectedVerseNumber === next.selectedVerseNumber &&
     prev.theme.colors.textPrimary === next.theme.colors.textPrimary &&
     prev.theme.colors.textWatermark === next.theme.colors.textWatermark
@@ -135,6 +167,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   headerText,
 }) => {
   const { theme } = useTheme();
+  const {variant: jesusNameVariant, transformText} = useJesusName();
   const insets = useSafeAreaInsets();
 
   const bottomScrollSpacer =
@@ -185,6 +218,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           item={item}
           theme={theme}
           fontScale={fontScale}
+          jesusNameVariant={jesusNameVariant}
+          transformText={transformText}
           selectedVerseNumber={selectedVerseNumber}
           onVersePress={onVersePress}
           onVerseLongPress={onVerseLongPress}

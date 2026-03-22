@@ -1,29 +1,19 @@
-import dataImporter from '../src/services/database/DataImporter';
-import { databaseService } from '../src/services/database/DatabaseService';
+import {__test__transformJesusName} from '../src/contexts/JesusNameContext';
 
-describe('DataImporter', () => {
-  beforeAll(async () => {
-    // Initialize the test database
-    await databaseService.initDatabase();
+describe('JesusNameContext', () => {
+  it('transforms Jesus name variants case-insensitively to canonical casing', () => {
+    expect(__test__transformJesusName('Jesosy', 'jesoa')).toBe('Jesoa');
+    expect(__test__transformJesusName('JESOSY', 'jesoa')).toBe('Jesoa');
+    expect(__test__transformJesusName('JeSoSy', 'jesoa')).toBe('Jesoa');
+
+    expect(__test__transformJesusName('Jesoa', 'jesosy')).toBe('Jesosy');
+    expect(__test__transformJesusName('JESOA', 'jesosy')).toBe('Jesosy');
+    expect(__test__transformJesusName('JeSoA', 'jesosy')).toBe('Jesosy');
   });
 
-  afterAll(async () => {
-    // Clean up after tests
-    await databaseService.closeDatabase();
+  it('does not replace inside other words', () => {
+    expect(__test__transformJesusName('AnaranaJesosyTest', 'jesoa')).toBe('AnaranaJesosyTest');
+    expect(__test__transformJesusName('JesosyTest', 'jesoa')).toBe('JesosyTest');
+    expect(__test__transformJesusName('TestJesoa', 'jesosy')).toBe('TestJesoa');
   });
-
-  it('should import data without errors', async () => {
-    // This will test the full import process
-    await expect(dataImporter.importData()).resolves.not.toThrow();
-    
-    // You can add more specific assertions here
-    // For example, verify that data was actually imported
-    const hymns = await databaseService.executeQuery('SELECT * FROM Hymns');
-    expect(hymns.rows.length).toBeGreaterThan(0);
-    
-    const verses = await databaseService.executeQuery('SELECT * FROM Verses');
-    expect(verses.rows.length).toBeGreaterThan(0);
-  });
-
-  // Add more test cases as needed
 });

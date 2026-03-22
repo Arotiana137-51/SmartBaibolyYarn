@@ -242,7 +242,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         .sort((a, b) => a.number - b.number)[0];
       const defaultHymn = ffpm1 ?? firstFfpm ?? hymns[0];
 
-      console.log('Selecting default hymn:', { id: defaultHymn.id, number: defaultHymn.number, category: defaultHymn.category });
       setCurrentHymnId(defaultHymn.id);
       setCurrentHymnNumber(defaultHymn.number);
       setCurrentHymnCategory(defaultHymn.category || null);
