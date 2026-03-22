@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View, StyleSheet, Modal } from 'react-native';
 import { Hymn } from '../hooks/useHymnsData';
 import { useTheme } from '../contexts/ThemeContext';
+import {t} from '../i18n/strings';
 
 interface HymnActionPopoverProps {
   visible: boolean;
@@ -58,7 +59,7 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
               {hymn.title}
             </Text>
             <Text style={[styles.hymnReference, { color: theme.colors.textSecondary }]}>
-              {hymn.category ? `${hymn.category.toUpperCase()} ` : ''}Hymne {hymn.number}
+              {hymn.category ? `${hymn.category.toUpperCase()} ` : ''}{t('favorites.hymnLabel', {number: hymn.number})}
             </Text>
           </View>
           
@@ -68,7 +69,7 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
               onPress={handleAddToFavorites}
             >
               <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                Ajouter aux favoris
+                {t('actions.addToFavorites')}
               </Text>
             </Pressable>
 
@@ -77,7 +78,7 @@ const HymnActionPopover: React.FC<HymnActionPopoverProps> = ({
               onPress={handleReportIssue}
               disabled={typeof stanzaNumber !== 'number' || !stanzaText}
             >
-              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>Signaler</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>{t('actions.report')}</Text>
             </Pressable>
           </View>
         </Pressable>

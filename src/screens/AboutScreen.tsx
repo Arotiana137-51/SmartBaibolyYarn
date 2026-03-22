@@ -12,7 +12,7 @@ const AboutScreen = () => {
   const appVersion = String((packageJson as any)?.version ?? '');
 
   const developerName = 'Arotiana Randrianasolo';
-  const developerRole = 'Développeur';
+  const developerRole = t('about.developerRole');
   const contactEmail = 'arotianarandria@proton.me';
   const phoneNumber = '+261342569879';
   const mobileMoneyNumber = '+261 34 25 698 79';
@@ -23,34 +23,34 @@ const AboutScreen = () => {
   const sections = useMemo(
     () => [
       {
-        title: 'Développeur',
+        title: t('about.sectionDeveloper'),
         lines: [
           developerName,
           developerRole,
-          "N'hésite pas à me contacter pour les retours, bugs, ou suggestions.",
+          t('about.developerLine3'),
         ],
       },
       {
-        title: 'Soutenir le projet',
+        title: t('about.sectionSupport'),
         lines: [
-          "Cette application est maintenue et améliorée sur mon temps libre.",
-          "Si tu veux financer la maintenance et les mises à jour, tu peux contribuer via le lien ci-dessous.",
+          t('about.supportLine1'),
+          t('about.supportLine2'),
           `Mobile Money: ${mobileMoneyNumber}`,
         ],
       },
       {
-        title: 'Informations',
+        title: t('about.sectionInfo'),
         lines: [
           `Version: ${appVersion || '-'}`,
-          'Disponible sur Android et iOS.',
+          t('about.infoLinePlatforms'),
         ],
       },
       {
-        title: 'Bonnes pratiques',
+        title: t('about.sectionBestPractices'),
         lines: [
-          "Garde l'application à jour pour bénéficier des correctifs.",
-          "Signale les erreurs ou incohérences via le bouton de signalement.",
-          "Respecte la confidentialité: consulte la politique si nécessaire.",
+          t('about.bestPracticeLine1'),
+          t('about.bestPracticeLine2'),
+          t('about.bestPracticeLine3'),
         ],
       },
     ],
@@ -117,12 +117,12 @@ const AboutScreen = () => {
               </Text>
             ))}
 
-            {section.title === 'Soutenir le projet' && canOpenUrl(supportUrl) ? (
+            {section.title === t('about.sectionSupport') && canOpenUrl(supportUrl) ? (
               <Pressable
                 style={[styles.primaryButton, {backgroundColor: theme.colors.accentBlue}]}
                 onPress={() => openUrlSafe(supportUrl)}
               >
-                <Text style={styles.primaryButtonText}>Contribuer</Text>
+                <Text style={styles.primaryButtonText}>{t('about.contribute')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -137,12 +137,12 @@ const AboutScreen = () => {
             },
           ]}
         >
-          <Text style={[styles.cardTitle, {color: theme.colors.navBackground}]}>Liens</Text>
+          <Text style={[styles.cardTitle, {color: theme.colors.navBackground}]}>{t('about.links')}</Text>
 
           {contactEmail.trim() ? (
             <Pressable style={styles.linkRow} onPress={() => openEmailSafe(contactEmail)}>
               <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
-                Contacter le développeur
+                {t('about.contactDeveloper')}
               </Text>
               <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
                 {contactEmail}
@@ -152,7 +152,7 @@ const AboutScreen = () => {
 
           {phoneNumber.trim() ? (
             <Pressable style={styles.linkRow} onPress={() => openPhoneSafe(phoneNumber)}>
-              <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>Téléphone</Text>
+              <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>{t('about.phone')}</Text>
               <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
                 {mobileMoneyNumber}
               </Text>
@@ -171,7 +171,7 @@ const AboutScreen = () => {
           {canOpenUrl(websiteUrl) ? (
             <Pressable style={styles.linkRow} onPress={() => openUrlSafe(websiteUrl)}>
               <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
-                Site web
+                {t('about.website')}
               </Text>
               <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
                 {websiteUrl}
@@ -182,10 +182,10 @@ const AboutScreen = () => {
           {canOpenUrl(PRIVACY_POLICY_URL) ? (
             <Pressable style={styles.linkRow} onPress={() => openUrlSafe(PRIVACY_POLICY_URL)}>
               <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
-                Politique de confidentialité
+                {t('about.privacyPolicy')}
               </Text>
               <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
-                Ouvrir
+                {t('about.open')}
               </Text>
             </Pressable>
           ) : null}
@@ -193,7 +193,7 @@ const AboutScreen = () => {
           {!contactEmail.trim() && !phoneNumber.trim() && !canOpenUrl(linkedInUrl) && !canOpenUrl(websiteUrl) && !canOpenUrl(PRIVACY_POLICY_URL) ? (
             <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}
             >
-              Ajoute tes liens (email/site/confidentialité) dans cet écran.
+              {t('about.addLinksHint')}
             </Text>
           ) : null}
         </View>

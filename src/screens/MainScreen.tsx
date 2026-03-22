@@ -304,6 +304,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     ? `${getBibleBookShortName(currentBook.name, currentBook.id)} ${currentChapter}`.trim()
     : `${currentChapter}`.trim();
 
+  const getChapterText = (chapter: number) => chapter === 1 ? 'voalohany' : `faha-${chapter}`;
+
   const bibleTitleLong = currentBook
     ? (
         currentBook.id === 18 ||
@@ -312,8 +314,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         currentBook.id === 21 ||
         currentBook.id === 22 ||
         currentBook.id === 25
-          ? `${getBibleBookShortName(currentBook.name, currentBook.id)} faha-${currentChapter}`
-          : `${currentBook.name}\nToko faha-${currentChapter}`
+          ? `${getBibleBookShortName(currentBook.name, currentBook.id)} ${getChapterText(currentChapter)}`
+          : `${currentBook.name}\nToko ${getChapterText(currentChapter)}`
       ).trim()
     : `${currentChapter}`.trim();
 

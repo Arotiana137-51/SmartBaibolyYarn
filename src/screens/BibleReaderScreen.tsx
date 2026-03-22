@@ -51,7 +51,10 @@ const BibleReaderScreen = () => {
   }, [verses, verse]);
 
   const title = useMemo(
-    () => t('bible.readerTitle', {book: getBibleBookShortName(bookName, bookId), chapter}),
+    () => {
+      const chapterText = chapter === 1 ? 'voalohany' : `faha-${chapter}`;
+      return t('bible.readerTitle', {book: getBibleBookShortName(bookName, bookId), chapterText});
+    },
     [bookName, bookId, chapter]
   );
 

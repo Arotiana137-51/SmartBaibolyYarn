@@ -10,6 +10,7 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { scaleFontSize } from '../constants/Typography';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
 import AnimatedHamburger from '../components/AnimatedHamburger';
+import {t} from '../i18n/strings';
 
 // SF Symbols-style magnifying glass component
 const MagnifyingGlass = ({ color, size = 16 }: { color: string; size?: number }) => (
@@ -122,14 +123,14 @@ const SearchScreen = () => {
             style={[styles.settingsPanel, { backgroundColor: theme.colors.backgroundSecondary }]}
             onPress={() => null}
           >
-            <Text style={[styles.settingsTitle, { color: theme.colors.textPrimary }]}>Paramètres</Text>
-            <Text style={[styles.settingsSubtitle, { color: theme.colors.textSecondary }]}>Mode de recherche</Text>
+            <Text style={[styles.settingsTitle, { color: theme.colors.textPrimary }]}>{t('search.settingsTitle')}</Text>
+            <Text style={[styles.settingsSubtitle, { color: theme.colors.textSecondary }]}>{t('search.searchMode')}</Text>
 
             <Pressable
               onPress={() => setSearchDisplayMode('raw')}
               style={[styles.settingsOptionRow, { borderColor: theme.colors.divider }]}
             >
-              <Text style={[styles.settingsOptionText, { color: theme.colors.textPrimary }]}>Recherche brute</Text>
+              <Text style={[styles.settingsOptionText, { color: theme.colors.textPrimary }]}>{t('search.raw')}</Text>
               <Text style={[styles.settingsOptionMark, { color: theme.colors.accentBlue }]}>
                 {searchDisplayMode === 'raw' ? '✓' : ''}
               </Text>
@@ -140,20 +141,20 @@ const SearchScreen = () => {
               style={[styles.settingsOptionRow, { borderColor: theme.colors.divider }]}
             >
               <Text style={[styles.settingsOptionText, { color: theme.colors.textPrimary }]}>
-                Recherche par catégorie
+                {t('search.grouped')}
               </Text>
               <Text style={[styles.settingsOptionMark, { color: theme.colors.accentBlue }]}>
                 {searchDisplayMode === 'grouped' ? '✓' : ''}
               </Text>
             </Pressable>
 
-            <Text style={[styles.settingsSubtitle, { color: theme.colors.textSecondary }]}>Correspondance</Text>
+            <Text style={[styles.settingsSubtitle, { color: theme.colors.textSecondary }]}>{t('search.match')}</Text>
 
             <Pressable
               onPress={() => setMatchWholeWord(prev => !prev)}
               style={[styles.settingsOptionRow, { borderColor: theme.colors.divider }]}
             >
-              <Text style={[styles.settingsOptionText, { color: theme.colors.textPrimary }]}>Mot entier</Text>
+              <Text style={[styles.settingsOptionText, { color: theme.colors.textPrimary }]}>{t('search.wholeWord')}</Text>
               <Text style={[styles.settingsOptionMark, { color: theme.colors.accentBlue }]}>
                 {matchWholeWord ? '✓' : ''}
               </Text>
@@ -163,7 +164,7 @@ const SearchScreen = () => {
               onPress={closeSettings}
               style={[styles.settingsCloseButton, { backgroundColor: theme.colors.accentBlue }]}
             >
-              <Text style={styles.settingsCloseButtonText}>Fermer</Text>
+              <Text style={styles.settingsCloseButtonText}>{t('common.close')}</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -311,7 +312,7 @@ const BibleSearchScreenContent = ({
             {getBibleBookShortName(item.bookName, item.bookId)}
           </Text>
           <Text style={[styles.resultCount, { color: theme.colors.accentBlue }]}>
-            {item.verseCount} résultat{item.verseCount > 1 ? 's' : ''}
+            {t('search.resultCount', {count: item.verseCount})}
           </Text>
         </View>
         <ChevronRight color={theme.colors.textSecondary} size={24} />
@@ -404,7 +405,7 @@ const BibleSearchScreenContent = ({
           <MagnifyingGlass color={theme.colors.textSecondary} size={18} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.textPrimary }]}
-            placeholder="Rechercher dans la Bible..."
+            placeholder={t('search.placeholderBible')}
             placeholderTextColor={theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -456,7 +457,7 @@ const BibleSearchScreenContent = ({
       ) : searchQuery.trim() ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            Aucun résultat trouvé dans la Bible
+            {t('search.noResultsBible')}
           </Text>
         </View>
       ) : null}
@@ -752,7 +753,7 @@ const HymnSearchScreenContent = ({
           <MagnifyingGlass color={theme.colors.textSecondary} size={16} />
           <TextInput
             style={[styles.searchInput, { color: theme.colors.textPrimary }]}
-            placeholder="Rechercher dans les hymnes..."
+            placeholder={t('search.placeholderHymns')}
             placeholderTextColor={theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -797,7 +798,7 @@ const HymnSearchScreenContent = ({
       ) : searchQuery.trim() ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            Aucun résultat trouvé dans les hymnes
+            {t('search.noResultsHymns')}
           </Text>
         </View>
       ) : null}

@@ -6,6 +6,7 @@ import { useBibleHistory } from '../hooks/useBibleHistory';
 import { useHymnHistory } from '../hooks/useHymnHistory';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import {t} from '../i18n/strings';
 
 type HistoryScreenRouteProp = RouteProp<RootStackParamList, 'History'>;
 
@@ -21,12 +22,12 @@ const HistoryScreen = () => {
 
   const handleClearHistory = () => {
     Alert.alert(
-      'Effacer l\'historique',
-      'Voulez-vous vraiment effacer tout l\'historique ?',
+      t('history.clearTitle'),
+      t('history.clearMessage'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: 'Effacer', 
+          text: t('common.clear'), 
           style: 'destructive',
           onPress: clearHistoryFn
         }
@@ -41,7 +42,7 @@ const HistoryScreen = () => {
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('fr-FR', { 
+    return date.toLocaleDateString('mg-MG', { 
       day: 'numeric', 
       month: 'short', 
       year: 'numeric',
@@ -72,14 +73,14 @@ const HistoryScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
       <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
         <Text style={[styles.title, { color: '#FFFFFF' }]}>
-          {mode === 'bible' ? 'Historique Bible' : 'Historique Hymnes'}
+          {mode === 'bible' ? t('history.titleBible') : t('history.titleHymnal')}
         </Text>
         {history.length > 0 && (
           <Pressable
             style={[styles.clearButton, { backgroundColor: theme.colors.accentBlue }]}
             onPress={handleClearHistory}
           >
-            <Text style={styles.clearButtonText}>Effacer tout</Text>
+            <Text style={styles.clearButtonText}>{t('history.clearAll')}</Text>
           </Pressable>
         )}
       </View>
@@ -88,8 +89,8 @@ const HistoryScreen = () => {
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
             {mode === 'bible' 
-              ? 'Aucun historique biblique' 
-              : 'Aucun historique de hymnes'
+              ? t('history.emptyBible')
+              : t('history.emptyHymnal')
             }
           </Text>
         </View>

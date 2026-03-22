@@ -9,6 +9,7 @@ import { useJesusName } from '../contexts/JesusNameContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
 import { processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
+import {t} from '../i18n/strings';
 
 // Helper function to highlight matching text
 const highlightText = (text: string, query: string, theme: any) => {
@@ -153,7 +154,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
           {getBibleBookShortName(bookName, bookId)}
         </Text>
         <Text style={[styles.subtitle, { color: '#FFFFFF' }]}>
-          Recherche: "{query}"
+          {t('verseList.searchLabel', {query})}
         </Text>
       </View>
 
@@ -179,7 +180,7 @@ const renderVerse = ({ item }: { item: BibleVerseResult }) => {
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            Aucun verset trouvé pour "{query}" dans {getBibleBookShortName(bookName, bookId)}
+            {t('verseList.empty', {query, book: getBibleBookShortName(bookName, bookId)})}
           </Text>
         </View>
       )}

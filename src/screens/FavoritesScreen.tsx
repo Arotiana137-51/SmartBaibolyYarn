@@ -10,6 +10,7 @@ import {useJesusName} from '../contexts/JesusNameContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
+import {t} from '../i18n/strings';
 
 type FavoritesScreenRouteProp = RouteProp<RootStackParamList, 'Favorites'>;
 type FavoritesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -28,12 +29,12 @@ const FavoritesScreen = () => {
 
   const handleRemoveFavorite = (item: any) => {
     Alert.alert(
-      'Retirer des favoris',
-      'Voulez-vous vraiment retirer cet élément des favoris ?',
+      t('favorites.removeTitle'),
+      t('favorites.removeMessage'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { 
-          text: 'Retirer', 
+          text: t('common.remove'), 
           style: 'destructive',
           onPress: () => handleRemoveFromFavorites(item)
         }
@@ -89,7 +90,7 @@ const FavoritesScreen = () => {
           <Pressable style={styles.pressableContent} onPress={() => handlePress(item)}>
             <View style={styles.itemContent}>
               <Text style={[styles.itemTitle, { color: theme.colors.textPrimary }]}>
-                {hymnItem.category ? `${hymnItem.category.toUpperCase()} ` : ''}Hymne {hymnItem.number}
+                {hymnItem.category ? `${hymnItem.category.toUpperCase()} ` : ''}{t('favorites.hymnLabel', {number: hymnItem.number})}
               </Text>
               <Text style={[styles.itemText, { color: theme.colors.textSecondary }]}>
                 {hymnItem.title}
@@ -111,7 +112,9 @@ const FavoritesScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
       <View style={[styles.header, { backgroundColor: theme.colors.navBackground }]}>
         <Text style={[TEXT_STYLES.heading, { color: '#FFFFFF' }]}>
-          {mode === 'bible' ? 'Favoris Bible' : 'Favoris Hymnes'}
+          {mode === 'bible'
+            ? 'Ankafizina ao anaty Baiboly'
+            : 'Ankafizina ao anaty Fihirana'}
         </Text>
       </View>
       
@@ -119,8 +122,8 @@ const FavoritesScreen = () => {
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
             {mode === 'bible' 
-              ? 'Aucun verset biblique en favoris' 
-              : 'Aucune hymne en favoris'
+              ? t('favorites.emptyBible')
+              : t('favorites.emptyHymnal')
             }
           </Text>
         </View>

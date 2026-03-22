@@ -71,14 +71,14 @@ const RootNavigator = () => {
         name="Search"
         component={SearchScreen}
         options={({route}) => ({
-          title: route.params.mode === 'bible' ? 'Recherche Bible' : 'Recherche Fihirana',
+          title: route.params.mode === 'bible' ? t('search.titleBible') : t('search.titleHymnal'),
           ...headerOptions,
         })}
       />
       <Stack.Screen
         name="VerseList"
         component={VerseListScreen}
-        options={{title: 'Résultats de recherche', ...headerOptions}}
+        options={{title: t('verseList.title'), ...headerOptions}}
       />
       <Stack.Screen
         name="Misc"

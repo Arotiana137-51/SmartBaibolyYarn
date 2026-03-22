@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { hymnsDatabaseService } from '../services/database/DatabaseService';
+import {t} from '../i18n/strings';
 
 export type HymnSearchOptions = {
   matchWholeWord?: boolean;
@@ -126,7 +127,7 @@ export const useHymnSearch = () => {
 
       return searchResults;
     } catch (err) {
-      setError('Erreur lors de la recherche des hymnes');
+      setError(t('errors.hymnSearch'));
       console.error('Hymn search error:', err);
       return [];
     } finally {

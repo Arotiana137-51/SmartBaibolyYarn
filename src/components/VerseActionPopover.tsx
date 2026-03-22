@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View, StyleSheet, Modal } from 'react-native';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme } from '../contexts/ThemeContext';
+import {t} from '../i18n/strings';
 
 interface VerseActionPopoverProps {
   visible: boolean;
@@ -65,7 +66,7 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
               onPress={handleViewCorrespondence}
             >
               <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                Voir concordance biblique
+                {t('actions.viewConcordance')}
               </Text>
             </Pressable>
             
@@ -74,7 +75,7 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
               onPress={handleAddToFavorites}
             >
               <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                Ajouter aux favoris
+                {t('actions.addToFavorites')}
               </Text>
             </Pressable>
 
@@ -83,7 +84,7 @@ const VerseActionPopover: React.FC<VerseActionPopoverProps> = ({
               onPress={handleReportIssue}
             >
               <Text style={[styles.menuItemText, { color: theme.colors.textPrimary }]}>
-                Signaler
+                {t('actions.report')}
               </Text>
             </Pressable>
           </View>

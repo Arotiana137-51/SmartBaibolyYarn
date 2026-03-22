@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import {t} from '../i18n/strings';
 
 type ReportIssueModalProps = {
   visible: boolean;
@@ -52,24 +53,24 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
         >
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
-              Signaler
+              {t('report.title')}
             </Text>
             <Pressable onPress={onClose}>
               <Text style={[styles.closeText, { color: theme.colors.textSecondary }]}>
-                Fermer
+                {t('common.close')}
               </Text>
             </Pressable>
           </View>
 
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Référence</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.reference')}</Text>
             <Text style={[styles.value, { color: theme.colors.textPrimary }]}>
               {reference}
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Texte</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.text')}</Text>
             <Text
               style={[styles.value, { color: theme.colors.textPrimary }]}
               numberOfLines={8}
@@ -79,11 +80,11 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
           </View>
 
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Commentaire</Text>
+            <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{t('report.comment')}</Text>
             <TextInput
               value={comment}
               onChangeText={setComment}
-              placeholder="Décris le problème à corriger..."
+              placeholder={t('report.placeholder')}
               placeholderTextColor={theme.colors.textSecondary}
               multiline
               style={[
@@ -95,8 +96,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
               ]}
             />
             <Text style={[styles.note, { color: theme.colors.textSecondary }]}>
-              En envoyant, tu transmets la référence, le texte affiché et ton commentaire afin de corriger les erreurs.
-              Aucune donnée de localisation n’est collectée.
+              {t('report.note')}
             </Text>
           </View>
 
@@ -105,7 +105,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
               style={[styles.button, { borderColor: theme.colors.divider }]}
               onPress={onClose}
             >
-              <Text style={[styles.buttonText, { color: theme.colors.textPrimary }]}>Annuler</Text>
+              <Text style={[styles.buttonText, { color: theme.colors.textPrimary }]}>{t('common.cancel')}</Text>
             </Pressable>
 
             <Pressable
@@ -119,7 +119,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
               onPress={() => onSubmit(comment)}
               disabled={!canSubmit}
             >
-              <Text style={[styles.buttonText, { color: '#fff' }]}>Envoyer</Text>
+              <Text style={[styles.buttonText, { color: '#fff' }]}>{t('common.send')}</Text>
             </Pressable>
           </View>
         </Pressable>

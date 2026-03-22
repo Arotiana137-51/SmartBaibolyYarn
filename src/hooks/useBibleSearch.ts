@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { bibleDatabaseService } from '../services/database/DatabaseService';
+import {t} from '../i18n/strings';
 
 export type BibleSearchOptions = {
   matchWholeWord?: boolean;
@@ -206,7 +207,7 @@ export const useBibleSearch = () => {
       results.sort((a, b) => a.bookId - b.bookId);
       return results;
     } catch (err) {
-      setError('Erreur lors de la recherche biblique');
+      setError(t('errors.bibleSearch'));
       console.error('Bible search error:', err);
       return [];
     } finally {
@@ -270,7 +271,7 @@ export const useBibleSearch = () => {
 
       return verseResults;
     } catch (err) {
-      setError('Erreur lors de la recherche des versets');
+      setError(t('errors.verseSearch'));
       console.error('Bible verses search error:', err);
       return [];
     } finally {
