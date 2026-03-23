@@ -1,5 +1,6 @@
 import React, {useEffect, useMemo, useRef} from 'react';
 import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
+import {useLowEndMode} from '../contexts/ThemeContext';
 
 type Props = {
   isDarkMode: boolean;
@@ -13,8 +14,8 @@ const KNOB_SIZE = 38;
 const KNOB_PADDING = 2;
 
 const SUN_GLYPH = '☀\uFE0E';
-const SUN_TRACK_FONT_SIZE = 24;
-const SUN_KNOB_FONT_SIZE = 20;
+const SUN_TRACK_FONT_SIZE = 30;
+const SUN_KNOB_FONT_SIZE = 26;
 
 const MoonIcon: React.FC<{size: number; color: string; backgroundColor: string; opacity?: number}> = ({
   size,
@@ -53,14 +54,21 @@ const MoonIcon: React.FC<{size: number; color: string; backgroundColor: string; 
 
 const ToggleThemeButton: React.FC<Props> = ({isDarkMode, onToggle, disabled}) => {
   const translateX = useRef(new Animated.Value(isDarkMode ? 1 : 0)).current;
+  const {isLowEndMode} = useLowEndMode();
 
   useEffect(() => {
+    translateX.stopAnimation();
+    if (isLowEndMode) {
+      translateX.setValue(isDarkMode ? 1 : 0);
+      return;
+    }
+
     Animated.timing(translateX, {
       toValue: isDarkMode ? 1 : 0,
       duration: 180,
       useNativeDriver: true,
     }).start();
-  }, [isDarkMode, translateX]);
+  }, [isDarkMode, translateX, isLowEndMode]);
 
   const knobTranslate = useMemo(() => {
     const maxX = TRACK_WIDTH - KNOB_SIZE - KNOB_PADDING * 2;
@@ -106,24 +114,26 @@ const ToggleThemeButton: React.FC<Props> = ({isDarkMode, onToggle, disabled}) =>
         ]}
       >
         <View style={styles.trackIcons} pointerEvents="none">
-          <MoonIcon
-            size={24}
-            color={iconBaseColor}
-            backgroundColor={trackBackground}
-            opacity={!isDarkMode ? 1 : 0.35}
-          />
           <Text
             style={[
               styles.sunTrack,
               {
                 color: iconBaseColor,
-                opacity: isDarkMode ? 1 : 0.35,
+                opacity: isDarkMode ? 0.35 : 1,
               },
             ]}
             allowFontScaling={false}
           >
             {SUN_GLYPH}
           </Text>
+          <View style={styles.moonContainer}>
+            <MoonIcon
+              size={24}
+              color={iconBaseColor}
+              backgroundColor={trackBackground}
+              opacity={isDarkMode ? 1 : 0.35}
+            />
+          </View>
         </View>
 
         <Animated.View
@@ -136,7 +146,7 @@ const ToggleThemeButton: React.FC<Props> = ({isDarkMode, onToggle, disabled}) =>
             },
           ]}
         >
-          {isDarkMode ? (
+          {!isDarkMode ? (
             <Text style={[styles.sunKnob, {color: iconBaseColor}]} allowFontScaling={false}>
               {SUN_GLYPH}
             </Text>
@@ -170,7 +180,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
   },
   knob: {
     width: KNOB_SIZE,
@@ -183,11 +193,27 @@ const styles = StyleSheet.create({
     fontSize: SUN_TRACK_FONT_SIZE,
     fontWeight: '600',
     letterSpacing: -0.2,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: SUN_TRACK_FONT_SIZE,
+    position: 'absolute',
+    left: 10,
+    top: '50%',
+    marginTop: -SUN_TRACK_FONT_SIZE / 2,
   },
   sunKnob: {
     fontSize: SUN_KNOB_FONT_SIZE,
     fontWeight: '600',
     letterSpacing: -0.2,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: SUN_KNOB_FONT_SIZE,
+  },
+  moonContainer: {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    marginTop: -12,
   },
 });
 

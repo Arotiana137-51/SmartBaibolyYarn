@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import {
   extractBracketFootnotes,
@@ -167,8 +167,26 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   headerText,
 }) => {
   const { theme } = useTheme();
+  const { isLowEndMode } = useLowEndMode();
   const {variant: jesusNameVariant, transformText} = useJesusName();
   const insets = useSafeAreaInsets();
+
+  // Low-end mode: fewer items rendered, lighter batching
+  const listProps = isLowEndMode
+    ? {
+        initialNumToRender: 10,
+        maxToRenderPerBatch: 6,
+        updateCellsBatchingPeriod: 60,
+        windowSize: 6,
+        removeClippedSubviews: false,
+      }
+    : {
+        initialNumToRender: 18,
+        maxToRenderPerBatch: 12,
+        updateCellsBatchingPeriod: 40,
+        windowSize: 10,
+        removeClippedSubviews: Platform.OS === 'android',
+      };
 
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
@@ -225,11 +243,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           onVerseLongPress={onVerseLongPress}
         />
       )}
-      initialNumToRender={18}
-      maxToRenderPerBatch={12}
-      updateCellsBatchingPeriod={40}
-      windowSize={10}
-      removeClippedSubviews={Platform.OS === 'android'}
+      {...listProps}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />
   );

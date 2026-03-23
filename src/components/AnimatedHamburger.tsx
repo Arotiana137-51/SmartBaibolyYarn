@@ -1,5 +1,6 @@
 import React from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import {useLowEndMode} from '../contexts/ThemeContext';
 
 interface AnimatedHamburgerProps {
   isOpen: boolean;
@@ -17,17 +18,23 @@ const AnimatedHamburger: React.FC<AnimatedHamburgerProps> = ({
   accessibilityLabel = 'Toggle menu'
 }) => {
   const animatedValue = React.useRef(new Animated.Value(isOpen ? 1 : 0)).current;
+  const {isLowEndMode} = useLowEndMode();
 
   React.useEffect(() => {
     // Stop any ongoing animation first
     animatedValue.stopAnimation();
+    if (isLowEndMode) {
+      animatedValue.setValue(isOpen ? 1 : 0);
+      return;
+    }
+
     // Then animate to the new value
     Animated.timing(animatedValue, {
       toValue: isOpen ? 1 : 0,
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [isOpen, animatedValue]);
+  }, [isOpen, animatedValue, isLowEndMode]);
 
   const barHeight = size * 0.08;
   const barSpacing = size * 0.25;

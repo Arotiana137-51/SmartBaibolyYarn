@@ -1,13 +1,14 @@
 import React, {useMemo} from 'react';
-import {Linking, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {t} from '../i18n/strings';
 import {PRIVACY_POLICY_URL} from '../constants/legal';
-import {useTheme} from '../contexts/ThemeContext';
+import {useTheme, useLowEndMode} from '../contexts/ThemeContext';
 import packageJson from '../../package.json';
 
 const AboutScreen = () => {
   const {theme} = useTheme();
+  const { isLowEndMode, enableLowEndMode, disableLowEndMode } = useLowEndMode();
 
   const appVersion = String((packageJson as any)?.version ?? '');
 
@@ -139,6 +140,38 @@ const AboutScreen = () => {
         >
           <Text style={[styles.cardTitle, {color: theme.colors.navBackground}]}>{t('about.links')}</Text>
 
+          <Pressable
+            style={styles.toggleRow}
+            onPress={() => {
+              if (isLowEndMode) {
+                disableLowEndMode();
+              } else {
+                enableLowEndMode();
+              }
+            }}
+          >
+            <Switch
+              value={isLowEndMode}
+              onValueChange={(value) => {
+                if (value) {
+                  enableLowEndMode();
+                } else {
+                  disableLowEndMode();
+                }
+              }}
+              trackColor={{ false: '#767577', true: theme.colors.accentBlue }}
+              thumbColor={isLowEndMode ? '#FFFFFF' : '#F4F3F4'}
+            />
+            <View style={styles.toggleTextContainer}>
+              <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
+                Ho an'ny finday somary miadana
+              </Text>
+              <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
+                Tsy mandeha haingana ny telefonanao? Alefaso ity
+              </Text>
+            </View>
+          </Pressable>
+
           {contactEmail.trim() ? (
             <Pressable style={styles.linkRow} onPress={() => openEmailSafe(contactEmail)}>
               <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
@@ -246,6 +279,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  toggleTextContainer: {
+    marginLeft: 12,
+    flex: 1,
   },
   linkRow: {
     paddingVertical: 10,

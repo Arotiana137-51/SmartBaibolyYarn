@@ -30,10 +30,14 @@ type ThemeContextValue = {
   setDarkMode: (enabled: boolean) => void;
   toggleDarkMode: () => void;
   isReady: boolean;
+  enableLowEndMode: () => void;
+  disableLowEndMode: () => void;
+  isLowEndMode: boolean;
 };
 
 const STORAGE_KEY_DARK_MODE = 'settings.darkMode';
 const STORAGE_KEY_THEME_MODE = 'settings.themeMode';
+const STORAGE_KEY_LOW_END_MODE = 'settings.lowEndMode';
 
 const darkColors: ThemeColors = {
   backgroundPrimary: '#000000',
@@ -74,6 +78,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isLowEndMode, setIsLowEndMode] = useState(false);
   const transitionOpacity = useRef(new Animated.Value(0)).current;
   const [transitionColor, setTransitionColor] = useState<string>('transparent');
 
@@ -92,6 +97,11 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
         if (legacyDarkMode === 'true') {
           setIsDarkMode(true);
         }
+
+        const lowEndMode = await AsyncStorage.getItem(STORAGE_KEY_LOW_END_MODE);
+        if (lowEndMode === 'true') {
+          setIsLowEndMode(true);
+        }
       } finally {
         setIsReady(true);
       }
@@ -107,9 +117,26 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
     }
   }, []);
 
+  const persistLowEnd = useCallback(async (enabled: boolean) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY_LOW_END_MODE, enabled ? 'true' : 'false');
+    } catch {
+      // ignore persistence errors
+    }
+  }, []);
+
   const setDarkMode = useCallback(
     (enabled: boolean) => {
       const nextColors = enabled ? darkColors : lightColors;
+      if (isLowEndMode) {
+        transitionOpacity.stopAnimation();
+        transitionOpacity.setValue(0);
+        setTransitionColor(nextColors.backgroundPrimary);
+        setIsDarkMode(enabled);
+        persist(enabled);
+        return;
+      }
+
       setTransitionColor(nextColors.backgroundPrimary);
       Animated.sequence([
         Animated.timing(transitionOpacity, {
@@ -127,12 +154,22 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
       setIsDarkMode(enabled);
       persist(enabled);
     },
-    [persist, transitionOpacity]
+    [isLowEndMode, persist, transitionOpacity]
   );
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode(!isDarkMode);
   }, [isDarkMode, setDarkMode]);
+
+  const enableLowEndMode = useCallback(() => {
+    setIsLowEndMode(true);
+    persistLowEnd(true);
+  }, [persistLowEnd]);
+
+  const disableLowEndMode = useCallback(() => {
+    setIsLowEndMode(false);
+    persistLowEnd(false);
+  }, [persistLowEnd]);
 
   const theme: Theme = useMemo(
     () => ({
@@ -149,8 +186,11 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
       setDarkMode,
       toggleDarkMode,
       isReady,
+      enableLowEndMode,
+      disableLowEndMode,
+      isLowEndMode,
     }),
-    [theme, isDarkMode, setDarkMode, toggleDarkMode, isReady]
+    [theme, isDarkMode, setDarkMode, toggleDarkMode, isReady, enableLowEndMode, disableLowEndMode, isLowEndMode]
   );
 
   return (
@@ -181,6 +221,11 @@ export const useTheme = () => {
     throw new Error('useTheme must be used within ThemeProvider');
   }
   return ctx;
+};
+
+export const useLowEndMode = () => {
+  const { isLowEndMode, enableLowEndMode, disableLowEndMode } = useTheme();
+  return { isLowEndMode, enableLowEndMode, disableLowEndMode };
 };
 
 const styles = StyleSheet.create({

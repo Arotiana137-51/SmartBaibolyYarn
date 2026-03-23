@@ -52,7 +52,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   onIncreaseFont,
   onDecreaseFont,
 }) => {
-  const {theme} = useTheme();
+  const {theme, isLowEndMode} = useTheme();
   const {variant: jesusNameVariant, setVariant: setJesusNameVariant} = useJesusName();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
@@ -61,35 +61,49 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 
   useEffect(() => {
     if (visible) {
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 140,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scale, {
-          toValue: 1,
-          speed: 20,
-          bounciness: 6,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      if (isLowEndMode) {
+        opacity.stopAnimation();
+        scale.stopAnimation();
+        opacity.setValue(1);
+        scale.setValue(1);
+      } else {
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 140,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scale, {
+            toValue: 1,
+            speed: 20,
+            bounciness: 6,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
       return;
     }
 
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 120,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 0.96,
-        duration: 120,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [visible, opacity, scale]);
+    if (isLowEndMode) {
+      opacity.stopAnimation();
+      scale.stopAnimation();
+      opacity.setValue(0);
+      scale.setValue(0.96);
+    } else {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.96,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible, opacity, scale, isLowEndMode]);
 
   const items = useMemo(
     () =>
@@ -220,7 +234,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 
             <View style={styles.variantSection}>
               <Text style={[styles.variantTitle, {color: theme.colors.textSecondary}]}>
-                Anaran'i Jesosy
+                Anaran'ny Tompo
               </Text>
 
               <Pressable
