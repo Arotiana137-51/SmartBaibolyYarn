@@ -6,6 +6,7 @@ import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import {
   extractBracketFootnotes,
+  flattenBibleTextForReader,
   renderBibleLineForReader,
   processBibleTextWithMetadataForReader,
 } from '../utils/bibleTextUtils';
@@ -14,6 +15,9 @@ import {useJesusName} from '../contexts/JesusNameContext';
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
 const BIBLE_BASE_BOTTOM_PADDING = 28;
+
+const PSALMS_BOOK_ID = 19;
+const PROVERBS_BOOK_ID = 20;
 
 const FLOATING_BOTTOM_NAV_SPACER = {
   offsetFromBottom: 15,
@@ -43,7 +47,12 @@ const VerseItem = React.memo(
     onVersePress?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
   }) => {
-    const { textWithoutFootnotes, footnotes } = extractBracketFootnotes(transformText(item.text));
+    const isPsalmsOrProverbs = item.book_id === PSALMS_BOOK_ID || item.book_id === PROVERBS_BOOK_ID;
+    const hasTitle = typeof item.title === 'string' && item.title.trim().length > 0;
+
+    const baseText = transformText(item.text);
+    const readerText = !isPsalmsOrProverbs && !hasTitle ? flattenBibleTextForReader(baseText) : baseText;
+    const { textWithoutFootnotes, footnotes } = extractBracketFootnotes(readerText);
     const { lines, italicLines } = processBibleTextWithMetadataForReader(textWithoutFootnotes);
 
     const isSelected =
@@ -71,6 +80,28 @@ const VerseItem = React.memo(
             },
           ]}
         >
+          {hasTitle ? (
+            <Text
+              style={{
+                fontStyle: 'italic',
+                fontWeight: '200',
+                letterSpacing: 1.2,
+                fontSize: Math.round(verseFontSize * 1.03),
+                color:
+                  theme.colors.textSecondary ??
+                  theme.colors.textWatermark ??
+                  theme.colors.readerText,
+                opacity: 0.62,
+                fontFamily: 'Cinzel',
+                lineHeight: verseLineHeight,
+                transform: [{ skewX: '-8deg' }],
+              }}
+            >
+              {item.title!.trim()}
+              {'\n'}
+            </Text>
+          ) : null}
+
           <Text
             style={[
               TEXT_STYLES.verseNumber,

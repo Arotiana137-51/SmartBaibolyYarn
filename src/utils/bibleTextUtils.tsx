@@ -178,6 +178,41 @@ export const processBibleTextWithMetadataForReader = (text: string): { lines: st
   return processBibleTextWithMetadataInternal(text, { bracketMode: 'strict_n' });
 };
 
+export const flattenBibleTextForReader = (text: string): string => {
+  if (typeof text !== 'string' || !text) {
+    return '';
+  }
+
+  const { lines, italicLines } = processBibleTextWithMetadataForReader(text);
+  if (lines.length === 0) {
+    return '';
+  }
+
+  // Keep block-italic lines (formerly bracketed blocks) on their own lines; everything else flows.
+  let out = '';
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!line) {
+      continue;
+    }
+
+    if (italicLines.has(i)) {
+      if (out && !out.endsWith('\n')) {
+        out += '\n';
+      }
+      out += line.trim() + '\n';
+      continue;
+    }
+
+    if (out && !out.endsWith('\n')) {
+      out += ' ';
+    }
+    out += line.trim();
+  }
+
+  return normalizeTextPreservingMarkers(out.replace(/[ ]{2,}/g, ' ').trim());
+};
+
 export const extractBracketFootnotes = (
   text: string
 ): { textWithoutFootnotes: string; footnotes: string[] } => {

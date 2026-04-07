@@ -16,6 +16,7 @@ export interface BibleVerse {
   chapter: number;
   verse_number: number;
   text: string;
+  title?: string | null;
 }
 
 export interface BibleCrossReference {
@@ -66,7 +67,7 @@ export const useBibleData = () => {
       setIsLoading(true);
       await bibleDatabaseService.initDatabase();
       const { rows } = await bibleDatabaseService.executeQuery<BibleVerse>(
-        'SELECT id, book_id, chapter, verse_number, text FROM Verses WHERE book_id = ? AND chapter = ? ORDER BY verse_number',
+        'SELECT id, book_id, chapter, verse_number, text, title FROM Verses WHERE book_id = ? AND chapter = ? ORDER BY verse_number',
         [bookId, chapter]
       );
       
@@ -105,7 +106,7 @@ export const useBibleData = () => {
     try {
       await bibleDatabaseService.initDatabase();
       const { rows } = await bibleDatabaseService.executeQuery<BibleVerse>(
-        'SELECT id, book_id, chapter, verse_number, text FROM Verses WHERE book_id = ? AND chapter = ? AND verse_number = ?',
+        'SELECT id, book_id, chapter, verse_number, text, title FROM Verses WHERE book_id = ? AND chapter = ? AND verse_number = ?',
         [bookId, chapter, verseNumber]
       );
       

@@ -262,6 +262,30 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   }, [mode, currentBook, currentChapter, currentHymnId, loadVerses, loadHymnVerses]);
 
+  useEffect(() => {
+    if (mode !== 'hymnal') {
+      return;
+    }
+
+    if (!currentHymnId || hymns.length === 0) {
+      return;
+    }
+
+    const hymn = hymns.find(h => h.id === currentHymnId);
+    if (!hymn) {
+      return;
+    }
+
+    if (currentHymnNumber !== hymn.number) {
+      setCurrentHymnNumber(hymn.number);
+    }
+
+    const nextCategory = hymn.category || null;
+    if (currentHymnCategory !== nextCategory) {
+      setCurrentHymnCategory(nextCategory);
+    }
+  }, [mode, currentHymnCategory, currentHymnId, currentHymnNumber, hymns]);
+
   // Auto-scroll to selected verse when verses are loaded
   useEffect(() => {
     if (shouldScrollToVerse !== null && verses.length > 0) {
@@ -578,6 +602,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             <HymnReaderView
               hymnVerses={hymnVerses}
               isLoading={isHymnsLoading}
+              hymnNumber={getCurrentHymn()?.number ?? null}
               hymnTitle={getCurrentHymn()?.title ?? null}
               fontScale={fontScale}
               onHymnLongPress={handleHymnStanzaLongPress}

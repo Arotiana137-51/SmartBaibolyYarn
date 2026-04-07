@@ -137,13 +137,13 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   const getStepTitle = useCallback(() => {
     switch (currentStep) {
       case 'book':
-        return 'Sélectionner un Livre';
+        return 'Fisafidianana boky';
       case 'chapter':
-        return `Sélectionner un Chapitre${selectedBook ? ` - ${selectedBookShortName}` : ''}`;
+        return `Fisafidianana toko${selectedBook ? ` - ${selectedBookShortName}` : ''}`;
       case 'verse':
-        return `Sélectionner un Verset${selectedBook && selectedChapter !== null ? ` - ${selectedBookShortName} ${selectedChapter}` : ''}`;
+        return `Fisafidianana andininy${selectedBook && selectedChapter !== null ? ` - ${selectedBookShortName} ${selectedChapter}` : ''}`;
       default:
-        return 'Sélectionner un Livre';
+        return 'Fisafidianana boky';
     }
   }, [currentStep, selectedBook, selectedBookShortName, selectedChapter]);
 
@@ -176,7 +176,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
                 color: theme.colors.textPrimary,
               },
             ]}
-            placeholder="Mitady boky..."
+            placeholder="Anaran'ny boky karohana..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor={theme.colors.textSecondary}

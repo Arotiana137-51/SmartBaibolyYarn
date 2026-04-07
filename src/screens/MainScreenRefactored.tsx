@@ -160,6 +160,8 @@ const MainScreenRefactored: React.FC<MainScreenProps> = ({ navigation }) => {
           <HymnReaderView
             hymnVerses={currentHymnVerses}
             isLoading={hymnsLoading}
+            hymnNumber={hymns.find(h => h.id === hymnState.currentHymnId)?.number ?? null}
+            hymnTitle={hymns.find(h => h.id === hymnState.currentHymnId)?.title ?? null}
             fontScale={fontScale}
           />
         )}

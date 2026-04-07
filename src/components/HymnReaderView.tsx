@@ -52,6 +52,8 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const hasTitle = typeof hymnTitle === 'string' && hymnTitle.trim().length > 0;
+
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
     FLOATING_BOTTOM_NAV_SPACER.offsetFromBottom +
@@ -105,19 +107,21 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       keyExtractor={(item) => item.verseNumber.toString()}
       contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
       ListHeaderComponent={
-        hymnTitle ? (
+        hasTitle ? (
           <View style={styles.headerContainer}>
-            <Text
-              style={[
-                styles.headerTitle,
-                {
-                  color: theme.colors.readerText,
-                  fontSize: styles.headerTitle.fontSize * fontScale,
-                },
-              ]}
-            >
-              {hymnTitle}
-            </Text>
+            {hasTitle ? (
+              <Text
+                style={[
+                  styles.headerTitle,
+                  {
+                    color: theme.colors.readerText,
+                    fontSize: styles.headerTitle.fontSize * fontScale,
+                  },
+                ]}
+              >
+                {hymnTitle!.trim()}
+              </Text>
+            ) : null}
           </View>
         ) : null
       }
@@ -219,9 +223,9 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
-    lineHeight: 28,
+    lineHeight:24,
   },
   centered: {
     flex: 1,

@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState, useRef} from 'react';
-import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
+import {FlatList, Pressable, StyleSheet, Text, View, Platform} from 'react-native';
 import {useRoute} from '@react-navigation/native';
 import {t} from '../i18n/strings';
 import {useBibleData} from '../hooks/useBibleData';
@@ -99,6 +99,9 @@ const BibleReaderScreen = () => {
           }}
           renderItem={({item}) => (
             <Text style={[styles.verseText, {fontSize}]}> 
+              {item.title ? (
+                <Text style={styles.verseTitle}>{item.title}{'\n'}</Text>
+              ) : null}
               {`${item.verse_number}. ${transformText(item.text)}`}
             </Text>
           )}
@@ -141,6 +144,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: '#1c1c1c',
     lineHeight: 22,
+  },
+  verseTitle: {
+    fontStyle: 'italic',
+    fontWeight: '200',
+    letterSpacing: 1.2,
+    color: '#ecebe6ff',
+    fontFamily: 'Cinzel',
+    transform: [{ skewX: '-8deg' }],
   },
   infoText: {
     fontSize: 14,
