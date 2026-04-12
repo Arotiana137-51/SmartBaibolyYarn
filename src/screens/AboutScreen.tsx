@@ -1,12 +1,16 @@
 import React, {useMemo} from 'react';
 import {Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {t} from '../i18n/strings';
 import {PRIVACY_POLICY_URL} from '../constants/legal';
 import {useTheme, useLowEndMode} from '../contexts/ThemeContext';
 import packageJson from '../../package.json';
+import type {RootStackParamList} from '../navigation/RootNavigator';
 
 const AboutScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const {theme} = useTheme();
   const { isLowEndMode, enableLowEndMode, disableLowEndMode } = useLowEndMode();
 
@@ -212,6 +216,18 @@ const AboutScreen = () => {
             </Pressable>
           ) : null}
 
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          >
+            <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
+              {t('about.privacyPolicy')}
+            </Text>
+            <Text style={[styles.linkHint, {color: theme.colors.textSecondary}]}>
+              {t('about.open')}
+            </Text>
+          </Pressable>
+
           {canOpenUrl(PRIVACY_POLICY_URL) ? (
             <Pressable style={styles.linkRow} onPress={() => openUrlSafe(PRIVACY_POLICY_URL)}>
               <Text style={[styles.linkText, {color: theme.colors.accentBlue}]}>
@@ -223,7 +239,7 @@ const AboutScreen = () => {
             </Pressable>
           ) : null}
 
-          {!contactEmail.trim() && !phoneNumber.trim() && !canOpenUrl(linkedInUrl) && !canOpenUrl(websiteUrl) && !canOpenUrl(PRIVACY_POLICY_URL) ? (
+          {!contactEmail.trim() && !phoneNumber.trim() && !canOpenUrl(linkedInUrl) && !canOpenUrl(websiteUrl) ? (
             <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}
             >
               {t('about.addLinksHint')}

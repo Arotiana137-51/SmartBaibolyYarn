@@ -1,4 +1,4 @@
-package com.smartbaibolyyarn
+package com.ebaiboly.app
 
 import android.app.Application
 import com.facebook.react.PackageList

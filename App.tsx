@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, {useEffect, useState} from 'react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {DatabaseProvider, useDatabase} from './src/contexts/DatabaseContext';
@@ -6,6 +6,8 @@ import {ActivityIndicator, View, Text, StyleSheet} from 'react-native';
 import RootNavigator from './src/navigation/RootNavigator';
 import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 
 // Splash screen component
 const SplashScreen = () => (
@@ -20,12 +22,45 @@ const AppContent = () => {
   const {isInitialized} = useDatabase();
   const {isReady} = useTheme();
   const {isReady: isJesusNameReady} = useJesusName();
+  const [privacyPolicyChecked, setPrivacyPolicyChecked] = useState(false);
+  const [privacyPolicyAccepted, setPrivacyPolicyAccepted] = useState(false);
 
-  if (!isReady || !isJesusNameReady || !isInitialized) {
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY_PRIVACY_POLICY_ACCEPTED);
+        if (isMounted) {
+          setPrivacyPolicyAccepted(stored === 'true');
+        }
+      } catch {
+        if (isMounted) {
+          setPrivacyPolicyAccepted(false);
+        }
+      } finally {
+        if (isMounted) {
+          setPrivacyPolicyChecked(true);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const providersReady = isReady && isJesusNameReady && isInitialized;
+
+  if (!providersReady || !privacyPolicyChecked) {
     return <SplashScreen />;
   }
 
-  return <RootNavigator />;
+  return (
+    <RootNavigator
+      initialRouteName={privacyPolicyAccepted ? 'Home' : 'PrivacyPolicy'}
+      privacyPolicyMandatory={!privacyPolicyAccepted}
+    />
+  );
 };
 
 // Main App component with providers

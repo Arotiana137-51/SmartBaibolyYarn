@@ -1,4 +1,4 @@
-package com.smartbaibolyyarn
+package com.ebaiboly.app
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

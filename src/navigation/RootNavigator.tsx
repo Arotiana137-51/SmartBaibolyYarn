@@ -10,6 +10,7 @@ import VerseListScreen from '../screens/VerseListScreen';
 import MiscScreen from '../screens/MiscScreen';
 import FanekemDetailsScreen from '../screens/FanekemDetailsScreen';
 import AboutScreen from '../screens/AboutScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 export type RootStackParamList = {
   Home:
@@ -28,11 +29,20 @@ export type RootStackParamList = {
   Misc: undefined;
   FanekemDetails: {title: string; content: string};
   About: undefined;
+  PrivacyPolicy: {mandatory?: boolean} | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const RootNavigator = () => {
+type RootNavigatorProps = {
+  initialRouteName?: keyof RootStackParamList;
+  privacyPolicyMandatory?: boolean;
+};
+
+const RootNavigator = ({
+  initialRouteName,
+  privacyPolicyMandatory,
+}: RootNavigatorProps) => {
   const {theme} = useTheme();
 
   const headerOptions = {
@@ -51,7 +61,7 @@ const RootNavigator = () => {
   } as const;
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator initialRouteName={initialRouteName}>
       <Stack.Screen
         name="Home"
         component={MainScreen}
@@ -97,6 +107,18 @@ const RootNavigator = () => {
         name="About"
         component={AboutScreen}
         options={{title: t('menu.about'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        initialParams={
+          privacyPolicyMandatory
+            ? {
+                mandatory: true,
+              }
+            : undefined
+        }
+        options={{title: t('about.privacyPolicy'), ...headerOptions}}
       />
     </Stack.Navigator>
   );
