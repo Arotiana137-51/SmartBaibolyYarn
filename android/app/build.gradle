@@ -94,12 +94,15 @@ android {
                 "META-INF/LGPL2.1",
             ]
         }
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
     defaultConfig {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
+        versionCode 3
         versionName "1.0.1"
     }
     signingConfigs {

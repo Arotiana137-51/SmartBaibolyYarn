@@ -97,7 +97,7 @@ const VerseItem = React.memo(
                 transform: [{ skewX: '-8deg' }],
               }}
             >
-              {item.title!.trim()}
+              {transformText(item.title!.trim())}
               {'\n'}
             </Text>
           ) : null}

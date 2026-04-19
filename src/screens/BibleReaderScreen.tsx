@@ -100,7 +100,7 @@ const BibleReaderScreen = () => {
           renderItem={({item}) => (
             <Text style={[styles.verseText, {fontSize}]}> 
               {item.title ? (
-                <Text style={styles.verseTitle}>{item.title}{'\n'}</Text>
+                <Text style={styles.verseTitle}>{transformText(item.title)}{'\n'}</Text>
               ) : null}
               {`${item.verse_number}. ${transformText(item.text)}`}
             </Text>
