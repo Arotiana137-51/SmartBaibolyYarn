@@ -1,0 +1,39 @@
+name: Build iOS (No Code Signing)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+      
+      - name: Install dependencies
+        run: yarn install
+      
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+      
+      - name: Build iOS app (no code signing)
+        run: |
+          cd ios
+          xcodebuild -workspace SmartBaibolyYarn.xcworkspace -scheme SmartBaibolyYarn -configuration Release -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' clean build CODE_SIGNING_ALLOWED=NO

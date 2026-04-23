@@ -1,0 +1,65 @@
+name: Build iOS (Signed for App Store)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+      
+      - name: Install dependencies
+        run: yarn install
+      
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+      
+      - name: Import code signing certificates
+        run: |
+          echo "${{ secrets.CERTIFICATES_P12 }}" | base64 --decode > certificates.p12
+          security create-keychain -p "" build.keychain
+          security import certificates.p12 -k build.keychain -P "${{ secrets.CERTIFICATES_P12_PASSWORD }}" -T /usr/bin/codesign
+          security list-keychain -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
+      
+      - name: Import provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.PROVISIONING_PROFILE }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+      
+      - name: Build and archive iOS app
+        run: |
+          cd ios
+          xcodebuild -workspace SmartBaibolyYarn.xcworkspace -scheme SmartBaibolyYarn -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/SmartBaibolyYarn.xcarchive archive
+      
+      - name: Export IPA
+        run: |
+          cd ios
+          xcodebuild -exportArchive -archivePath build/SmartBaibolyYarn.xcarchive -exportPath build/export -exportOptionsPlist ExportOptions.plist
+      
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartBaibolyYarn.ipa
+          path: ios/build/export/SmartBaibolyYarn.ipa
