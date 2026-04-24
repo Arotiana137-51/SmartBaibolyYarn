@@ -1,0 +1,76 @@
+name: iOS Build (Simulator)
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build databases
+        run: yarn build:database
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+          working-directory: .
+
+      - name: Install CocoaPods with specific versions
+        run: |
+          gem install cocoapods -v '>= 1.13' --version '!= 1.15.0' --version '!= 1.15.1'
+          gem install activesupport -v '>= 6.1.7.5' --version '!= 7.1.0'
+          gem install xcodeproj -v '< 1.26.0'
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Build iOS app for simulator
+        run: |
+          cd ios
+          if [ -f "SmartBaibolyYarn.xcworkspace/contents.xcworkspacedata" ]; then
+            xcodebuild -workspace SmartBaibolyYarn.xcworkspace \
+              -scheme SmartBaibolyYarn \
+              -sdk iphonesimulator \
+              -configuration Debug \
+              -destination 'generic/platform=iOS Simulator' \
+              clean build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+          else
+            xcodebuild -project SmartBaibolyYarn.xcodeproj \
+              -scheme SmartBaibolyYarn \
+              -sdk iphonesimulator \
+              -configuration Debug \
+              -destination 'generic/platform=iOS Simulator' \
+              clean build \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO
+          fi
+
+      - name: Build succeeded
+        run: echo "✅ iOS build completed successfully!"
