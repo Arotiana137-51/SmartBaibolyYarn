@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { HymnVerse } from '../hooks/useHymnsData';
@@ -64,6 +64,30 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
 
   const bottomScrollSpacerAdjusted = Math.round(bottomScrollSpacer * 0.5) + 7;
 
+  const {chorusLines, hymnStanzas} = useMemo(() => {
+    const chorus = hymnVerses.filter(verse => verse.is_chorus);
+    const stanzaOnly = hymnVerses.filter(verse => !verse.is_chorus);
+
+    const grouped = stanzaOnly.reduce<Record<number, HymnVerse[]>>(
+      (accumulator, verse) => {
+        const bucket = accumulator[verse.verse_number] ?? [];
+        bucket.push(verse);
+        accumulator[verse.verse_number] = bucket;
+        return accumulator;
+      },
+      {},
+    );
+
+    const stanzas = Object.entries(grouped)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([verseNumber, stanzaVerses]) => ({
+        verseNumber: Number(verseNumber),
+        lines: stanzaVerses,
+      }));
+
+    return {chorusLines: chorus, hymnStanzas: stanzas};
+  }, [hymnVerses]);
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -71,27 +95,6 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       </View>
     );
   }
-
-  // Group hymn verses by stanza number
-  const chorusLines = hymnVerses.filter(verse => verse.is_chorus);
-  const stanzaOnlyLines = hymnVerses.filter(verse => !verse.is_chorus);
-
-  const groupedHymnVerses = stanzaOnlyLines.reduce<Record<number, HymnVerse[]>>(
-    (accumulator, verse) => {
-      const bucket = accumulator[verse.verse_number] ?? [];
-      bucket.push(verse);
-      accumulator[verse.verse_number] = bucket;
-      return accumulator;
-    },
-    {}
-  );
-
-  const hymnStanzas = Object.entries(groupedHymnVerses)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([verseNumber, stanzaVerses]) => ({
-      verseNumber: Number(verseNumber),
-      lines: stanzaVerses,
-    }));
 
   const stanzaCardBackground = theme.isDark
     ? hexToRgba('#FFFFFF', 0.06)

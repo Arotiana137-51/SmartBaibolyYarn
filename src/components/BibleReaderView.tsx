@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform } from 'react-native';
+import React, {useCallback} from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
@@ -229,6 +229,37 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
 
   const bottomScrollSpacerAdjusted = Math.round(bottomScrollSpacer * 0.5) + 7;
 
+  const keyExtractor = useCallback((item: BibleVerse) => item.id.toString(), []);
+
+  const renderItem = useCallback(
+    ({item}: ListRenderItemInfo<BibleVerse>) => (
+      <VerseItem
+        item={item}
+        theme={theme}
+        fontScale={fontScale}
+        jesusNameVariant={jesusNameVariant}
+        transformText={transformText}
+        selectedVerseNumber={selectedVerseNumber}
+        onVersePress={onVersePress}
+        onVerseLongPress={onVerseLongPress}
+      />
+    ),
+    [theme, fontScale, jesusNameVariant, transformText, selectedVerseNumber, onVersePress, onVerseLongPress],
+  );
+
+  const onScrollToIndexFailed = useCallback(
+    (info: {index: number}) => {
+      setTimeout(() => {
+        flatListRef?.current?.scrollToIndex({
+          index: info.index,
+          animated: true,
+          viewPosition: 0.2,
+        });
+      }, 220);
+    },
+    [flatListRef],
+  );
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -241,7 +272,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     <FlatList
       ref={flatListRef}
       data={verses}
-      keyExtractor={(item) => item.id.toString()}
+      keyExtractor={keyExtractor}
       contentContainerStyle={[
         styles.contentContainer,
         {paddingBottom: BIBLE_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted},
@@ -253,27 +284,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           </View>
         ) : null
       }
-      onScrollToIndexFailed={(info) => {
-        setTimeout(() => {
-          flatListRef?.current?.scrollToIndex({
-            index: info.index,
-            animated: true,
-            viewPosition: 0.2,
-          });
-        }, 220);
-      }}
-      renderItem={({ item }) => (
-        <VerseItem
-          item={item}
-          theme={theme}
-          fontScale={fontScale}
-          jesusNameVariant={jesusNameVariant}
-          transformText={transformText}
-          selectedVerseNumber={selectedVerseNumber}
-          onVersePress={onVersePress}
-          onVerseLongPress={onVerseLongPress}
-        />
-      )}
+      onScrollToIndexFailed={onScrollToIndexFailed}
+      renderItem={renderItem}
       {...listProps}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />

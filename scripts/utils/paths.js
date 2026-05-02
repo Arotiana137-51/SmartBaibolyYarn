@@ -39,8 +39,8 @@ const getSourceDataPaths = () => {
   const projectRoot = getProjectRoot();
   
   return {
-    bible: path.join(projectRoot, 'src', 'data', 'bible'),
-    hymns: path.join(projectRoot, 'src', 'data', 'hymns'),
+    bible: path.join(projectRoot, 'scripts', 'source-data', 'bible'),
+    hymns: path.join(projectRoot, 'scripts', 'source-data', 'hymns'),
   };
 };
 
@@ -75,12 +75,34 @@ const getDatabasePaths = () => {
   };
 };
 
-// Ensure directory exists (cross-platform)
+// Ensure directory exists (cross-platform).
+// Accepts a string path, or an object with string fields {root, dev, prod}
+// so callers can pass either getAssetsPaths().android or getAssetsPaths().android.dev.
 const ensureDirectory = (dirPath) => {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-    console.log(`📁 Created directory: ${dirPath}`);
+  if (typeof dirPath === 'string') {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+      console.log(`📁 Created directory: ${dirPath}`);
+    }
+    return;
   }
+
+  if (dirPath && typeof dirPath === 'object') {
+    for (const key of ['root', 'dev', 'prod']) {
+      const value = dirPath[key];
+      if (typeof value === 'string') {
+        if (!fs.existsSync(value)) {
+          fs.mkdirSync(value, { recursive: true });
+          console.log(`📁 Created directory: ${value}`);
+        }
+      }
+    }
+    return;
+  }
+
+  throw new TypeError(
+    `ensureDirectory expected a string path or {root,dev,prod} object, got ${typeof dirPath}`
+  );
 };
 
 // Copy file cross-platform with error handling

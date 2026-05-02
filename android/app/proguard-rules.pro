@@ -24,3 +24,7 @@
 
 # Keep SQLite native methods
 -keepclasseswithmembernames class * { native <methods>; }
+
+# Aggressive R8 optimizations to shrink dex size
+-repackageclasses ''
+-allowaccessmodification

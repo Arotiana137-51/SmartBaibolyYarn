@@ -6,42 +6,93 @@ export type BibleSearchOptions = {
   matchWholeWord?: boolean;
 };
 
-const containsJesusNameVariant = (query: string) => {
-  const q = query.toLowerCase();
-  return q.includes('jesosy') || q.includes('jesoa');
+const JESUS_VARIANTS = ['jesosy', 'jesoa'];
+
+const looksLikeJesusPrefix = (token: string) => {
+  if (!token) return false;
+  const t = token.toLowerCase();
+  if (JESUS_VARIANTS.some(v => v.startsWith(t) || t.startsWith(v))) return true;
+  return t.startsWith('jeso') || t === 'jes' || t === 'je';
 };
 
- const makeJesusNameLikeParams = (query: string) => {
-   const safe = query;
-   const qLower = safe.toLowerCase();
-   const variants = [safe];
+const containsJesusNameVariant = (query: string) => {
+  const q = query.toLowerCase();
+  if (JESUS_VARIANTS.some(v => q.includes(v))) return true;
+  return q.split(/\s+/).filter(Boolean).some(looksLikeJesusPrefix);
+};
 
-   if (qLower.includes('jesosy')) {
-     variants.push(safe.replace(/jesosy/gi, 'Jesoa'));
-   }
+const makeJesusNameLikeParams = (query: string) => {
+  const safe = query;
+  const variants = new Set<string>([safe]);
+  const qLower = safe.toLowerCase();
 
-   if (qLower.includes('jesoa')) {
-     variants.push(safe.replace(/jesoa/gi, 'Jesosy'));
-   }
+  if (qLower.includes('jesosy')) {
+    variants.add(safe.replace(/jesosy/gi, 'Jesoa'));
+  }
+  if (qLower.includes('jesoa')) {
+    variants.add(safe.replace(/jesoa/gi, 'Jesosy'));
+  }
 
-   const unique = Array.from(new Set(variants));
-   return unique.map(v => `%${v}%`);
- };
+  // If the query contains a "jeso"-like prefix anywhere (e.g. "jeso o"),
+  // collapse spaces and add the canonical variants so LIKE still finds them.
+  const collapsed = safe.replace(/\s+/g, '');
+  if (/jeso/i.test(collapsed)) {
+    variants.add('Jesosy');
+    variants.add('Jesoa');
+  }
 
- const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return Array.from(variants).map(v => `%${v}%`);
+};
 
- const makeWholeWordRegex = (query: string) => {
-   const escaped = escapeRegExp(query.trim());
-   // RN JS engines don't reliably support Unicode property escapes everywhere.
-   // This is a pragmatic boundary: non-alphanumeric acts as word boundary.
-   return new RegExp(`(^|[^A-Za-z0-9])${escaped}([^A-Za-z0-9]|$)`, 'i');
- };
+const normalizeForFtsQuery = (value: string) => {
+  const raw = (value ?? '').toString();
+  if (!raw) return '';
 
- const makeWholeWordRegexForJesusName = () => {
-   const a = escapeRegExp('Jesosy');
-   const b = escapeRegExp('Jesoa');
-   return new RegExp(`(^|[^A-Za-z0-9])(${a}|${b})([^A-Za-z0-9]|$)`, 'i');
- };
+  // 1) Lowercase
+  // 2) Split diacritics (NFD) then drop combining marks
+  // 3) Replace punctuation/symbols with spaces (also strips quotes which would break MATCH)
+  // 4) Collapse whitespace
+  return raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const makeFtsPrefixQuery = (normalized: string) => {
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return '';
+
+  const baseTokens = tokens.map(tok => `${tok}*`).join(' AND ');
+  const branches = new Set<string>([baseTokens]);
+
+  // Robustness: if there are multiple tokens and any are short (≤2 chars),
+  // the user may have inserted a stray space mid-word. Try a collapsed variant.
+  const collapsed = tokens.join('');
+  if (tokens.length > 1 && tokens.some(t => t.length <= 2)) {
+    branches.add(`${collapsed}*`);
+  }
+
+  // Jesus-name expansion: cover Jesoa/Jesosy variants whenever the query
+  // contains a "jeso"-like prefix, even partial ("jeso o", "jes").
+  const expand = containsJesusNameVariant(normalized);
+  if (expand) {
+    // Replace any token that looks like a Jesus prefix with each canonical variant.
+    for (const variant of JESUS_VARIANTS) {
+      const replaced = tokens
+        .map(tok => (looksLikeJesusPrefix(tok) ? `${variant}*` : `${tok}*`))
+        .join(' AND ');
+      branches.add(replaced);
+      // Also try with all spaces collapsed (handles "jeso o" → "jesoo" → variant).
+      branches.add(`${variant}*`);
+    }
+  }
+
+  const list = Array.from(branches).filter(Boolean);
+  return list.length === 1 ? list[0] : list.map(s => `(${s})`).join(' OR ');
+};
 
 export interface BibleSearchResult {
   bookId: number;
@@ -79,79 +130,34 @@ export const useBibleSearch = () => {
       await bibleDatabaseService.initDatabase();
 
       const matchWholeWord = options?.matchWholeWord === true;
-      const shouldExpandJesus = containsJesusNameVariant(query);
+      const normalizedQuery = normalizeForFtsQuery(query);
+      if (!normalizedQuery) {
+        return [];
+      }
+      const ftsParam = matchWholeWord ? `"${normalizedQuery}"` : makeFtsPrefixQuery(normalizedQuery);
+
+      const ftsCandidatesQuery = `
+        SELECT
+          v.book_id,
+          b.name as book_name,
+          b.testament as testament,
+          v.chapter,
+          v.verse_number,
+          v.text
+        FROM VersesFts f
+        JOIN Verses v ON v.id = f.rowid
+        JOIN Books b ON b.id = v.book_id
+        WHERE f MATCH ?
+        ORDER BY v.book_id, v.chapter, v.verse_number
+      `;
+
+      const shouldExpandJesus = containsJesusNameVariant(normalizedQuery);
       const expandedLikeParams = shouldExpandJesus ? makeJesusNameLikeParams(query) : [`%${query}%`];
       const likeWhere = expandedLikeParams.length === 1
         ? 'v.text LIKE ?'
         : `(${expandedLikeParams.map(() => 'v.text LIKE ?').join(' OR ')})`;
 
-      if (!matchWholeWord) {
-        // Substring search (current behavior): SQL does the counting/grouping.
-        const searchQuery = `
-          SELECT 
-            b.id as book_id,
-            b.name as book_name,
-            b.testament as testament,
-            COUNT(v.id) as verse_count,
-            (
-              SELECT v2.chapter
-              FROM verses v2
-              WHERE v2.book_id = b.id AND (${expandedLikeParams.map(() => 'v2.text LIKE ?').join(' OR ')})
-              ORDER BY v2.chapter, v2.verse_number
-              LIMIT 1
-            ) as matched_chapter,
-            (
-              SELECT v2.verse_number
-              FROM verses v2
-              WHERE v2.book_id = b.id AND (${expandedLikeParams.map(() => 'v2.text LIKE ?').join(' OR ')})
-              ORDER BY v2.chapter, v2.verse_number
-              LIMIT 1
-            ) as matched_verse_number,
-            (
-              SELECT v2.text
-              FROM verses v2
-              WHERE v2.book_id = b.id AND (${expandedLikeParams.map(() => 'v2.text LIKE ?').join(' OR ')})
-              ORDER BY v2.chapter, v2.verse_number
-              LIMIT 1
-            ) as matched_text
-          FROM Books b
-          JOIN Verses v ON b.id = v.book_id
-          WHERE ${likeWhere}
-          GROUP BY b.id, b.name, b.testament
-          ORDER BY b.id ASC
-        `;
-
-        const subParams = [...expandedLikeParams];
-        const results = await bibleDatabaseService.executeQuery(searchQuery, [
-          ...subParams,
-          ...subParams,
-          ...subParams,
-          ...expandedLikeParams,
-        ]);
-
-        const searchResults: BibleSearchResult[] = [];
-        for (const row of results.rows as any[]) {
-          const bookId = row.book_id as number;
-          searchResults.push({
-            bookId,
-            bookName: row.book_name,
-            testament: getTestamentFromBookId(bookId),
-            verseCount: row.verse_count,
-            matchedChapter: row.matched_chapter,
-            matchedVerseNumber: row.matched_verse_number,
-            matchedText: row.matched_text,
-          });
-        }
-        return searchResults.sort((a, b) => a.bookId - b.bookId);
-      }
-
-      // Whole word search: fetch candidate verses using LIKE then filter in JS.
-      // This avoids relying on SQLite REGEXP support.
-      const regex =
-        containsJesusNameVariant(query) && ['jesosy', 'jesoa'].includes(query.trim().toLowerCase())
-          ? makeWholeWordRegexForJesusName()
-          : makeWholeWordRegex(query);
-      const candidatesQuery = `
+      const likeCandidatesQuery = `
         SELECT
           v.book_id,
           b.name as book_name,
@@ -165,7 +171,17 @@ export const useBibleSearch = () => {
         ORDER BY v.book_id, v.chapter, v.verse_number
       `;
 
-      const candidates = await bibleDatabaseService.executeQuery(candidatesQuery, [...expandedLikeParams]);
+      let candidates: { rows: any[] };
+      try {
+        candidates = await bibleDatabaseService.executeQuerySilent(ftsCandidatesQuery, [ftsParam]);
+      } catch (e: any) {
+        const message = typeof e?.message === 'string' ? e.message : '';
+        if (message.toLowerCase().includes('no such module: fts5') || message.toLowerCase().includes('no such table')) {
+          candidates = await bibleDatabaseService.executeQuery(likeCandidatesQuery, [...expandedLikeParams]);
+        } else {
+          throw e;
+        }
+      }
 
       const byBook = new Map<
         number,
@@ -182,9 +198,6 @@ export const useBibleSearch = () => {
 
       for (const row of candidates.rows as any[]) {
         const text = String(row.text ?? '');
-        if (!regex.test(text)) {
-          continue;
-        }
 
         const bookId = row.book_id as number;
         const existing = byBook.get(bookId);
@@ -227,14 +240,34 @@ export const useBibleSearch = () => {
       await bibleDatabaseService.initDatabase();
 
       const matchWholeWord = options?.matchWholeWord === true;
-      const shouldExpandJesus = containsJesusNameVariant(query);
+      const normalizedQuery = normalizeForFtsQuery(query);
+      if (!normalizedQuery) {
+        return [];
+      }
+      const ftsParam = matchWholeWord ? `"${normalizedQuery}"` : makeFtsPrefixQuery(normalizedQuery);
+
+      const ftsQuery = `
+        SELECT
+          v.book_id,
+          b.name as book_name,
+          v.chapter,
+          v.verse_number,
+          v.text
+        FROM VersesFts f
+        JOIN Verses v ON v.id = f.rowid
+        JOIN Books b ON b.id = v.book_id
+        WHERE f MATCH ? AND v.book_id = ?
+        ORDER BY v.chapter, v.verse_number
+      `;
+
+      const shouldExpandJesus = containsJesusNameVariant(normalizedQuery);
       const expandedLikeParams = shouldExpandJesus ? makeJesusNameLikeParams(query) : [`%${query}%`];
       const likeWhere = expandedLikeParams.length === 1
         ? 'v.text LIKE ?'
         : `(${expandedLikeParams.map(() => 'v.text LIKE ?').join(' OR ')})`;
 
-      const searchQuery = `
-        SELECT 
+      const likeQuery = `
+        SELECT
           v.book_id,
           b.name as book_name,
           v.chapter,
@@ -246,20 +279,20 @@ export const useBibleSearch = () => {
         ORDER BY v.chapter, v.verse_number
       `;
 
-      const results = await bibleDatabaseService.executeQuery(searchQuery, [bookId, ...expandedLikeParams]);
-      const verseResults: BibleVerseResult[] = [];
-
-      const regex = matchWholeWord
-        ? (containsJesusNameVariant(query) && ['jesosy', 'jesoa'].includes(query.trim().toLowerCase())
-            ? makeWholeWordRegexForJesusName()
-            : makeWholeWordRegex(query))
-        : null;
-
-      for (const row of results.rows as any[]) {
-        const text = String(row.text ?? '');
-        if (regex && !regex.test(text)) {
-          continue;
+      let results: { rows: any[] };
+      try {
+        results = await bibleDatabaseService.executeQuerySilent(ftsQuery, [ftsParam, bookId]);
+      } catch (e: any) {
+        const message = typeof e?.message === 'string' ? e.message : '';
+        if (message.toLowerCase().includes('no such module: fts5') || message.toLowerCase().includes('no such table')) {
+          results = await bibleDatabaseService.executeQuery(likeQuery, [bookId, ...expandedLikeParams]);
+        } else {
+          throw e;
         }
+      }
+
+      const verseResults: BibleVerseResult[] = [];
+      for (const row of results.rows as any[]) {
         verseResults.push({
           bookId: row.book_id,
           bookName: row.book_name,

@@ -107,14 +107,14 @@ class DatabaseService {
         });
 
         await this.executeQuery('PRAGMA foreign_keys = ON');
-
-        try {
-          const dbList = await this.executeQuery<{ seq: number; name: string; file: string }>(
-            'PRAGMA database_list'
-          );
-        } catch (error) {
-          // PRAGMA database_list failed silently
-        }
+        // WAL gives concurrent readers and faster commits; safe with synchronous=NORMAL.
+        await this.executeQuerySilent('PRAGMA journal_mode = WAL');
+        await this.executeQuerySilent('PRAGMA synchronous = NORMAL');
+        await this.executeQuerySilent('PRAGMA temp_store = MEMORY');
+        // 64 MB mmap is free on Android and cuts cold reads on the FTS shadow tables.
+        await this.executeQuerySilent('PRAGMA mmap_size = 67108864');
+        // Negative = KiB; -8000 = 8 MB page cache.
+        await this.executeQuerySilent('PRAGMA cache_size = -8000');
 
       } catch (error) {
         console.error('Error initializing database:', error);

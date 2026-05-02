@@ -1,188 +1,231 @@
 // scripts/buildHymnsDatabase.js
-const sqlite3 = require('sqlite3').verbose();
+//
+// Builds ONLY the Hymns database (dev .db + prod .zip) and copies it into the
+// android and ios asset folders. Bible artifacts are left untouched.
+//
+// Run:  yarn build:hymns
+
 const fs = require('fs');
 const path = require('path');
-const { 
-  getAssetsPaths, 
-  getSourceDataPaths, 
-  getDatabasePaths, 
-  ensureDirectory, 
+
+const {
+  getAssetsPaths,
+  getSourceDataPaths,
+  getDatabasePaths,
+  ensureDirectory,
   copyFileSafe,
-  getFileStats,
-  normalizePathForDisplay 
+  normalizePathForDisplay,
 } = require('./utils/paths');
 
-function buildHymnsDatabase() {
-  console.log('🎵 Building Hymns SQLite database from JSON files...');
-  
-  // Get cross-platform paths
-  const assetsPaths = getAssetsPaths();
-  const databasePaths = getDatabasePaths();
-  
-  // Ensure all directories exist
-  ensureDirectory(assetsPaths.root);
-  ensureDirectory(assetsPaths.android);
-  ensureDirectory(assetsPaths.ios);
-  
-  const hymnsDbPath = databasePaths.hymns.root;
+const {
+  normalizeForFtsContent,
+  normalizeHymnAuthors,
+  runAsync,
+  allAsync,
+  finalizeAsync,
+  closeAsync,
+  applyBuildPragmas,
+  createZipFromDb,
+  reportSize,
+  sqlite3,
+} = require('./utils/buildDb');
 
-  // Clean up existing database if it exists
-  if (fs.existsSync(hymnsDbPath)) {
-    console.log('🗑️  Removing existing hymns database...');
-    fs.unlinkSync(hymnsDbPath);
+async function buildHymns(dbPath) {
+  console.log('🎵 Building Hymns...');
+  if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+
+  const db = new sqlite3.Database(dbPath);
+  await applyBuildPragmas(db);
+
+  await runAsync(db, `CREATE TABLE Hymns (
+    id TEXT PRIMARY KEY,
+    number INTEGER NOT NULL,
+    category TEXT,
+    title TEXT,
+    authors TEXT
+  )`);
+
+  await runAsync(db, `CREATE TABLE HymnVerses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hymn_id TEXT NOT NULL,
+    verse_number INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    is_chorus BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (hymn_id) REFERENCES Hymns (id) ON DELETE CASCADE,
+    UNIQUE(hymn_id, verse_number) ON CONFLICT REPLACE
+  )`);
+
+  // Hymns metadata FTS keeps small UNINDEXED columns so the search hook can
+  // resolve hymn_id without a second join.
+  await runAsync(db, `CREATE VIRTUAL TABLE HymnsFts USING fts5(
+    title_plain,
+    authors_plain,
+    hymn_id UNINDEXED,
+    number UNINDEXED,
+    category UNINDEXED,
+    tokenize='unicode61 remove_diacritics 2',
+    prefix='2 3 4'
+  )`);
+
+  // Verses FTS is contentless to save the most space (verse text is the bulk).
+  await runAsync(db, `CREATE VIRTUAL TABLE HymnVersesFts USING fts5(
+    text_plain,
+    tokenize='unicode61 remove_diacritics 2',
+    prefix='2 3 4',
+    content=''
+  )`);
+
+  // ---- Import hymns ----
+  const sourcePaths = getSourceDataPaths();
+  const hymnsDir = sourcePaths.hymns;
+  const files = ['01_fihirana_ffpm.json', '02_fihirana_fanampiny.json', '03_antema.json'];
+
+  const insHymn = db.prepare(
+    `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors) VALUES (?, ?, ?, ?, ?)`
+  );
+  const insVerse = db.prepare(
+    `INSERT OR REPLACE INTO HymnVerses (hymn_id, verse_number, text, is_chorus) VALUES (?, ?, ?, ?)`
+  );
+  const insHymnAsync = (p) =>
+    new Promise((res, rej) => insHymn.run(p, (e) => (e ? rej(e) : res())));
+  const insVerseAsync = (p) =>
+    new Promise((res, rej) => insVerse.run(p, (e) => (e ? rej(e) : res())));
+
+  for (const file of files) {
+    const filePath = path.join(hymnsDir, file);
+    if (!fs.existsSync(filePath)) continue;
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    for (const [hymnId, hymn] of Object.entries(data)) {
+      const authors =
+        Array.isArray(hymn.mpanoratra) && hymn.mpanoratra.length > 0
+          ? JSON.stringify(hymn.mpanoratra)
+          : null;
+      await insHymnAsync([
+        hymnId,
+        parseInt(hymn.laharana, 10) || 0,
+        hymn.sokajy || '',
+        hymn.lohateny || '',
+        authors,
+      ]);
+      for (const verse of hymn.hira || []) {
+        await insVerseAsync([
+          hymnId,
+          verse.andininy,
+          verse.tononkira,
+          verse.fiverenany ? 1 : 0,
+        ]);
+      }
+    }
   }
 
-  console.log(`📁 Building hymns database at: ${normalizePathForDisplay(hymnsDbPath)}`);
-  
-  const db = new sqlite3.Database(hymnsDbPath);
-  
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      console.log('📝 Creating hymns schema...');
+  await finalizeAsync(insHymn);
+  await finalizeAsync(insVerse);
 
-      db.run(`CREATE TABLE Hymns (
-        id TEXT PRIMARY KEY,
-        number INTEGER NOT NULL,
-        category TEXT,
-        title TEXT,
-        authors TEXT
-      )`);
+  // ---- Populate FTS ----
+  const hymnRows = await allAsync(
+    db,
+    `SELECT rowid, id, number, category, title, authors FROM Hymns`
+  );
+  const insHymnsFts = db.prepare(
+    `INSERT INTO HymnsFts(rowid, title_plain, authors_plain, hymn_id, number, category) VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const insHymnsFtsAsync = (p) =>
+    new Promise((res, rej) => insHymnsFts.run(p, (e) => (e ? rej(e) : res())));
 
-      db.run(`CREATE TABLE HymnVerses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        hymn_id TEXT NOT NULL,
-        verse_number INTEGER NOT NULL,
-        text TEXT NOT NULL,
-        is_chorus BOOLEAN NOT NULL DEFAULT 0,
-        FOREIGN KEY (hymn_id) REFERENCES Hymns (id) ON DELETE CASCADE,
-        UNIQUE(hymn_id, verse_number) ON CONFLICT REPLACE
-      )`);
+  for (const h of hymnRows) {
+    const titlePlain = normalizeForFtsContent(String(h.title || ''));
+    const authorsPlain = normalizeForFtsContent(
+      normalizeHymnAuthors(String(h.authors || ''))
+    );
+    await insHymnsFtsAsync([
+      h.rowid,
+      titlePlain,
+      authorsPlain,
+      h.id,
+      Number(h.number) || 0,
+      String(h.category || ''),
+    ]);
+  }
+  await finalizeAsync(insHymnsFts);
 
-      db.run(`CREATE INDEX idx_hymns_number_category ON Hymns(number, category)`);
-      db.run(`CREATE INDEX idx_hymn_verses ON HymnVerses(hymn_id, verse_number)`);
+  const verseRows = await allAsync(db, `SELECT id, text FROM HymnVerses`);
+  const insVersesFts = db.prepare(`INSERT INTO HymnVersesFts(rowid, text_plain) VALUES (?, ?)`);
+  const insVersesFtsAsync = (p) =>
+    new Promise((res, rej) => insVersesFts.run(p, (e) => (e ? rej(e) : res())));
+  for (const r of verseRows) {
+    await insVersesFtsAsync([r.id, normalizeForFtsContent(String(r.text || ''))]);
+  }
+  await finalizeAsync(insVersesFts);
 
-      db.run(`CREATE VIRTUAL TABLE HymnsFts USING fts5(
-        title_plain,
-        authors_plain,
-        hymn_id UNINDEXED,
-        number UNINDEXED,
-        category UNINDEXED,
-        tokenize='unicode61 remove_diacritics 2',
-        prefix='2 3 4'
-      )`);
+  console.log(`  ↳ ${hymnRows.length} hymns, ${verseRows.length} verses indexed`);
 
-      db.run(`CREATE VIRTUAL TABLE HymnVersesFts USING fts5(
-        text_plain,
-        hymn_id UNINDEXED,
-        verse_number UNINDEXED,
-        tokenize='unicode61 remove_diacritics 2',
-        prefix='2 3 4'
-      )`);
+  console.log('  optimizing FTS + VACUUM ...');
+  await runAsync(db, `INSERT INTO HymnsFts(HymnsFts) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO HymnVersesFts(HymnVersesFts) VALUES('optimize')`);
+  await runAsync(db, `ANALYZE`);
+  await runAsync(db, `VACUUM`);
 
-      console.log('🎶 Importing hymns data...');
-      importHymnsData(db);
-
-      console.log('🔎 Populating hymns FTS index...');
-      db.all(`SELECT rowid, id, number, category, title, authors FROM Hymns`, [], (err, hymnRows) => {
-        if (err) {
-          console.error('Error fetching hymns for FTS:', err);
-          reject(err);
-          return;
-        }
-
-        hymnRows.forEach(hymn => {
-          const titlePlain = hymn.title.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-          const authorsPlain = (hymn.authors || '').toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-          
-          db.run(`INSERT INTO HymnsFts (rowid, title_plain, authors_plain, hymn_id, number, category) VALUES (?, ?, ?, ?, ?, ?)`,
-            [hymn.rowid, titlePlain, authorsPlain, hymn.id, hymn.number, hymn.category || '']);
-        });
-      });
-
-      db.all(`SELECT rowid, hymn_id, verse_number, text FROM HymnVerses`, [], (err, verseRows) => {
-        if (err) {
-          console.error('Error fetching hymn verses for FTS:', err);
-          reject(err);
-          return;
-        }
-
-        verseRows.forEach(verse => {
-          const textPlain = verse.text.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-          
-          db.run(`INSERT INTO HymnVersesFts (rowid, text_plain, hymn_id, verse_number) VALUES (?, ?, ?, ?)`,
-            [verse.rowid, textPlain, verse.hymn_id, verse.verse_number]);
-        });
-
-        console.log('✅ Hymns database built successfully!');
-        resolve();
-      });
-    });
-  });
+  await closeAsync(db);
+  console.log(`✅ Hymns built: ${normalizePathForDisplay(dbPath)}`);
 }
 
-function importHymnsData(db) {
-  const databasePaths = getDatabasePaths();
-  const hymnsPath = databasePaths.hymns.source;
-  const files = ['01_fihirana_ffpm.json', '02_fihirana_fanampiny.json', '03_antema.json'];
-  
-  files.forEach(file => {
-    const filePath = path.join(hymnsPath, file);
-    if (fs.existsSync(filePath)) {
-      console.log(`🎼 Importing hymns from: ${file}`);
-      
-      const hymnsData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      
-      Object.entries(hymnsData).forEach(([hymnId, hymnData]) => {
-        // Insert hymn
-        db.run(`INSERT OR REPLACE INTO Hymns (id, number, category, title, authors) VALUES (?, ?, ?, ?, ?)`,
-          [
-            hymnId,
-            parseInt(hymnData.laharana) || 0,
-            hymnData.sokajy || '',
-            hymnData.lohateny || '',
-            hymnData.mpanoratra.length > 0 ? JSON.stringify(hymnData.mpanoratra) : null
-          ]);
-        
-        // Insert verses
-        hymnData.hira.forEach(verse => {
-          db.run(`INSERT OR REPLACE INTO HymnVerses (hymn_id, verse_number, text, is_chorus) VALUES (?, ?, ?, ?)`,
-            [hymnId, verse.andininy, verse.tononkira, verse.fiverenany ? 1 : 0]);
-        });
-      });
-    }
-  });
-}
+async function main() {
+  const startedAt = Date.now();
 
-function copyHymnsDatabaseToAssets() {
-  console.log('📦 Copying hymns database to platform assets...');
-  
   const assetsPaths = getAssetsPaths();
   const databasePaths = getDatabasePaths();
-  
-  const sourceDb = databasePaths.hymns.root;
-  const androidTarget = assetsPaths.android;
-  const iosTarget = assetsPaths.ios;
-  
-  // Copy to Android assets
-  copyFileSafe(sourceDb, path.join(androidTarget, 'Hymns.db'));
-  
-  // Copy to iOS bundle
-  copyFileSafe(sourceDb, path.join(iosTarget, 'Hymns.db'));
-  
-  console.log('✅ Hymns database copied to platform assets!');
+
+  ensureDirectory(assetsPaths.dev);
+  ensureDirectory(assetsPaths.prod);
+  ensureDirectory(assetsPaths.android.dev);
+  ensureDirectory(assetsPaths.android.prod);
+  ensureDirectory(assetsPaths.ios.dev);
+  ensureDirectory(assetsPaths.ios.prod);
+
+  const hymnsDev = databasePaths.hymns.dev;
+  const hymnsProd = databasePaths.hymns.prod;
+
+  // Wipe ONLY Hymns artifacts.
+  for (const p of [
+    hymnsDev,
+    hymnsProd,
+    databasePaths.hymns.androidDev,
+    databasePaths.hymns.androidProd,
+    databasePaths.hymns.iosDev,
+    databasePaths.hymns.iosProd,
+  ]) {
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+  }
+
+  await buildHymns(hymnsDev);
+
+  console.log('\n📦 Copying dev DB to platform asset folders...');
+  copyFileSafe(hymnsDev, databasePaths.hymns.androidDev);
+  copyFileSafe(hymnsDev, databasePaths.hymns.iosDev);
+
+  console.log('🗜️  Creating max-compression ZIP for prod...');
+  await createZipFromDb(hymnsDev, hymnsProd);
+
+  console.log('📦 Copying prod ZIP to platform asset folders...');
+  copyFileSafe(hymnsProd, databasePaths.hymns.androidProd);
+  copyFileSafe(hymnsProd, databasePaths.hymns.iosProd);
+
+  console.log('\n📊 Hymns size audit\n');
+  reportSize('Hymns.db (root)', hymnsDev);
+  reportSize('Hymns.db (android)', databasePaths.hymns.androidDev);
+  reportSize('Hymns.db (ios)', databasePaths.hymns.iosDev);
+  reportSize('Hymns.zip (root)', hymnsProd);
+  reportSize('Hymns.zip (android)', databasePaths.hymns.androidProd);
+  reportSize('Hymns.zip (ios)', databasePaths.hymns.iosProd);
+
+  console.log(`\n⏱️  Hymns build done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 }
 
-// Main execution
 if (require.main === module) {
-  buildHymnsDatabase()
-    .then(() => {
-      copyHymnsDatabaseToAssets();
-      console.log('🎉 Hymns database build completed successfully!');
-    })
-    .catch(error => {
-      console.error('❌ Error building hymns database:', error);
-      process.exit(1);
-    });
+  main().catch((err) => {
+    console.error('❌ Hymns build failed:', err);
+    process.exit(1);
+  });
 }
 
-module.exports = { buildHymnsDatabase, copyHymnsDatabaseToAssets };
+module.exports = { buildHymns, main };

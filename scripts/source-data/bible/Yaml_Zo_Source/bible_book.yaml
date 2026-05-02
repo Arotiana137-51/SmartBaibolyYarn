@@ -1,0 +1,330 @@
+mg_1:
+  book_id: mg_1
+  book_number: 1
+  book_name: Genesisy
+  book_chapter_count: 50
+mg_2:
+  book_id: mg_2
+  book_number: 2
+  book_name: Eksodosy
+  book_chapter_count: 40
+mg_3:
+  book_id: mg_3
+  book_number: 3
+  book_name: Levitikosy
+  book_chapter_count: 27
+mg_4:
+  book_id: mg_4
+  book_number: 4
+  book_name: Nomery
+  book_chapter_count: 36
+mg_5:
+  book_id: mg_5
+  book_number: 5
+  book_name: Deoteronomia
+  book_chapter_count: 34
+mg_6:
+  book_id: mg_6
+  book_number: 6
+  book_name: Josoa
+  book_chapter_count: 24
+mg_7:
+  book_id: mg_7
+  book_number: 7
+  book_name: Mpitsara
+  book_chapter_count: 21
+mg_8:
+  book_id: mg_8
+  book_number: 8
+  book_name: Rota
+  book_chapter_count: 4
+mg_9:
+  book_id: mg_9
+  book_number: 9
+  book_name: 'I Samoela'
+  book_chapter_count: 31
+mg_10:
+  book_id: mg_10
+  book_number: 10
+  book_name: 'II Samoela'
+  book_chapter_count: 24
+mg_11:
+  book_id: mg_11
+  book_number: 11
+  book_name: 'I Mpanjaka'
+  book_chapter_count: 22
+mg_12:
+  book_id: mg_12
+  book_number: 12
+  book_name: 'II Mpanjaka'
+  book_chapter_count: 25
+mg_13:
+  book_id: mg_13
+  book_number: 13
+  book_name: 'I Tantara'
+  book_chapter_count: 29
+mg_14:
+  book_id: mg_14
+  book_number: 14
+  book_name: 'II Tantara'
+  book_chapter_count: 36
+mg_15:
+  book_id: mg_15
+  book_number: 15
+  book_name: Ezra
+  book_chapter_count: 10
+mg_16:
+  book_id: mg_16
+  book_number: 16
+  book_name: Nehemia
+  book_chapter_count: 13
+mg_17:
+  book_id: mg_17
+  book_number: 17
+  book_name: Estera
+  book_chapter_count: 10
+mg_18:
+  book_id: mg_18
+  book_number: 18
+  book_name: Joba
+  book_chapter_count: 42
+mg_19:
+  book_id: mg_19
+  book_number: 19
+  book_name: Salamo
+  book_chapter_count: 150
+mg_20:
+  book_id: mg_20
+  book_number: 20
+  book_name: Ohabolana
+  book_chapter_count: 31
+mg_21:
+  book_id: mg_21
+  book_number: 21
+  book_name: Mpitoriteny
+  book_chapter_count: 12
+mg_22:
+  book_id: mg_22
+  book_number: 22
+  book_name: 'Tonon-kiran''i Solomona'
+  book_chapter_count: 8
+mg_23:
+  book_id: mg_23
+  book_number: 23
+  book_name: Isaia
+  book_chapter_count: 66
+mg_24:
+  book_id: mg_24
+  book_number: 24
+  book_name: Jeremia
+  book_chapter_count: 52
+mg_25:
+  book_id: mg_25
+  book_number: 25
+  book_name: Fitomaniana
+  book_chapter_count: 5
+mg_26:
+  book_id: mg_26
+  book_number: 26
+  book_name: Ezekiela
+  book_chapter_count: 48
+mg_27:
+  book_id: mg_27
+  book_number: 27
+  book_name: Daniela
+  book_chapter_count: 12
+mg_28:
+  book_id: mg_28
+  book_number: 28
+  book_name: Hosea
+  book_chapter_count: 14
+mg_29:
+  book_id: mg_29
+  book_number: 29
+  book_name: Joela
+  book_chapter_count: 4
+mg_30:
+  book_id: mg_30
+  book_number: 30
+  book_name: Amosa
+  book_chapter_count: 9
+mg_31:
+  book_id: mg_31
+  book_number: 31
+  book_name: Obadia
+  book_chapter_count: 1
+mg_32:
+  book_id: mg_32
+  book_number: 32
+  book_name: Jona
+  book_chapter_count: 4
+mg_33:
+  book_id: mg_33
+  book_number: 33
+  book_name: Mika
+  book_chapter_count: 7
+mg_34:
+  book_id: mg_34
+  book_number: 34
+  book_name: Nahoma
+  book_chapter_count: 3
+mg_35:
+  book_id: mg_35
+  book_number: 35
+  book_name: Habakoka
+  book_chapter_count: 3
+mg_36:
+  book_id: mg_36
+  book_number: 36
+  book_name: Zefania
+  book_chapter_count: 3
+mg_37:
+  book_id: mg_37
+  book_number: 37
+  book_name: Hagay
+  book_chapter_count: 2
+mg_38:
+  book_id: mg_38
+  book_number: 38
+  book_name: Zakaria
+  book_chapter_count: 14
+mg_39:
+  book_id: mg_39
+  book_number: 39
+  book_name: Malakia
+  book_chapter_count: 3
+mg_40:
+  book_id: mg_40
+  book_number: 40
+  book_name: Matio
+  book_chapter_count: 28
+mg_41:
+  book_id: mg_41
+  book_number: 41
+  book_name: Marka
+  book_chapter_count: 16
+mg_42:
+  book_id: mg_42
+  book_number: 42
+  book_name: Lioka
+  book_chapter_count: 24
+mg_43:
+  book_id: mg_43
+  book_number: 43
+  book_name: Jaona
+  book_chapter_count: 21
+mg_44:
+  book_id: mg_44
+  book_number: 44
+  book_name: 'Asan''ny Apostoly'
+  book_chapter_count: 28
+mg_45:
+  book_id: mg_45
+  book_number: 45
+  book_name: Romana
+  book_chapter_count: 16
+mg_46:
+  book_id: mg_46
+  book_number: 46
+  book_name: 'I Korintiana'
+  book_chapter_count: 16
+mg_47:
+  book_id: mg_47
+  book_number: 47
+  book_name: 'II Korintiana'
+  book_chapter_count: 13
+mg_48:
+  book_id: mg_48
+  book_number: 48
+  book_name: Galatiana
+  book_chapter_count: 6
+mg_49:
+  book_id: mg_49
+  book_number: 49
+  book_name: Efesiana
+  book_chapter_count: 6
+mg_50:
+  book_id: mg_50
+  book_number: 50
+  book_name: Filipiana
+  book_chapter_count: 4
+mg_51:
+  book_id: mg_51
+  book_number: 51
+  book_name: Kolosiana
+  book_chapter_count: 4
+mg_52:
+  book_id: mg_52
+  book_number: 52
+  book_name: 'I Tesaloniana'
+  book_chapter_count: 5
+mg_53:
+  book_id: mg_53
+  book_number: 53
+  book_name: 'II Tesaloniana'
+  book_chapter_count: 3
+mg_54:
+  book_id: mg_54
+  book_number: 54
+  book_name: 'I Timoty'
+  book_chapter_count: 6
+mg_55:
+  book_id: mg_55
+  book_number: 55
+  book_name: 'II Timoty'
+  book_chapter_count: 4
+mg_56:
+  book_id: mg_56
+  book_number: 56
+  book_name: Titosy
+  book_chapter_count: 3
+mg_57:
+  book_id: mg_57
+  book_number: 57
+  book_name: Filemona
+  book_chapter_count: 1
+mg_58:
+  book_id: mg_58
+  book_number: 58
+  book_name: Hebreo
+  book_chapter_count: 13
+mg_59:
+  book_id: mg_59
+  book_number: 59
+  book_name: Jakoba
+  book_chapter_count: 5
+mg_60:
+  book_id: mg_60
+  book_number: 60
+  book_name: 'I Petera'
+  book_chapter_count: 5
+mg_61:
+  book_id: mg_61
+  book_number: 61
+  book_name: 'II Petera'
+  book_chapter_count: 3
+mg_62:
+  book_id: mg_62
+  book_number: 62
+  book_name: 'I Jaona'
+  book_chapter_count: 5
+mg_63:
+  book_id: mg_63
+  book_number: 63
+  book_name: 'II Jaona'
+  book_chapter_count: 1
+mg_64:
+  book_id: mg_64
+  book_number: 64
+  book_name: 'III Jaona'
+  book_chapter_count: 1
+mg_65:
+  book_id: mg_65
+  book_number: 65
+  book_name: Joda
+  book_chapter_count: 1
+mg_66:
+  book_id: mg_66
+  book_number: 66
+  book_name: Apokalypsy
+  book_chapter_count: 22

@@ -525,24 +525,3 @@ export const testBracketedLineProcessing = (originalText: string): {
   };
 };
 
-/**
- * Simple test to verify bracket removal (for development/debugging)
- */
-export const debugBracketRemoval = (text: string): void => {
-  console.log('=== DEBUG BRACKET REMOVAL ===');
-  console.log('Original:', JSON.stringify(text));
-  
-  const step1 = processNTags(text);
-  console.log('After <n> processing:', JSON.stringify(step1));
-  
-  const { lines, italicLines } = processBibleTextWithMetadata(step1);
-  console.log('Lines:', lines);
-  console.log('Italic lines:', Array.from(italicLines));
-  
-  const result = lines.map((line, idx) => ({
-    line,
-    isItalic: italicLines.has(idx)
-  }));
-  console.log('Final result:', result);
-  console.log('=== END DEBUG ===');
-};

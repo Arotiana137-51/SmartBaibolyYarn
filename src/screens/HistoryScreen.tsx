@@ -35,9 +35,8 @@ const HistoryScreen = () => {
     );
   };
 
-  const handlePress = (item: any) => {
+  const handlePress = (_item: any) => {
     // Navigate back to the item
-    console.log('Navigate to:', item);
   };
 
   const formatDate = (timestamp: number) => {

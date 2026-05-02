@@ -78,6 +78,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def hasValidReleaseKeystore = keystorePropertiesFile.exists() &&
+        keystoreProperties['storeFile'] &&
+        keystoreProperties['storePassword'] &&
+        keystoreProperties['keyAlias'] &&
+        keystoreProperties['keyPassword']
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -102,9 +108,19 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.0.1"
+        versionCode 4
+        versionName "1.0.2"
+        resConfigs "fr"
     }
+    // Disabled for AAB builds (Play Store). AAB format handles ABI splits automatically.
+    // splits {
+    //     abi {
+    //         enable true
+    //         reset()
+    //         include "armeabi-v7a", "arm64-v8a"
+    //         universalApk false
+    //     }
+    // }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -113,7 +129,7 @@ android {
             keyPassword 'android'
         }
         release {
-            if (keystorePropertiesFile.exists()) {
+            if (hasValidReleaseKeystore) {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
@@ -128,41 +144,34 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            if (!hasValidReleaseKeystore) {
+                throw new GradleException("Missing release signing config. Create android/keystore.properties with storeFile/storePassword/keyAlias/keyPassword and place the keystore file at the referenced path.")
+            }
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
 
-            // Reduce release artifact size by excluding emulator architectures.
-            ndk {
-                abiFilters "armeabi-v7a", "arm64-v8a"
-            }
+            // Note: ABI filtering handled by splits.abi configuration above
         }
     }
 
-    // Database assets configuration: dev for debug, prod for release
+    // Database assets configuration: dev for debug, prod for release.
+    // Each srcDir's contents become the asset root, so debug ships the raw
+    // .db files at the top level and release ships the .zip files at the top
+    // level. Runtime lookups in src/utils/paths.ts -> getDatabaseAssetPath
+    // must match this flat layout.
     sourceSets {
         debug {
-            assets.srcDirs = ['src/main/assets/data/dev']
+            assets.srcDirs = ['../../assets/data/dev']
         }
         release {
             assets.srcDirs = ['src/main/assets/data/prod']
         }
     }
 
-    // Task to build production ZIPs before release build
-    // DISABLED: Zips already exist, run 'yarn build:prod' manually if needed
-    // task buildProdZips(type: Exec) {
-    //     workingDir rootProject.rootDir
-    //     executable 'node'
-    //     args 'scripts/buildProdZip.js'
-    // }
-    //
-    // // Hook: build ZIPs before release build
-    // tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
-    //     dependsOn buildProdZips
-    // }
-    // buildProdZips.onlyIf { gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } }
+    // Prod ZIPs are built by `yarn build:database`. Run it manually before
+    // a release build if the source data changed.
 }
 
 dependencies {

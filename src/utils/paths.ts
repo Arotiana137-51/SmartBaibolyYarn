@@ -13,11 +13,17 @@ export const isIOS = Platform.OS === 'ios';
 export const isDevelopment = __DEV__;
 
 export const getDatabaseAssetPath = (dbName: string): string => {
-  // Dev mode: use data/dev/ directory with .db files
-  // Production mode: use data/prod/ directory with .zip files
-  const subdir = __DEV__ ? 'dev' : 'prod';
   const ext = __DEV__ ? '.db' : '.zip';
   const fileName = dbName.replace(/\.db$/i, ext);
+  // Android: gradle sourceSets in android/app/build.gradle map the variant's
+  // data/<mode> directory onto the asset root, so the packaged assets are
+  // flat (BibleMG65.db at the top of the assets folder).
+  // iOS: the whole Resources tree is bundled, so the data/<mode>/ prefix is
+  // preserved in the main bundle path.
+  if (Platform.OS === 'android') {
+    return fileName;
+  }
+  const subdir = __DEV__ ? 'dev' : 'prod';
   return `data/${subdir}/${fileName}`;
 };
 

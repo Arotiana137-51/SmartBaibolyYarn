@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/Arotiana/Documents/SmartBaibolyYarn/android/app/src/main/res/ -type f -exec ls -la {} \\\\;)",
+      "Bash(find /c/Users/Arotiana/Documents/SmartBaibolyYarn/src/ -type f \\\\\\( -name \"*.json\" -o -name \"*.png\" -o -name \"*.jpg\" -o -name \"*.ttf\" -o -name \"*.otf\" \\\\\\) -exec ls -la {} \\\\;)",
+      "Bash(find /c/Users/Arotiana/Documents/SmartBaibolyYarn/src -type f -exec stat -c \"%s %n\" {} +)",
+      "Bash(find /c/Users/Arotiana/Documents/SmartBaibolyYarn/src/data/hymns -type f -exec ls -la {} \\\\;)",
+      "Bash(mkdir -p scripts/source-data/hymns scripts/source-data/bible)",
+      "Bash(mv src/data/hymns/01_fihirana_ffpm.json scripts/source-data/hymns/)",
+      "Bash(mv src/data/hymns/02_fihirana_fanampiny.json scripts/source-data/hymns/)",
+      "Bash(mv src/data/hymns/03_antema.json scripts/source-data/hymns/)",
+      "Bash(mv src/data/bible/TsyMiasa_Bible_MG65.json scripts/source-data/bible/)",
+      "Bash(rm -f src/screens/MainScreenRefactored.tsx src/screens/DatabaseTestScreen.tsx src/screens/BibleBooksScreen.tsx src/screens/BibleChaptersScreen.tsx src/screens/BibleReaderScreen.tsx src/screens/HymnsHomeScreen.tsx src/navigation/AppNavigator.tsx src/services/database/DataImporter.ts src/hooks/useNavigationServices.ts src/services/navigation/NavigationService.ts src/services/navigation/BibleNavigationService.ts src/services/navigation/HymnNavigationService.ts debugDatabase.ts debugDataImporter.ts)",
+      "Bash(rmdir src/services/navigation)",
+      "Bash(find android/app/src -type f -name \"*.db\")",
+      "Bash(ls android/app/src/main/assets/)",
+      "Bash(ls android/app/src/main/assets/data/)",
+      "Bash(ls scripts/)",
+      "Bash(ls scripts/source-data/)",
+      "Bash(ls -la android/app/src/main/assets/data/prod/)",
+      "Bash(ls -la assets/data/)",
+      "Bash(ls -la assets/data/dev/)",
+      "Bash(ls -la assets/)",
+      "Bash(ls -la assets/data/prod/)",
+      "Bash(ls -la android/app/src/main/assets/)",
+      "Bash(ls -la android/app/src/main/assets/data/)",
+      "Bash(ls ios/SmartBaibolyYarn/Resources/data/)",
+      "Bash(ls ios/SmartBaibolyYarn/Resources/data/dev/)",
+      "Bash(ls ios/SmartBaibolyYarn/Resources/data/prod/)",
+      "Bash(which sqlite3 *)",
+      "Bash(sqlite3 --version)",
+      "Bash(node -e \"const s=require\\('sqlite3'\\); console.log\\('ok', s.VERSION || 'loaded'\\)\")",
+      "Bash(adb devices *)",
+      "Bash(adb shell *)",
+      "Bash(tasklist)",
+      "Bash(./gradlew bundleRelease)"
+    ]
+  }
+}

@@ -17,10 +17,6 @@ const FanekemDetailsScreen = () => {
   const normalizedTitle = normalizeTextPreservingMarkers(title);
   const normalizedContent = normalizeTextPreservingMarkers(content);
 
-  if (__DEV__) {
-    console.log('FanekemDetails DEBUG: normalized content', normalizedContent);
-  }
-
   const textColor = theme.isDark ? theme.colors.readerText : theme.colors.textPrimary;
   
   // Check if this is the vavolombelona text (contains the specific pattern)

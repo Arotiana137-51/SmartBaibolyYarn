@@ -33,14 +33,21 @@ android/keystore.properties
 *.hprof
 .cxx/
 *.keystore
+android/app/*.jks
+android/app/*.keystore
 !debug.keystore
 .kotlin/
+android/app/keystore.properties
 
 # node.js
 #
 node_modules/
 npm-debug.log
 yarn-error.log
+
+# Gradle build logs
+gradle_*.log
+gradle_*.txt
 
 # fastlane
 #

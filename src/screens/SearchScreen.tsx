@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, TextInput, SectionList, Pressable, ActivityIndicator, Modal } from 'react-native';
+import {
+  normalizeForHighlight,
+  findHighlightRanges,
+  segmentTextForHighlight,
+} from '../utils/searchHighlight';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useBibleSearch, BibleSearchResult } from '../hooks/useBibleSearch';
@@ -263,9 +268,12 @@ const BibleSearchScreenContent = ({
     .reduce((sum, r) => sum + r.verseCount, 0);
   const totalCount = oldTestamentCount + newTestamentCount;
 
-  const handleBookPress = (bookId: number, bookName: string) => {
-    navigation.navigate('VerseList', { bookId, bookName, query: searchQuery, matchWholeWord });
-  };
+  const handleBookPress = useCallback(
+    (bookId: number, bookName: string) => {
+      navigation.navigate('VerseList', { bookId, bookName, query: searchQuery, matchWholeWord });
+    },
+    [navigation, searchQuery, matchWholeWord]
+  );
 
   const bibleSections = (() => {
     if (displayMode === 'raw') {
@@ -288,36 +296,39 @@ const BibleSearchScreenContent = ({
     return [{ title, data: fallback }];
   })();
 
-  const renderBibleResult = ({ item }: { item: BibleSearchResult }) => (
-    <Pressable
-      style={({pressed}) => [
-        styles.resultCard,
-        { backgroundColor: theme.colors.backgroundSecondary },
-        pressed && {
-          elevation: 4,
-          shadowOpacity: 0.12,
-          transform: [{scale: 0.995}],
-        },
-      ]}
-      android_ripple={{
-        color: theme.colors.accentBlue + '20',
-        borderless: false,
-        foreground: true,
-      }}
-      onPress={() => handleBookPress(item.bookId, item.bookName)}
-    >
-      <View style={styles.resultContent}>
-        <View style={styles.resultTextContainer}>
-          <Text style={[styles.resultTitle, { color: theme.colors.textPrimary }]}>
-            {getBibleBookShortName(item.bookName, item.bookId)}
-          </Text>
-          <Text style={[styles.resultCount, { color: theme.colors.accentBlue }]}>
-            {t('search.resultCount', {count: item.verseCount})}
-          </Text>
+  const renderBibleResult = useCallback(
+    ({ item }: { item: BibleSearchResult }) => (
+      <Pressable
+        style={({pressed}) => [
+          styles.resultCard,
+          { backgroundColor: theme.colors.backgroundSecondary },
+          pressed && {
+            elevation: 4,
+            shadowOpacity: 0.12,
+            transform: [{scale: 0.995}],
+          },
+        ]}
+        android_ripple={{
+          color: theme.colors.accentBlue + '20',
+          borderless: false,
+          foreground: true,
+        }}
+        onPress={() => handleBookPress(item.bookId, item.bookName)}
+      >
+        <View style={styles.resultContent}>
+          <View style={styles.resultTextContainer}>
+            <Text style={[styles.resultTitle, { color: theme.colors.textPrimary }]}>
+              {getBibleBookShortName(item.bookName, item.bookId)}
+            </Text>
+            <Text style={[styles.resultCount, { color: theme.colors.accentBlue }]}>
+              {t('search.resultCount', {count: item.verseCount})}
+            </Text>
+          </View>
+          <ChevronRight color={theme.colors.textSecondary} size={24} />
         </View>
-        <ChevronRight color={theme.colors.textSecondary} size={24} />
-      </View>
-    </Pressable>
+      </Pressable>
+    ),
+    [handleBookPress, theme.colors]
   );
 
   return (
@@ -443,7 +454,7 @@ const BibleSearchScreenContent = ({
         <SectionList
           sections={bibleSections as any}
           keyExtractor={(item, index) => `${(item as BibleSearchResult).bookId.toString()}:${index}`}
-          renderItem={({ item }) => renderBibleResult({ item })}
+          renderItem={renderBibleResult as any}
           renderSectionHeader={({ section }) =>
             displayMode === 'grouped' && section.title ? (
               <View style={styles.sectionHeaderContainer}>
@@ -537,9 +548,12 @@ const HymnSearchScreenContent = ({
     }
   }, [searchResults]);
 
-  const handleHymnPress = (hymnId: string) => {
-    navigation.navigate('Home', { mode: 'hymnal', selectedHymnId: hymnId });
-  };
+  const handleHymnPress = useCallback(
+    (hymnId: string) => {
+      navigation.navigate('Home', { mode: 'hymnal', selectedHymnId: hymnId });
+    },
+    [navigation]
+  );
 
   const getHymnCategoryGroupTitle = (categoryRaw: string) => {
     const category = (categoryRaw || '').trim().toLowerCase();
@@ -585,78 +599,89 @@ const HymnSearchScreenContent = ({
     return [...orderedSections, ...remainingTitles.map(title => ({ title, data: grouped[title] }))];
   })();
 
-  const highlightText = (text: string, query: string, baseColor: string) => {
-    if (!query.trim()) return text;
+  const normalizedHighlightQuery = useMemo(
+    () => normalizeForHighlight(searchQuery),
+    [searchQuery]
+  );
 
-    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedQuery})`, 'gi');
-    const parts = text.split(regex);
-    const lowerQuery = query.toLowerCase();
-
-    return parts.map((part, index) => {
-      const isMatch = part.toLowerCase() === lowerQuery;
-      return (
+  const highlightText = useCallback(
+    (text: string, baseColor: string) => {
+      if (!text) return text;
+      if (!normalizedHighlightQuery) {
+        return <Text style={{ color: baseColor }}>{text}</Text>;
+      }
+      const ranges = findHighlightRanges(text, normalizedHighlightQuery);
+      const segments = segmentTextForHighlight(text, ranges);
+      return segments.map((seg, index) => (
         <Text
           key={index}
-          style={isMatch ? { color: theme.colors.accentBlue, fontWeight: '600' } : { color: baseColor }}
+          style={
+            seg.match
+              ? { color: theme.colors.accentBlue, fontWeight: '600' }
+              : { color: baseColor }
+          }
         >
-          {part}
+          {seg.text}
         </Text>
-      );
-    });
-  };
+      ));
+    },
+    [normalizedHighlightQuery, theme.colors.accentBlue]
+  );
 
-  const renderHymnResult = ({ item }: { item: HymnSearchResult }) => {
-    const highlightedTitle = item.title
-      ? highlightText(item.title, searchQuery, theme.colors.textSecondary)
-      : item.title;
-    const highlightedSnippet = item.matchedVerse
-      ? highlightText(item.matchedVerse, searchQuery, theme.colors.textSecondary)
-      : null;
+  const renderHymnResult = useCallback(
+    ({ item }: { item: HymnSearchResult }) => {
+      const highlightedTitle = item.title
+        ? highlightText(item.title, theme.colors.textSecondary)
+        : item.title;
+      const highlightedSnippet = item.matchedVerse
+        ? highlightText(item.matchedVerse, theme.colors.textSecondary)
+        : null;
 
-    return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.resultCard,
-          { backgroundColor: theme.colors.backgroundSecondary },
-          pressed && {
-            elevation: 4,
-            shadowOpacity: 0.12,
-            transform: [{ scale: 0.995 }],
-          },
-        ]}
-        android_ripple={{
-          color: theme.colors.accentBlue + '20',
-          borderless: false,
-          foreground: true,
-        }}
-        onPress={() => handleHymnPress(item.id)}
-      >
-        <View style={styles.hymnResultContainer}>
-          <View style={styles.hymnHeaderRow}>
-            <Text style={[styles.hymnNumberBadge, { backgroundColor: theme.colors.accentBlue }]}>
-              {item.number}
-            </Text>
-            {item.category && (
-              <Text style={[styles.hymnCategoryLabel, { color: theme.colors.textSecondary }]}>
-                {item.category.toUpperCase()}
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            styles.resultCard,
+            { backgroundColor: theme.colors.backgroundSecondary },
+            pressed && {
+              elevation: 4,
+              shadowOpacity: 0.12,
+              transform: [{ scale: 0.995 }],
+            },
+          ]}
+          android_ripple={{
+            color: theme.colors.accentBlue + '20',
+            borderless: false,
+            foreground: true,
+          }}
+          onPress={() => handleHymnPress(item.id)}
+        >
+          <View style={styles.hymnResultContainer}>
+            <View style={styles.hymnHeaderRow}>
+              <Text style={[styles.hymnNumberBadge, { backgroundColor: theme.colors.accentBlue }]}>
+                {item.number}
               </Text>
+              {item.category && (
+                <Text style={[styles.hymnCategoryLabel, { color: theme.colors.textSecondary }]}>
+                  {item.category.toUpperCase()}
+                </Text>
+              )}
+            </View>
+            <Text style={[styles.hymnTitleText, { color: theme.colors.textPrimary }]} numberOfLines={2}>
+              {highlightedTitle}
+            </Text>
+            {highlightedSnippet && (
+              <View style={styles.hymnPreviewContainer}>
+                <Text style={[styles.hymnPreviewText, { color: theme.colors.textSecondary }]} numberOfLines={3}>
+                  {highlightedSnippet}
+                </Text>
+              </View>
             )}
           </View>
-          <Text style={[styles.hymnTitleText, { color: theme.colors.textPrimary }]} numberOfLines={2}>
-            {highlightedTitle}
-          </Text>
-          {highlightedSnippet && (
-            <View style={styles.hymnPreviewContainer}>
-              <Text style={[styles.hymnPreviewText, { color: theme.colors.textSecondary }]} numberOfLines={3}>
-                {highlightedSnippet}
-              </Text>
-            </View>
-          )}
-        </View>
-      </Pressable>
-    );
-  };
+        </Pressable>
+      );
+    },
+    [highlightText, theme.colors, handleHymnPress]
+  );
 
   return (
     <>
@@ -784,7 +809,7 @@ const HymnSearchScreenContent = ({
           keyExtractor={(item, index) =>
             `${(item as HymnSearchResult).id}:${(item as HymnSearchResult).verseNumber ?? 'na'}:${index}`
           }
-          renderItem={({ item }) => renderHymnResult({ item })}
+          renderItem={renderHymnResult as any}
           renderSectionHeader={({ section }) =>
             displayMode === 'grouped' && section.title ? (
               <View style={styles.sectionHeaderContainer}>

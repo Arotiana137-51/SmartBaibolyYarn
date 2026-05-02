@@ -87,12 +87,17 @@ export const useHymnsData = () => {
         title: string;
         authors: string;
       }>(
+        // HymnVersesFts is contentless, so we look up hymn_id by joining
+        // HymnVerses on rowid rather than selecting it from FTS.
         `SELECT h.id, h.number, h.category, h.title, h.authors
          FROM Hymns h
          WHERE h.id IN (
            SELECT hymn_id FROM HymnsFts WHERE HymnsFts MATCH ?
            UNION
-           SELECT hymn_id FROM HymnVersesFts WHERE HymnVersesFts MATCH ?
+           SELECT v.hymn_id
+             FROM HymnVersesFts f
+             JOIN HymnVerses v ON v.rowid = f.rowid
+             WHERE HymnVersesFts MATCH ?
          )
          ORDER BY h.number
          LIMIT 200`,

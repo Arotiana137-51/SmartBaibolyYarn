@@ -1,323 +1,285 @@
 // scripts/buildBibleDatabase.js
-const sqlite3 = require('sqlite3').verbose();
+//
+// Builds ONLY the Bible database (dev .db + prod .zip) and copies it into the
+// android and ios asset folders. Hymns artifacts are left untouched.
+//
+// Run:  yarn build:bible
+
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const readline = require('readline');
-const { 
-  getAssetsPaths, 
-  getSourceDataPaths, 
-  getDatabasePaths, 
-  ensureDirectory, 
+const yaml = require('js-yaml');
+
+const {
+  getAssetsPaths,
+  getSourceDataPaths,
+  getDatabasePaths,
+  ensureDirectory,
   copyFileSafe,
-  getFileStats,
-  normalizePathForDisplay 
+  normalizePathForDisplay,
 } = require('./utils/paths');
 
-// Bible book ID mapping
-const bookIdMap = {
-  // Old Testament
-  'genesisy': 1, 'eksodosy': 2, 'levitikosy': 3, 'nomery': 4, 'deoteronomia': 5,
-  'joela': 6, 'josoa': 7, 'fitomaniana': 8, '1-jaona': 43, '2-jaona': 44, '3-jaona': 45,
-  'joba': 9, 'salamo': 10, 'ohabolana': 11, 'eklesiasta': 12, 'tononkirani-solomona': 13,
-  'isaia': 14, 'jeremia': 15, 'fitiomaniana': 16, 'ezekiela': 17, 'daniela': 18,
-  'hosea': 19, 'joela': 20, 'amosa': 21, 'obadia': 22, 'jona': 23, 'mika': 24,
-  'ahoma': 25, 'habakoka': 26, 'zefania': 27, 'hagay': 28, 'zakaria': 29, 'malakia': 30,
-  'estera': 31, 'ezra': 32, 'nehemia': 33,
-  // New Testament
-  'matio': 40, 'marka': 41, 'lioka': 42, 'jaona': 43, 'asanny-apostoly': 44,
-  'romanina': 45, '1-korintianina': 46, '2-korintianina': 47, 'galatianina': 48,
-  'efesianina': 49, 'filipianina': 50, 'kolosianina': 51, '1-tesalonianina': 52,
-  '2-tesalonianina': 53, '1-timoty': 54, '2-timoty': 55, 'titosy': 56, 'filemona': 57,
-  'hebreo': 58, 'jakoba': 59, '1-petera': 60, '2-petera': 61, '1-jaona': 62, '2-jaona': 63,
-  '3-jaona': 64, 'joda': 65, 'apokalypsy': 66
-};
+const {
+  cleanDisplayText,
+  normalizeForFtsContent,
+  runAsync,
+  finalizeAsync,
+  closeAsync,
+  applyBuildPragmas,
+  createZipFromDb,
+  reportSize,
+  sqlite3,
+} = require('./utils/buildDb');
 
-function buildBibleDatabase() {
-  console.log('🚀 Building Bible SQLite database from JSON files...');
-  
-  // Get cross-platform paths
-  const assetsPaths = getAssetsPaths();
+async function buildBible(dbPath) {
+  console.log('📖 Building Bible...');
+  if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+
+  const db = new sqlite3.Database(dbPath);
+  await applyBuildPragmas(db);
+
+  await runAsync(db, `CREATE TABLE Books (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    testament TEXT NOT NULL CHECK (testament IN ('old', 'new')),
+    chapters INTEGER NOT NULL,
+    filename TEXT NOT NULL
+  )`);
+
+  await runAsync(db, `CREATE TABLE Verses (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER NOT NULL,
+    chapter INTEGER NOT NULL,
+    verse_number INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    title TEXT,
+    FOREIGN KEY (book_id) REFERENCES Books (id) ON DELETE CASCADE,
+    UNIQUE(book_id, chapter, verse_number) ON CONFLICT REPLACE
+  )`);
+
+  // Contentless FTS5 — only the inverted index, no _content shadow table.
+  await runAsync(db, `CREATE VIRTUAL TABLE VersesFts USING fts5(
+    text_plain,
+    tokenize='unicode61 remove_diacritics 2',
+    prefix='2 3 4',
+    content=''
+  )`);
+
+  // ---- Source: prefer YAML, fallback to legacy MG65 JSON ----
+  const sourcePaths = getSourceDataPaths();
   const databasePaths = getDatabasePaths();
-  
-  // Ensure all directories exist
-  ensureDirectory(assetsPaths.root);
-  ensureDirectory(assetsPaths.android);
-  ensureDirectory(assetsPaths.ios);
-  
-  const bibleDbPath = databasePaths.bible.root;
+  const yamlSourceDir = path.join(sourcePaths.bible, 'Yaml_Zo_Source');
+  const yamlBooksFile = path.join(yamlSourceDir, 'bible_book.yaml');
+  const yamlVersionFile = path.join(yamlSourceDir, 'bible_version.yaml');
+  const yamlVersesPrefix = 'bible_verse_mg1865_mg_';
+  const mg65JsonPath = databasePaths.bible.source;
 
-  // Clean up existing database if it exists
-  if (fs.existsSync(bibleDbPath)) {
-    console.log('🗑️  Removing existing Bible database...');
-    fs.unlinkSync(bibleDbPath);
+  const usingYamlSource =
+    fs.existsSync(yamlSourceDir) &&
+    fs.existsSync(yamlBooksFile) &&
+    fs.existsSync(yamlVersionFile);
+
+  if (!usingYamlSource && !fs.existsSync(mg65JsonPath)) {
+    throw new Error('No Bible source found (YAML or legacy MG65 JSON).');
   }
 
-  console.log(`📁 Building Bible database at: ${normalizePathForDisplay(bibleDbPath)}`);
-  
-  const db = new sqlite3.Database(bibleDbPath);
-  
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      console.log('📝 Creating Bible schema...');
+  console.log(`  source: ${usingYamlSource ? 'YAML' : 'legacy JSON'}`);
 
-      db.run(`CREATE TABLE Books (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        testament TEXT NOT NULL,
-        chapters INTEGER NOT NULL,
-        filename TEXT NOT NULL
-      )`);
-
-      db.run(`CREATE TABLE Verses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        book_id INTEGER NOT NULL,
-        chapter INTEGER NOT NULL,
-        verse_number INTEGER NOT NULL,
-        text TEXT NOT NULL,
-        FOREIGN KEY (book_id) REFERENCES Books (id) ON DELETE CASCADE,
-        UNIQUE(book_id, chapter, verse_number) ON CONFLICT REPLACE
-      )`);
-
-      db.run(`CREATE TABLE CrossReferences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        from_book_id INTEGER NOT NULL,
-        from_chapter INTEGER NOT NULL,
-        from_verse_start INTEGER NOT NULL,
-        from_verse_end INTEGER NOT NULL,
-        to_book_id INTEGER NOT NULL,
-        to_book_name TEXT NOT NULL,
-        to_chapter INTEGER NOT NULL,
-        to_verse_start INTEGER NOT NULL,
-        to_verse_end INTEGER NOT NULL,
-        votes INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (from_book_id) REFERENCES Books (id) ON DELETE CASCADE,
-        FOREIGN KEY (to_book_id) REFERENCES Books (id) ON DELETE CASCADE
-      )`);
-
-      db.run(`CREATE INDEX idx_verses_book_chapter ON Verses(book_id, chapter)`);
-      db.run(`CREATE INDEX idx_cross_refs_from ON CrossReferences(from_book_id, from_chapter, from_verse_start, from_verse_end)`);
-      db.run(`CREATE INDEX idx_cross_refs_to ON CrossReferences(to_book_id, to_chapter, to_verse_start, to_verse_end)`);
-
-      db.run(`CREATE VIRTUAL TABLE BooksFts USING fts5(
-        name_plain,
-        testament UNINDEXED,
-        chapters UNINDEXED,
-        rowid UNINDEXED,
-        tokenize='unicode61 remove_diacritics 2',
-        prefix='2 3 4'
-      )`);
-
-      db.run(`CREATE VIRTUAL TABLE VersesFts USING fts5(
-        text_plain,
-        book_id UNINDEXED,
-        chapter UNINDEXED,
-        verse_number UNINDEXED,
-        rowid UNINDEXED,
-        tokenize='unicode61 remove_diacritics 2',
-        prefix='2 3 4'
-      )`);
-
-      console.log('📚 Importing Bible books...');
-      importBibleBooks(db);
-
-      console.log('📖 Importing Bible verses...');
-      importBibleVerses(db);
-
-      console.log('🔗 Importing cross references...');
-      importCrossReferences(db);
-
-      console.log('🔎 Populating Bible FTS index...');
-      db.all(`SELECT rowid, id, name, testament, chapters FROM Books`, [], (err, bookRows) => {
-        if (err) {
-          console.error('Error fetching books for FTS:', err);
-          reject(err);
-          return;
-        }
-
-        bookRows.forEach(book => {
-          const namePlain = book.name.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-          
-          db.run(`INSERT INTO BooksFts (rowid, name_plain, testament, chapters) VALUES (?, ?, ?, ?)`,
-            [book.rowid, namePlain, book.testament, book.chapters]);
-        });
-      });
-
-      db.all(`SELECT rowid, book_id, chapter, verse_number, text FROM Verses`, [], (err, verseRows) => {
-        if (err) {
-          console.error('Error fetching verses for FTS:', err);
-          reject(err);
-          return;
-        }
-
-        verseRows.forEach(verse => {
-          const textPlain = verse.text.toLowerCase().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-          
-          db.run(`INSERT INTO VersesFts (rowid, text_plain, book_id, chapter, verse_number) VALUES (?, ?, ?, ?, ?)`,
-            [verse.rowid, textPlain, verse.book_id, verse.chapter, verse.verse_number]);
-        });
-
-        console.log('✅ Bible database built successfully!');
-        resolve();
-      });
-    });
-  });
-}
-
-function importBibleBooks(db) {
-  const databasePaths = getDatabasePaths();
-  const biblePath = databasePaths.bible.source;
-  const booksFile = path.join(biblePath, 'books.json');
-  
-  if (!fs.existsSync(booksFile)) {
-    console.error(`❌ Books file not found: ${booksFile}`);
-    return;
-  }
-
-  const booksData = JSON.parse(fs.readFileSync(booksFile, 'utf8'));
-  
-  Object.entries(booksData).forEach(([filename, bookData]) => {
-    const bookName = bookData.name;
-    const bookId = bookIdMap[filename.toLowerCase()];
-    
-    if (bookId) {
-      db.run(`INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename) VALUES (?, ?, ?, ?, ?)`,
-        [bookId, bookName, bookData.testament, bookData.chapters, filename]);
-    } else {
-      console.warn(`⚠️  Unknown book filename: ${filename}`);
+  // ---- Books ----
+  if (usingYamlSource) {
+    const booksYaml = yaml.load(fs.readFileSync(yamlBooksFile, 'utf8')) || {};
+    for (const [key, value] of Object.entries(booksYaml)) {
+      const raw = String(value?.book_number ?? value?.book_id ?? key);
+      const m = raw.match(/^(?:mg_)?(\d+)$/i);
+      const bookId = m ? Number(m[1]) : null;
+      if (!bookId) continue;
+      const name = String(value?.book_name || '').trim();
+      const chapters = Number(value?.book_chapter_count) || 0;
+      const filename = String(value?.book_id || key || '');
+      const testament = bookId <= 39 ? 'old' : 'new';
+      await runAsync(
+        db,
+        `INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename) VALUES (?, ?, ?, ?, ?)`,
+        [bookId, name, testament, chapters, filename]
+      );
     }
-  });
-}
-
-function importBibleVerses(db) {
-  const databasePaths = getDatabasePaths();
-  const biblePath = databasePaths.bible.source;
-  const booksFile = path.join(biblePath, 'books.json');
-  
-  if (!fs.existsSync(booksFile)) {
-    console.error(`❌ Books file not found: ${booksFile}`);
-    return;
+  } else {
+    const mg65 = JSON.parse(fs.readFileSync(mg65JsonPath, 'utf8'));
+    const tables = (mg65.objects || []).filter((o) => o.type === 'table');
+    const booksTable = tables.find((t) => t.name === 'books');
+    if (!booksTable) throw new Error('MG65 JSON missing books table');
+    const cols = (booksTable.columns || []).map((c) => c.name);
+    const bBookNum = cols.indexOf('book_number');
+    const bLong = cols.indexOf('long_name');
+    const versesTable = tables.find((t) => t.name === 'verses');
+    const vCols = (versesTable.columns || []).map((c) => c.name);
+    const vBook = vCols.indexOf('book_number');
+    const vChapter = vCols.indexOf('chapter');
+    const sortedBookNumbers = [
+      ...new Set((booksTable.rows || []).map((r) => Number(r[bBookNum]))),
+    ].sort((a, b) => a - b);
+    const bookNumberToId = new Map(sortedBookNumbers.map((bn, i) => [bn, i + 1]));
+    const maxChapterByBook = new Map();
+    for (const r of versesTable.rows || []) {
+      const bn = Number(r[vBook]);
+      const ch = Number(r[vChapter]);
+      if (ch > (maxChapterByBook.get(bn) || 0)) maxChapterByBook.set(bn, ch);
+    }
+    for (const r of booksTable.rows || []) {
+      const bn = Number(r[bBookNum]);
+      const id = bookNumberToId.get(bn);
+      if (!id) continue;
+      const name = String(r[bLong] || '');
+      const testament = bn < 400 ? 'old' : 'new';
+      const chapters = maxChapterByBook.get(bn) || 0;
+      await runAsync(
+        db,
+        `INSERT OR REPLACE INTO Books (id, name, testament, chapters, filename) VALUES (?, ?, ?, ?, ?)`,
+        [id, name, testament, chapters, '']
+      );
+    }
   }
 
-  const booksData = JSON.parse(fs.readFileSync(booksFile, 'utf8'));
-  
-  Object.entries(booksData).forEach(([filename, bookData]) => {
-    const bookId = bookIdMap[filename.toLowerCase()];
-    
-    if (bookId) {
-      const versesFile = path.join(biblePath, filename);
-      
-      if (fs.existsSync(versesFile)) {
-        console.log(`📖 Importing verses from: ${filename}`);
-        
-        const versesData = JSON.parse(fs.readFileSync(versesFile, 'utf8'));
-        
-        Object.entries(versesData).forEach(([chapterStr, verses]) => {
-          const chapter = parseInt(chapterStr);
-          
-          Object.entries(verses).forEach(([verseStr, text]) => {
-            const verseNumber = parseInt(verseStr);
-            
-            db.run(`INSERT OR REPLACE INTO Verses (book_id, chapter, verse_number, text) VALUES (?, ?, ?, ?)`,
-              [bookId, chapter, verseNumber, text]);
-          });
-        });
-      } else {
-        console.warn(`⚠️  Verses file not found: ${versesFile}`);
+  // ---- Verses + FTS ----
+  const insertVerse = db.prepare(
+    `INSERT OR REPLACE INTO Verses (id, book_id, chapter, verse_number, text, title) VALUES (?, ?, ?, ?, ?, ?)`
+  );
+  const insertFts = db.prepare(`INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`);
+
+  const insVerseAsync = (p) =>
+    new Promise((res, rej) => insertVerse.run(p, (e) => (e ? rej(e) : res())));
+  const insFtsAsync = (p) =>
+    new Promise((res, rej) => insertFts.run(p, (e) => (e ? rej(e) : res())));
+
+  let verseId = 1;
+
+  if (usingYamlSource) {
+    for (let bookId = 1; bookId <= 66; bookId += 1) {
+      const file = path.join(yamlSourceDir, `${yamlVersesPrefix}${bookId}.yaml`);
+      if (!fs.existsSync(file)) {
+        throw new Error(`Missing YAML verses file for book ${bookId}`);
+      }
+      const versesYaml = yaml.load(fs.readFileSync(file, 'utf8')) || {};
+      const rows = [];
+      for (const value of Object.values(versesYaml)) {
+        const raw = String(value?.verse_book || '');
+        const m = raw.match(/^(?:mg_)?(\d+)$/i);
+        const vBook = m ? Number(m[1]) : null;
+        const chapter = Number(value?.verse_chapter);
+        const verseNumber = Number(value?.verse_number);
+        const text = String(value?.verse_text || '');
+        const title = value?.verse_title == null ? null : String(value.verse_title);
+        if (vBook !== bookId || !text || !Number.isFinite(chapter) || !Number.isFinite(verseNumber)) {
+          continue;
+        }
+        rows.push({ chapter, verseNumber, text, title });
+      }
+      rows.sort((a, b) => a.chapter - b.chapter || a.verseNumber - b.verseNumber);
+      for (const row of rows) {
+        const display = cleanDisplayText(row.text);
+        const plain = normalizeForFtsContent(display);
+        await insVerseAsync([verseId, bookId, row.chapter, row.verseNumber, display, row.title]);
+        await insFtsAsync([verseId, plain]);
+        verseId += 1;
       }
     }
-  });
-}
-
-function importCrossReferences(db) {
-  const databasePaths = getDatabasePaths();
-  const biblePath = databasePaths.bible.source;
-  const crossRefsFile = path.join(biblePath, 'cross_references.txt');
-  
-  if (!fs.existsSync(crossRefsFile)) {
-    console.warn(`⚠️  Cross references file not found: ${crossRefsFile}`);
-    return;
+  } else {
+    const mg65 = JSON.parse(fs.readFileSync(mg65JsonPath, 'utf8'));
+    const tables = (mg65.objects || []).filter((o) => o.type === 'table');
+    const versesTable = tables.find((t) => t.name === 'verses');
+    const cols = (versesTable.columns || []).map((c) => c.name);
+    const vBook = cols.indexOf('book_number');
+    const vChapter = cols.indexOf('chapter');
+    const vVerse = cols.indexOf('verse');
+    const vText = cols.indexOf('text');
+    const sortedBookNumbers = [
+      ...new Set((versesTable.rows || []).map((r) => Number(r[vBook]))),
+    ].sort((a, b) => a - b);
+    const bookNumberToId = new Map(sortedBookNumbers.map((bn, i) => [bn, i + 1]));
+    for (const r of versesTable.rows || []) {
+      const bn = Number(r[vBook]);
+      const id = bookNumberToId.get(bn);
+      if (!id) continue;
+      const chapter = Number(r[vChapter]);
+      const verseNumber = Number(r[vVerse]);
+      const display = cleanDisplayText(String(r[vText] || ''));
+      const plain = normalizeForFtsContent(display);
+      await insVerseAsync([verseId, id, chapter, verseNumber, display, null]);
+      await insFtsAsync([verseId, plain]);
+      verseId += 1;
+    }
   }
 
-  console.log(`🔗 Importing cross references from: ${crossRefsFile}`);
-  
-  const fileStream = fs.createReadStream(crossRefsFile);
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity
-  });
+  await finalizeAsync(insertVerse);
+  await finalizeAsync(insertFts);
 
-  let importedCount = 0;
-  let skippedCount = 0;
+  console.log(`  ↳ ${verseId - 1} verses indexed`);
 
-  rl.on('line', (line) => {
-    const parts = line.split('\t');
-    if (parts.length >= 9) {
-      const fromBookId = parseInt(parts[0]);
-      const fromChapter = parseInt(parts[1]);
-      const fromVerseStart = parseInt(parts[2]);
-      const fromVerseEnd = parseInt(parts[3]);
-      const toBookId = parseInt(parts[4]);
-      const toBookName = parts[5];
-      const toChapter = parseInt(parts[6]);
-      const toVerseStart = parseInt(parts[7]);
-      const toVerseEnd = parseInt(parts[8]);
-      const votes = parseInt(parts[9]) || 0;
+  console.log('  optimizing FTS + VACUUM ...');
+  await runAsync(db, `INSERT INTO VersesFts(VersesFts) VALUES('optimize')`);
+  await runAsync(db, `ANALYZE`);
+  await runAsync(db, `VACUUM`);
 
-      // Validate book IDs
-      if (bookIdMap[Object.keys(bookIdMap).find(key => bookIdMap[key] === fromBookId)] && 
-          bookIdMap[Object.keys(bookIdMap).find(key => bookIdMap[key] === toBookId)]) {
-        db.run(`INSERT OR REPLACE INTO CrossReferences (
-          from_book_id, from_chapter, from_verse_start, from_verse_end,
-          to_book_id, to_book_name, to_chapter, to_verse_start, to_verse_end, votes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [fromBookId, fromChapter, fromVerseStart, fromVerseEnd,
-           toBookId, toBookName, toChapter, toVerseStart, toVerseEnd, votes]);
-        importedCount++;
-      } else {
-        skippedCount++;
-      }
-    }
-  });
-
-  return new Promise((resolve) => {
-    rl.on('close', () => {
-      console.log(`✅ Imported ${importedCount} cross references, skipped ${skippedCount} invalid entries`);
-      resolve();
-    });
-  });
+  await closeAsync(db);
+  console.log(`✅ Bible built: ${normalizePathForDisplay(dbPath)}`);
 }
 
-function copyBibleDatabaseToAssets() {
-  console.log('📦 Copying Bible database to platform assets...');
-  
+async function main() {
+  const startedAt = Date.now();
+
   const assetsPaths = getAssetsPaths();
   const databasePaths = getDatabasePaths();
-  
-  const sourceDb = databasePaths.bible.root;
-  const androidTarget = assetsPaths.android;
-  const iosTarget = assetsPaths.ios;
-  
-  // Copy to Android assets
-  copyFileSafe(sourceDb, path.join(androidTarget, 'BibleMG65.db'));
-  
-  // Copy to iOS bundle
-  copyFileSafe(sourceDb, path.join(iosTarget, 'BibleMG65.db'));
-  
-  console.log('✅ Bible database copied to platform assets!');
+
+  ensureDirectory(assetsPaths.dev);
+  ensureDirectory(assetsPaths.prod);
+  ensureDirectory(assetsPaths.android.dev);
+  ensureDirectory(assetsPaths.android.prod);
+  ensureDirectory(assetsPaths.ios.dev);
+  ensureDirectory(assetsPaths.ios.prod);
+
+  const bibleDev = databasePaths.bible.dev;
+  const bibleProd = databasePaths.bible.prod;
+
+  // Wipe ONLY Bible artifacts.
+  for (const p of [
+    bibleDev,
+    bibleProd,
+    databasePaths.bible.androidDev,
+    databasePaths.bible.androidProd,
+    databasePaths.bible.iosDev,
+    databasePaths.bible.iosProd,
+  ]) {
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+  }
+
+  await buildBible(bibleDev);
+
+  console.log('\n📦 Copying dev DB to platform asset folders...');
+  copyFileSafe(bibleDev, databasePaths.bible.androidDev);
+  copyFileSafe(bibleDev, databasePaths.bible.iosDev);
+
+  console.log('🗜️  Creating max-compression ZIP for prod...');
+  await createZipFromDb(bibleDev, bibleProd);
+
+  console.log('📦 Copying prod ZIP to platform asset folders...');
+  copyFileSafe(bibleProd, databasePaths.bible.androidProd);
+  copyFileSafe(bibleProd, databasePaths.bible.iosProd);
+
+  console.log('\n📊 Bible size audit\n');
+  reportSize('Bible.db (root)', bibleDev);
+  reportSize('Bible.db (android)', databasePaths.bible.androidDev);
+  reportSize('Bible.db (ios)', databasePaths.bible.iosDev);
+  reportSize('Bible.zip (root)', bibleProd);
+  reportSize('Bible.zip (android)', databasePaths.bible.androidProd);
+  reportSize('Bible.zip (ios)', databasePaths.bible.iosProd);
+
+  console.log(`\n⏱️  Bible build done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 }
 
-// Main execution
 if (require.main === module) {
-  buildBibleDatabase()
-    .then(() => {
-      copyBibleDatabaseToAssets();
-      console.log('🎉 Bible database build completed successfully!');
-    })
-    .catch(error => {
-      console.error('❌ Error building Bible database:', error);
-      process.exit(1);
-    });
+  main().catch((err) => {
+    console.error('❌ Bible build failed:', err);
+    process.exit(1);
+  });
 }
 
-module.exports = { buildBibleDatabase, copyBibleDatabaseToAssets };
+module.exports = { buildBible, main };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
@@ -9,33 +9,12 @@ import { useJesusName } from '../contexts/JesusNameContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
 import { processBibleTextWithMetadataForReader } from '../utils/bibleTextUtils';
+import {
+  normalizeForHighlight,
+  findHighlightRanges,
+  segmentTextForHighlight,
+} from '../utils/searchHighlight';
 import {t} from '../i18n/strings';
-
-// Helper function to highlight matching text
-const highlightText = (text: string, query: string, theme: any) => {
-  if (!query.trim()) return <Text>{text}</Text>;
-
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`(${escapedQuery})`, 'gi');
-  const parts = text.split(regex);
-  const lowerQuery = query.toLowerCase();
-
-  return (
-    <Text>
-      {parts.map((part, index) => {
-        const isMatch = part.toLowerCase() === lowerQuery;
-        return (
-          <Text
-            key={index}
-            style={isMatch ? { color: theme.colors.accentBlue, fontWeight: '700' } : {}}
-          >
-            {part}
-          </Text>
-        );
-      })}
-    </Text>
-  );
-};
 
 type VerseListScreenRouteProp = RouteProp<RootStackParamList, 'VerseList'>;
 type VerseListScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -68,84 +47,116 @@ const VerseListScreen = () => {
     loadVerses();
   }, [bookId, query, getVersesForBook, matchWholeWord]);
 
-  const handleVersePress = (verse: BibleVerseResult) => {
-    // Navigate back to MainScreen and display the chapter
-    navigation.navigate('Home', { 
-      mode: 'bible',
-      selectedBook: { id: verse.bookId, name: verse.bookName },
-      selectedChapter: verse.chapter,
-      selectedVerse: verse.verseNumber
-    });
-  };
-
-const renderVerse = ({ item }: { item: BibleVerseResult }) => {
-  const { lines, italicLines } = processBibleTextWithMetadataForReader(transformText(item.text));
-
-  const renderLineWithInlineFootnotes = (line: string) => {
-    const regex = /(\[\*[^\]]+\])/g;
-    const parts = line.split(regex);
-
-    return (
-      <Text>
-        {parts.map((part, idx) => {
-          if (!part) {
-            return null;
-          }
-
-          const isFootnote = part.startsWith('[*') && part.endsWith(']');
-          if (isFootnote) {
-            return (
-              <Text
-                key={`fn-${idx}`}
-                style={{ opacity: 0.72, fontStyle: 'italic', fontSize: 15 }}
-              >
-                {part}
-              </Text>
-            );
-          }
-
-          return (
-            <Text key={`tx-${idx}`}>
-              {highlightText(part, query, theme)}
-            </Text>
-          );
-        })}
-      </Text>
-    );
-  };
-  
-  return (
-    <Pressable
-      style={[styles.verseItem, { backgroundColor: theme.colors.backgroundSecondary }]}
-      onPress={() => handleVersePress(item)}
-    >
-      <View style={styles.verseHeader}>
-        <Text style={[styles.verseReference, { color: theme.colors.textPrimary }]}>
-          {getBibleBookShortName(bookName, bookId)} {item.chapter}:{item.verseNumber}
-        </Text>
-      </View>
-      <View style={styles.verseContent}>
-        {lines.map((line, lineIndex) => (
-          <Text
-            key={lineIndex}
-            style={{
-              fontSize: 16,
-              lineHeight: 24,
-              marginBottom: 4,
-              textAlign: 'justify',
-              fontStyle: italicLines.has(lineIndex) ? 'italic' : 'normal',
-              color: italicLines.has(lineIndex)
-                ? theme.colors.textWatermark
-                : theme.colors.textPrimary,
-            }}
-          >
-            {renderLineWithInlineFootnotes(line)}
-          </Text>
-        ))}
-      </View>
-    </Pressable>
+  const handleVersePress = useCallback(
+    (verse: BibleVerseResult) => {
+      navigation.navigate('Home', {
+        mode: 'bible',
+        selectedBook: { id: verse.bookId, name: verse.bookName },
+        selectedChapter: verse.chapter,
+        selectedVerse: verse.verseNumber,
+      });
+    },
+    [navigation]
   );
-};
+
+  const normalizedHighlightQuery = useMemo(
+    () => normalizeForHighlight(query),
+    [query]
+  );
+
+  const highlightText = useCallback(
+    (text: string) => {
+      if (!text) return null;
+      if (!normalizedHighlightQuery) {
+        return <Text>{text}</Text>;
+      }
+      const ranges = findHighlightRanges(text, normalizedHighlightQuery);
+      const segments = segmentTextForHighlight(text, ranges);
+      return (
+        <Text>
+          {segments.map((seg, idx) => (
+            <Text
+              key={idx}
+              style={
+                seg.match
+                  ? { color: theme.colors.accentBlue, fontWeight: '700' }
+                  : undefined
+              }
+            >
+              {seg.text}
+            </Text>
+          ))}
+        </Text>
+      );
+    },
+    [normalizedHighlightQuery, theme.colors.accentBlue]
+  );
+
+  const renderVerse = useCallback(
+    ({ item }: { item: BibleVerseResult }) => {
+      const { lines, italicLines } = processBibleTextWithMetadataForReader(
+        transformText(item.text)
+      );
+
+      const renderLineWithInlineFootnotes = (line: string) => {
+        const regex = /(\[\*[^\]]+\])/g;
+        const parts = line.split(regex);
+
+        return (
+          <Text>
+            {parts.map((part, idx) => {
+              if (!part) return null;
+              const isFootnote = part.startsWith('[*') && part.endsWith(']');
+              if (isFootnote) {
+                return (
+                  <Text
+                    key={`fn-${idx}`}
+                    style={{ opacity: 0.72, fontStyle: 'italic', fontSize: 15 }}
+                  >
+                    {part}
+                  </Text>
+                );
+              }
+              return <Text key={`tx-${idx}`}>{highlightText(part)}</Text>;
+            })}
+          </Text>
+        );
+      };
+
+      return (
+        <Pressable
+          style={[styles.verseItem, { backgroundColor: theme.colors.backgroundSecondary }]}
+          onPress={() => handleVersePress(item)}
+        >
+          <View style={styles.verseHeader}>
+            <Text style={[styles.verseReference, { color: theme.colors.textPrimary }]}>
+              {getBibleBookShortName(bookName, bookId)} {item.chapter}:{item.verseNumber}
+            </Text>
+          </View>
+          <View style={styles.verseContent}>
+            {lines.map((line, lineIndex) => (
+              <Text
+                key={lineIndex}
+                style={{
+                  fontSize: 16,
+                  lineHeight: 24,
+                  marginBottom: 4,
+                  textAlign: 'justify',
+                  fontStyle: italicLines.has(lineIndex) ? 'italic' : 'normal',
+                  color: italicLines.has(lineIndex)
+                    ? theme.colors.textWatermark
+                    : theme.colors.textPrimary,
+                }}
+              >
+                {renderLineWithInlineFootnotes(line)}
+              </Text>
+            ))}
+          </View>
+        </Pressable>
+      );
+    },
+    [bookId, bookName, handleVersePress, highlightText, theme.colors, transformText]
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.backgroundPrimary }]}>
