@@ -17,12 +17,17 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
 import BibleReaderView from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
-import CustomBottomNav from '../components/CustomBottomNav';
-import HymnSelectionModal from '../components/HymnSelectionModal';
 import BibleSelectionModal from '../components/BibleSelectionModal';
-import VerseActionPopover from '../components/VerseActionPopover';
-import HymnActionPopover from '../components/HymnActionPopover';
+import HymnSelectionModal from '../components/HymnSelectionModal';
+import CustomBottomNav from '../components/CustomBottomNav';
 import ReportIssueModal from '../components/ReportIssueModal';
+import SelectionTopBar from '../components/SelectionTopBar';
+import VerseActionPopover from '../components/VerseActionPopover';
+import ChapterEditorModal from '../components/ChapterEditorModal';
+import HymnActionPopover from '../components/HymnActionPopover';
+import {useChapterMarks} from '../hooks/useChapterMarks';
+import {useJesusName} from '../contexts/JesusNameContext';
+import {buildChapterDisplay, type ChapterMark} from '../utils/chapterMarks';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
 import { useHymnsData, Hymn } from '../hooks/useHymnsData';
 import { useFavorites } from '../hooks/useFavorites';
@@ -92,6 +97,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   );
   const [bibleSelectionVisible, setBibleSelectionVisible] = useState(false);
 
+  const [bibleSelectionProgress, setBibleSelectionProgress] = useState<{
+    step: 'book' | 'chapter' | 'verse';
+    selectedBook: {id: number; name: string} | null;
+    selectedChapter: number | null;
+  }>({step: 'book', selectedBook: null, selectedChapter: null});
+  const [requestedBibleSelectionStep, setRequestedBibleSelectionStep] = useState<
+    'book' | 'chapter' | 'verse' | null
+  >(null);
+
   const [currentHymnId, setCurrentHymnId] = useState<string | null>(
     route.params?.selectedHymnId || null
   );
@@ -151,6 +165,16 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [verseActionVisible, setVerseActionVisible] = useState(false);
   const [selectedVerseForAction, setSelectedVerseForAction] = useState<BibleVerse | null>(null);
 
+  // Chapter editor modal state
+  const [chapterEditorVisible, setChapterEditorVisible] = useState(false);
+  const [chapterEditorScrollVerseNumber, setChapterEditorScrollVerseNumber] =
+    useState<number | null>(null);
+  const {transformText} = useJesusName();
+  const {marks: chapterMarks, setAllMarks, clearChapter} = useChapterMarks(
+    currentBook?.id ?? null,
+    currentChapter ?? null,
+  );
+
   // Hymn action popover state
   const [hymnActionVisible, setHymnActionVisible] = useState(false);
 
@@ -178,6 +202,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       if (crossRefModalVisible) return false;
       if (reportModalVisible) return false;
       if (hymnSelectionVisible) return false;
+      if (chapterEditorVisible) return false;
       return true;
     };
 
@@ -223,6 +248,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     mode,
     reportModalVisible,
     verseActionVisible,
+    chapterEditorVisible,
   ]);
 
   useEffect(() => {
@@ -496,6 +522,24 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     setVerseActionVisible(true);
   };
 
+  const chapterDisplay = useMemo(() => {
+    if (!chapterEditorVisible || verses.length === 0) return null;
+    return buildChapterDisplay(verses, transformText);
+  }, [chapterEditorVisible, verses, transformText]);
+
+  const chapterEditorReference = currentBook
+    ? `${currentBook.name} ${currentChapter}`
+    : `${currentChapter}`;
+
+  const handleChapterMarksSave = (next: ChapterMark[]) => {
+    setAllMarks(next);
+    setChapterEditorVisible(false);
+  };
+
+  const handleChapterMarksClear = () => {
+    clearChapter();
+  };
+
   const handleViewCorrespondence = (verse: BibleVerse) => {
     openCrossReferences(verse);
   };
@@ -564,19 +608,47 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       edges={['left', 'right']}
       style={[styles.container, {backgroundColor: theme.colors.readerBackground}]}
     >
-      <TopBar
-        appMode={mode}
-        title={title}
-        isMenuOpen={isMenuOpen}
-        onMenuPress={() => setIsMenuOpen(open => !open)}
-        onTitlePress={handleTitlePress}
-        onPreviousPress={handlePreviousChapter}
-        onNextPress={handleNextChapter}
-      />
+      {mode === 'bible' && bibleSelectionVisible ? (
+        <SelectionTopBar
+          tabs={[
+            {key: 'book' as const, label: 'Boky'},
+            {key: 'chapter' as const, label: 'Toko'},
+            {key: 'verse' as const, label: 'Andininy'},
+          ]}
+          activeKey={bibleSelectionProgress.step}
+          onTabPress={(key) => {
+            if (key === 'chapter' && !bibleSelectionProgress.selectedBook) {
+              return;
+            }
+            if (
+              key === 'verse' &&
+              (!bibleSelectionProgress.selectedBook ||
+                bibleSelectionProgress.selectedChapter === null)
+            ) {
+              return;
+            }
+            setRequestedBibleSelectionStep(key);
+          }}
+        />
+      ) : (
+        <TopBar
+          appMode={mode}
+          title={title}
+          isMenuOpen={isMenuOpen}
+          onMenuPress={() => setIsMenuOpen(open => !open)}
+          onTitlePress={handleTitlePress}
+          onPreviousPress={handlePreviousChapter}
+          onNextPress={handleNextChapter}
+        />
+      )}
       <View style={styles.readerContainer} {...swipeResponder.panHandlers}>
         {mode === 'bible' && bibleSelectionVisible ? (
           <BibleSelectionModal
-            onClose={() => setBibleSelectionVisible(false)}
+            onClose={() => {
+              setBibleSelectionVisible(false);
+              setRequestedBibleSelectionStep(null);
+              setBibleSelectionProgress({step: 'book', selectedBook: null, selectedChapter: null});
+            }}
             onBibleSelect={(bookId, bookName, chapter, verse) => {
               setMode('bible');
               setCurrentBook({ id: bookId, name: bookName });
@@ -584,6 +656,23 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               setSelectedVerseNumber(verse);
               setShouldScrollToVerse(verse);
               setBibleSelectionVisible(false);
+              setRequestedBibleSelectionStep(null);
+            }}
+            requestedStep={requestedBibleSelectionStep}
+            onProgressChange={(progress) => {
+              setBibleSelectionProgress((prev) => {
+                if (
+                  prev.step === progress.step &&
+                  prev.selectedChapter === progress.selectedChapter &&
+                  (prev.selectedBook?.id ?? null) === (progress.selectedBook?.id ?? null)
+                ) {
+                  return prev;
+                }
+                return progress;
+              });
+              setRequestedBibleSelectionStep((prev) =>
+                prev === progress.step ? null : prev,
+              );
             }}
           />
         ) : (
@@ -592,17 +681,20 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               verses={verses}
               isLoading={isLoading}
               fontScale={fontScale}
-              onVersePress={handleVerseLongPress}
-              onVerseLongPress={handleVerseLongPress}
+              onVerseDoubleTap={handleVerseLongPress}
+              onVerseLongPress={(verse) => {
+                setChapterEditorScrollVerseNumber(verse.verse_number);
+                setChapterEditorVisible(true);
+              }}
               selectedVerseNumber={selectedVerseNumber}
               flatListRef={flatListRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
+              chapterMarks={chapterMarks}
             />
           ) : (
             <HymnReaderView
               hymnVerses={hymnVerses}
               isLoading={isHymnsLoading}
-              hymnNumber={getCurrentHymn()?.number ?? null}
               hymnTitle={getCurrentHymn()?.title ?? null}
               fontScale={fontScale}
               onHymnLongPress={handleHymnStanzaLongPress}
@@ -731,6 +823,22 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onViewCorrespondence={handleViewCorrespondence}
         onAddToFavorites={handleAddToFavorites}
         onReportIssue={openBibleReportModal}
+      />
+
+      <ChapterEditorModal
+        visible={chapterEditorVisible}
+        reference={chapterEditorReference}
+        chapter={chapterDisplay}
+        initialMarks={chapterMarks}
+        initialScrollVerseNumber={chapterEditorScrollVerseNumber}
+        fontScale={fontScale}
+        highlightColor={theme.colors.markerHighlight}
+        onSave={handleChapterMarksSave}
+        onClear={handleChapterMarksClear}
+        onClose={() => {
+          setChapterEditorVisible(false);
+          setChapterEditorScrollVerseNumber(null);
+        }}
       />
 
       <HymnActionPopover

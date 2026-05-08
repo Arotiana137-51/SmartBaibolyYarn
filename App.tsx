@@ -1,4 +1,5 @@
 ﻿import React, {useEffect, useState} from 'react';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {DatabaseProvider, useDatabase} from './src/contexts/DatabaseContext';
@@ -66,17 +67,19 @@ const AppContent = () => {
 // Main App component with providers
 const App = () => {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <JesusNameProvider>
-          <DatabaseProvider>
-            <NavigationContainer>
-              <AppContent />
-            </NavigationContainer>
-          </DatabaseProvider>
-        </JesusNameProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{flex: 1}}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <JesusNameProvider>
+            <DatabaseProvider>
+              <NavigationContainer>
+                <AppContent />
+              </NavigationContainer>
+            </DatabaseProvider>
+          </JesusNameProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 };
 

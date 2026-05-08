@@ -17,6 +17,7 @@ interface ThemeColors {
   glow: string;
   navBackground: string;
   verseNumber: string;
+  markerHighlight: string;
 };
 
 export type Theme = {
@@ -54,6 +55,7 @@ const darkColors: ThemeColors = {
   glow: '#25A18E',
   navBackground: '#004E64',
   verseNumber: '#007991',
+  markerHighlight: 'rgba(255, 193, 7, 0.42)',
 };
 
 const lightColors: ThemeColors = {
@@ -71,6 +73,7 @@ const lightColors: ThemeColors = {
   glow: '#25A18E',
   navBackground: '#004E64',
   verseNumber: '#007991',
+  markerHighlight: 'rgba(255, 213, 79, 0.55)',
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);

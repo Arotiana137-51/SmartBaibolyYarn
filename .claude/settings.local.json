@@ -33,7 +33,9 @@
       "Bash(adb devices *)",
       "Bash(adb shell *)",
       "Bash(tasklist)",
-      "Bash(./gradlew bundleRelease)"
+      "Bash(./gradlew bundleRelease)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }

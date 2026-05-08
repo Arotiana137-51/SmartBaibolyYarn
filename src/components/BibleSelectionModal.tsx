@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, memo, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, memo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,11 +18,19 @@ type SelectionStep = 'book' | 'chapter' | 'verse';
 interface BibleSelectionModalOptimizedProps {
   onClose: () => void;
   onBibleSelect: (bookId: number, bookName: string, chapter: number, verse: number) => void;
+  requestedStep?: SelectionStep | null;
+  onProgressChange?: (progress: {
+    step: SelectionStep;
+    selectedBook: {id: number; name: string} | null;
+    selectedChapter: number | null;
+  }) => void;
 }
 
 const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> = ({
   onClose,
   onBibleSelect,
+  requestedStep = null,
+  onProgressChange,
 }) => {
   const {theme} = useTheme();
   const insets = useSafeAreaInsets();
@@ -125,6 +133,42 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     setVerseCount(0);
     onClose();
   }, [onClose]);
+
+  const onProgressChangeRef = useRef(onProgressChange);
+  useEffect(() => {
+    onProgressChangeRef.current = onProgressChange;
+  }, [onProgressChange]);
+
+  useEffect(() => {
+    onProgressChangeRef.current?.({
+      step: currentStep,
+      selectedBook: selectedBook ? {id: selectedBook.id, name: selectedBook.name} : null,
+      selectedChapter,
+    });
+  }, [currentStep, selectedBook, selectedChapter]);
+
+  useEffect(() => {
+    if (!requestedStep) return;
+    if (requestedStep === currentStep) return;
+
+    if (requestedStep === 'book') {
+      setCurrentStep('book');
+      return;
+    }
+
+    if (requestedStep === 'chapter') {
+      if (selectedBook) {
+        setCurrentStep('chapter');
+      }
+      return;
+    }
+
+    if (requestedStep === 'verse') {
+      if (selectedBook && selectedChapter !== null) {
+        setCurrentStep('verse');
+      }
+    }
+  }, [currentStep, requestedStep, selectedBook, selectedChapter]);
 
   const handleBack = useCallback(() => {
     if (currentStep === 'verse') {
