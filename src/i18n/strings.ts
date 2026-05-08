@@ -6,6 +6,10 @@ type TranslationKey =
   | 'menu.search'
   | 'menu.misc'
   | 'menu.about'
+  | 'menu.personalization'
+  | 'personalization.title'
+  | 'personalization.subtitle'
+  | 'personalization.reset'
   | 'common.cancel'
   | 'common.close'
   | 'common.remove'
@@ -105,6 +109,10 @@ const translations: Translations = {
     'menu.search': 'Fikarohana',
     'menu.misc': 'Samihafa',
     'menu.about': 'Mombamomba',
+    'menu.personalization': 'Loko manokana',
+    'personalization.title': 'Loko manokana',
+    'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
+    'personalization.reset': 'Avereno tany am-boalohany',
     'common.cancel': 'Ajanony',
     'common.close': 'Hidio',
     'common.remove': 'Esory',

@@ -427,6 +427,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'about':
         navigation.navigate('About');
         return;
+      case 'personalization':
+        navigation.navigate('Personalization');
+        return;
       default: {
         const _exhaustiveCheck: never = key;
         return _exhaustiveCheck;
@@ -492,7 +495,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       await flushIssueReports(ISSUE_REPORT_ENDPOINT_URL);
     } catch (e) {
       // Keep queue for later retry
-      console.log('flushIssueReports failed:', e);
+      if (__DEV__) console.log('flushIssueReports failed:', e);
     }
   };
 

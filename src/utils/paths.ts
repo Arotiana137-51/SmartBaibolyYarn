@@ -135,7 +135,9 @@ export const ensureDirectoryExists = async (path: string): Promise<void> => {
     await FileSystem.mkdir(path);
   } catch (error) {
     // Directory might already exist, which is fine
-    console.log(`Directory ${path} already exists or creation failed:`, error);
+    if (__DEV__) {
+      console.log(`Directory ${path} already exists or creation failed:`, error);
+    }
   }
 };
 

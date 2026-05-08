@@ -91,6 +91,39 @@ const buildHtml = (
     }
   }
 
+  function clearVisualFormatting(start, end) {
+    try {
+      editor.contentEditable = 'true';
+      try { selectRange(start, end); } catch (e0) {}
+      // Some WebViews keep <mark> wrappers around even after removeFormat/hiliteColor.
+      // Unwrap any highlight marks that intersect the current selection.
+      try {
+        var sel = window.getSelection();
+        var r = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+        if (r && typeof r.intersectsNode === 'function') {
+          var marks = Array.prototype.slice.call(editor.querySelectorAll('mark.hl'));
+          marks.forEach(function(m) {
+            try {
+              if (!r.intersectsNode(m)) return;
+              var parent = m.parentNode;
+              if (!parent) return;
+              while (m.firstChild) parent.insertBefore(m.firstChild, m);
+              parent.removeChild(m);
+            } catch (eU) {}
+          });
+        }
+      } catch (eM) {}
+      try { document.execCommand('removeFormat', false, null); } catch (e1) {}
+      try {
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand('hiliteColor', false, 'transparent');
+      } catch (e2) {}
+      editor.contentEditable = 'false';
+    } catch (e) {
+      try { editor.contentEditable = 'false'; } catch (e0) {}
+    }
+  }
+
   function getVtNodes() {
     return Array.prototype.slice.call(editor.querySelectorAll('.vt'));
   }
@@ -132,6 +165,7 @@ const buildHtml = (
   function notifySelection() {
     try {
       var off = getSelectionOffsets();
+      if (off) { window.__lastSelection = off; }
       rn({ type: 'SELECTION', offsets: off });
     } catch (e) {
       rn({ type: 'SELECTION', offsets: null });
@@ -185,15 +219,30 @@ const buildHtml = (
     // Some Android WebViews lose the selection when toggling editability.
     // Re-select the saved offsets so execCommand applies to the intended range.
     try { selectRange(off.start, off.end); } catch (e0) {}
+    // queryCommandState BEFORE execCommand tells us whether the selection was
+    // already styled — if it was, execCommand is going to toggle it OFF.
+    var wasActive = false;
+    try { wasActive = !!document.queryCommandState(cmd); } catch (eQ) { wasActive = false; }
     document.execCommand(cmd, false, null);
     editor.contentEditable = 'false';
-    rn({ type: 'MARK', mark: { style: cmd === 'bold' ? 'bold' : cmd === 'italic' ? 'italic' : 'underline', start: off.start, end: off.end } });
+    var style = cmd === 'bold' ? 'bold' : cmd === 'italic' ? 'italic' : 'underline';
+    if (wasActive) {
+      // Toggling off: tell RN to remove this style across [start,end] without
+      // disturbing other styles (highlight, the other two text styles).
+      rn({ type: 'UNMARK', style: style, start: off.start, end: off.end });
+    } else {
+      rn({ type: 'MARK', mark: { style: style, start: off.start, end: off.end } });
+    }
   }
 
   function applyHighlight(color) {
     var off = getSelectionOffsets();
     if (!off) { rn({ type: 'NO_SELECTION' }); return; }
     // Persist FIRST so save works even if visual wrapping fails on this WebView.
+    // Note: highlight does not auto-toggle here — to remove a highlight the user
+    // selects the range and taps "Fafao". This keeps highlight independent of the
+    // bold/italic/underline toggle behavior so a user re-tapping H to layer color
+    // never accidentally erases their existing highlight.
     rn({ type: 'MARK', mark: { style: 'highlight', start: off.start, end: off.end, color: color } });
     try {
       var sel = window.getSelection();
@@ -231,13 +280,39 @@ const buildHtml = (
     }
   }
 
+  // Merge overlapping same-style ranges so toggle-based execCommand calls don't
+  // accidentally undo themselves on the second application over the same span.
+  function mergeMarks(marks) {
+    var byKey = {};
+    (marks || []).forEach(function(m) {
+      var key = m.style === 'highlight' ? 'highlight:' + (m.color || '') : m.style;
+      (byKey[key] = byKey[key] || []).push(m);
+    });
+    var out = [];
+    Object.keys(byKey).forEach(function(k) {
+      var arr = byKey[k].slice().sort(function(a, b) { return a.start - b.start; });
+      var cur = null;
+      arr.forEach(function(m) {
+        if (!cur) { cur = {start: m.start, end: m.end, style: m.style, color: m.color}; return; }
+        if (m.start <= cur.end) {
+          if (m.end > cur.end) cur.end = m.end;
+        } else {
+          out.push(cur);
+          cur = {start: m.start, end: m.end, style: m.style, color: m.color};
+        }
+      });
+      if (cur) out.push(cur);
+    });
+    return out;
+  }
+
   // Apply initial marks visually (best-effort) by selecting each range and applying the style.
   // Suppress MARK re-broadcasts so these existing marks don't get duplicated in pendingMarks.
   function applyInitial() {
     if (!INITIAL || !INITIAL.length) return;
     __suppressMarkPosts = true;
     try {
-      INITIAL.forEach(function(m) {
+      mergeMarks(INITIAL).forEach(function(m) {
         try {
           selectRange(m.start, m.end);
           if (m.style === 'highlight') applyHighlight(m.color);
@@ -271,10 +346,14 @@ const buildHtml = (
           }
         }
 
+        // Merge overlapping same-style ranges so toggle-based execCommand calls don't
+        // accidentally undo themselves on the second pass over the same span.
+        var merged = mergeMarks(newMarks);
+
         // Re-apply every mark from scratch using the same code path as initial render.
         __suppressMarkPosts = true;
         try {
-          (newMarks || []).forEach(function(m) {
+          merged.forEach(function(m) {
             try {
               selectRange(m.start, m.end);
               if (m.style === 'highlight') {
@@ -309,8 +388,25 @@ const buildHtml = (
     getSelectionOffsets: function() {
       var off = getSelectionOffsets();
       rn({ type: 'SELECTION', offsets: off });
+    },
+    eraseSelection: function() {
+      // Read the live DOM selection from inside the WebView (RN-side
+      // selectionOffsets state can get cleared the moment the footer button
+      // is tapped). Fall back to the last cached selection if needed.
+      var off = getSelectionOffsets();
+      if (!off) {
+        if (typeof window.__lastSelection === 'object' && window.__lastSelection) {
+          off = window.__lastSelection;
+        }
+      }
+      if (!off) { rn({ type: 'NO_SELECTION' }); return; }
+      clearVisualFormatting(off.start, off.end);
+      rn({ type: 'ERASE_RANGE', start: off.start, end: off.end });
     }
   };
+
+  // Track the last non-null selection so eraseSelection has a fallback.
+  window.__lastSelection = null;
 
   // Save original text for clearAll.
   getVtNodes().forEach(function(vt) { vt.dataset.originalText = vt.textContent; });
@@ -432,6 +528,61 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
           createdAt: new Date().toISOString(),
         };
         setPendingMarks(prev => [...prev, m]);
+      } else if (msg.type === 'UNMARK' && msg.style) {
+        const removeStart: number = msg.start;
+        const removeEnd: number = msg.end;
+        const removeStyle = msg.style as MarkStyle;
+        setPendingMarks(prev => {
+          const next: ChapterMark[] = [];
+          for (const existing of prev) {
+            if (existing.style !== removeStyle) {
+              next.push(existing);
+              continue;
+            }
+            if (removeStart >= existing.end || removeEnd <= existing.start) {
+              next.push(existing);
+              continue;
+            }
+            if (removeStart <= existing.start && removeEnd >= existing.end) {
+              continue;
+            }
+            if (existing.start < removeStart && removeEnd < existing.end) {
+              next.push({...existing, id: `${existing.id}-l`, end: removeStart});
+              next.push({...existing, id: `${existing.id}-r`, start: removeEnd});
+              continue;
+            }
+            if (removeStart <= existing.start) {
+              next.push({...existing, id: `${existing.id}-t`, start: removeEnd});
+              continue;
+            }
+            next.push({...existing, id: `${existing.id}-t`, end: removeStart});
+          }
+          return next;
+        });
+      } else if (msg.type === 'ERASE_RANGE') {
+        const eStart: number = msg.start;
+        const eEnd: number = msg.end;
+        if (typeof eStart !== 'number' || typeof eEnd !== 'number' || eEnd <= eStart) return;
+        setPendingMarks(prev => {
+          const next: ChapterMark[] = [];
+          for (const m of prev) {
+            if (eStart >= m.end || eEnd <= m.start) { next.push(m); continue; }
+            if (eStart <= m.start && eEnd >= m.end) { continue; }
+            if (m.start < eStart && eEnd < m.end) {
+              next.push({...m, id: `${m.id}-l`, end: eStart});
+              next.push({...m, id: `${m.id}-r`, start: eEnd});
+              continue;
+            }
+            if (eStart <= m.start) { next.push({...m, id: `${m.id}-t`, start: eEnd}); continue; }
+            next.push({...m, id: `${m.id}-t`, end: eStart});
+          }
+          const payload = JSON.stringify(next);
+          inject(`window.RNEditor && window.RNEditor.rerenderMarks && window.RNEditor.rerenderMarks(${payload}); true;`);
+          return next;
+        });
+        setSelectionOffsets(null);
+      } else if (msg.type === 'NO_SELECTION') {
+        setSelectionOffsets(null);
       } else if (msg.type === 'CLEARED') {
         setPendingMarks([]);
         setSelectionOffsets(null);
@@ -453,44 +604,11 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   };
 
   const handleEraseSelection = () => {
-    if (!selectionOffsets) return;
-    const {start, end} = selectionOffsets;
-
-    const newMarks: ChapterMark[] = [];
-    for (const m of pendingMarks) {
-      if (m.style !== 'highlight') {
-        newMarks.push(m);
-        continue;
-      }
-      if (start >= m.end || end <= m.start) {
-        newMarks.push(m);
-        continue;
-      }
-      if (start <= m.start && end >= m.end) {
-        continue;
-      }
-      if (m.start < start && end < m.end) {
-        newMarks.push({...m, id: `${m.id}-left`, start: m.start, end: start});
-        newMarks.push({...m, id: `${m.id}-right`, start: end, end: m.end});
-        continue;
-      }
-      if (start <= m.start && end < m.end && end > m.start) {
-        newMarks.push({...m, id: `${m.id}-trimmed`, start: end, end: m.end});
-        continue;
-      }
-      if (m.start < start && end >= m.end) {
-        newMarks.push({...m, id: `${m.id}-trimmed`, start: m.start, end: start});
-        continue;
-      }
-    }
-
-    setPendingMarks(newMarks);
-    setSelectionOffsets(null);
-
-    const payload = JSON.stringify(newMarks);
-    inject(
-      `window.RNEditor && window.RNEditor.rerenderMarks && window.RNEditor.rerenderMarks(${payload}); true;`,
-    );
+    // Delegate to the WebView. It reads the live DOM selection (or the cached
+    // last-known selection) and posts ERASE_RANGE back, which we handle in
+    // onMessage. This avoids the race where RN's selectionOffsets state may
+    // be cleared by the time the user taps Fafao.
+    inject('window.RNEditor && window.RNEditor.eraseSelection && window.RNEditor.eraseSelection(); true;');
   };
 
   return (
@@ -522,16 +640,6 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
           </View>
 
           <View style={styles.toolbar}>
-            <ToolbarButton
-              label="H"
-              accent={selectedHighlightColor}
-              onPress={() => {
-                const colorToUse = selectedHighlightColor || '#FFEB3B';
-                if (__DEV__) console.log('[hl] RN->WebView inject highlight', colorToUse);
-                inject(`window.RNEditor && window.RNEditor.highlight(${JSON.stringify(colorToUse)}); true;`);
-              }}
-              theme={theme}
-            />
             <ToolbarButton
               label="B"
               bold
@@ -565,7 +673,10 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
                     {backgroundColor: color},
                     selectedHighlightColor === color && styles.colorOptionSelected,
                   ]}
-                  onPress={() => setSelectedHighlightColor(color)}
+                  onPress={() => {
+                    setSelectedHighlightColor(color);
+                    inject(`window.RNEditor && window.RNEditor.highlight(${JSON.stringify(color)}); true;`);
+                  }}
                 />
               ))}
             </View>
@@ -597,7 +708,7 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
               style={[
                 styles.footerButton,
                 {backgroundColor: theme.colors.backgroundTertiary},
-                !selectionOffsets ? {opacity: 0.45} : null,
+                !selectionOffsets ? {opacity: 0.5} : null,
               ]}
               onPress={handleEraseSelection}
               disabled={!selectionOffsets}>
@@ -627,6 +738,7 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
 const ToolbarButton = ({
   label,
   onPress,
+  disabled,
   bold,
   italic,
   underline,
@@ -635,6 +747,7 @@ const ToolbarButton = ({
 }: {
   label: string;
   onPress: () => void;
+  disabled?: boolean;
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
@@ -643,9 +756,11 @@ const ToolbarButton = ({
 }) => (
   <Pressable
     onPress={onPress}
+    disabled={disabled}
     style={[
       styles.toolbarButton,
       {backgroundColor: accent ?? theme.colors.backgroundTertiary},
+      disabled ? {opacity: 0.5} : null,
     ]}>
     <Text
       style={[

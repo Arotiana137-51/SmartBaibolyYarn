@@ -29,6 +29,19 @@ const CATEGORIES = [
   { key: 'ff', label: 'F. Fanampiny' },
 ];
 
+// Lighten a hex color by mixing it with white
+const lightenColor = (hex: string, percent: number): string => {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = ((num >> 8) & 0x00ff) + amt;
+  const B = (num & 0x0000ff) + amt;
+  const newR = R < 255 ? (R < 1 ? 0 : R) : 255;
+  const newG = G < 255 ? (G < 1 ? 0 : G) : 255;
+  const newB = B < 255 ? (B < 1 ? 0 : B) : 255;
+  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1)}`;
+};
+
 const TAB_ROW_HEIGHT = 60;
 
 const CATEGORY_MAX: Record<string, number> = {
@@ -200,11 +213,11 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                   style={({pressed}) => [
                     styles.categoryTab,
                     { borderRightColor: 'rgba(255,255,255,0.4)' },
-                    selectedCategory === category.key && { backgroundColor: theme.colors.accentBlue },
+                    selectedCategory === category.key && { backgroundColor: lightenColor(theme.colors.accentBlue, 25) },
                     pressed && { opacity: 0.9 },
                   ]}
                   android_ripple={{
-                    color: theme.colors.accentBlue + '40',
+                    color: lightenColor(theme.colors.accentBlue, 40) + '60',
                     borderless: true,
                   }}
                   onPress={() => handleCategoryChange(category.key)}

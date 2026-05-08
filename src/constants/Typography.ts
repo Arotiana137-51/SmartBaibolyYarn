@@ -121,14 +121,13 @@ export const TEXT_STYLES = {
     color: '#FFFFFF',
   },
   
-  // Bible verse numbers
+  // Bible verse numbers — color is supplied at runtime from theme.colors.verseNumber.
   verseNumber: {
     fontFamily: FONT_FAMILIES.primary,
     fontSize: TYPOGRAPHY_SCALE.small,
     lineHeight: LINE_HEIGHTS.tight * TYPOGRAPHY_SCALE.small,
     letterSpacing: LETTER_SPACING.normal,
     fontWeight: '700',
-    color: '#007991', // Use mid-tone teal for verse numbers
   },
 } as const;
 

@@ -35,7 +35,8 @@
       "Bash(tasklist)",
       "Bash(./gradlew bundleRelease)",
       "Bash(npx tsc *)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

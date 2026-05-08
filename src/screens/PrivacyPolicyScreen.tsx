@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {RootStackParamList} from '../navigation/RootNavigator';
+import {t} from '../i18n/strings';
 
 export const STORAGE_KEY_PRIVACY_POLICY_ACCEPTED = 'privacy_policy_accepted_v1';
 
@@ -136,6 +137,17 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
         </ScrollView>
 
         <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
+          <Pressable
+            style={[
+              styles.personalizationButton,
+              {borderColor: theme.colors.divider, backgroundColor: theme.colors.backgroundSecondary},
+            ]}
+            onPress={() => navigation.navigate('Personalization')}
+          >
+            <Text style={[styles.personalizationButtonText, {color: theme.colors.textPrimary}]}>
+              {t('menu.personalization')}
+            </Text>
+          </Pressable>
           {isMandatory ? (
             <Pressable
               style={[styles.primaryButton, {backgroundColor: theme.colors.accentBlue}]}
@@ -221,6 +233,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  personalizationButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  personalizationButtonText: {
     fontSize: 14,
     fontWeight: '700',
   },

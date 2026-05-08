@@ -11,6 +11,7 @@ import MiscScreen from '../screens/MiscScreen';
 import FanekemDetailsScreen from '../screens/FanekemDetailsScreen';
 import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import PersonalizationScreen from '../screens/PersonalizationScreen';
 
 export type RootStackParamList = {
   Home:
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   FanekemDetails: {title: string; content: string};
   About: undefined;
   PrivacyPolicy: {mandatory?: boolean} | undefined;
+  Personalization: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -107,6 +109,11 @@ const RootNavigator = ({
         name="About"
         component={AboutScreen}
         options={{title: t('menu.about'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="Personalization"
+        component={PersonalizationScreen}
+        options={{title: t('personalization.title'), ...headerOptions}}
       />
       <Stack.Screen
         name="PrivacyPolicy"

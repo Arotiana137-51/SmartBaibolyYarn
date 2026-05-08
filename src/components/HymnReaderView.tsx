@@ -1,8 +1,8 @@
-import React, {useMemo} from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
+import React, {useCallback, useMemo} from 'react';
+import { View, Text, StyleSheet, FlatList, Platform, Pressable, ActivityIndicator } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { HymnVerse } from '../hooks/useHymnsData';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
 
 // Hymn-specific spacing configuration
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
@@ -42,6 +42,120 @@ interface HymnReaderViewProps {
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
 }
 
+interface HymnStanza {
+  verseNumber: number;
+  lines: HymnVerse[];
+}
+
+interface HymnStanzaItemProps {
+  item: HymnStanza;
+  fontScale: number;
+  readerText: string;
+  verseNumberColor: string;
+  stanzaCardBackground: string;
+  chorusBackground: string;
+  chorusLines: HymnVerse[];
+  onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
+}
+
+const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
+  item,
+  fontScale,
+  readerText,
+  verseNumberColor,
+  stanzaCardBackground,
+  chorusBackground,
+  chorusLines,
+  onHymnLongPress,
+}) => {
+  const stanzaText = useMemo(
+    () => item.lines.map(line => line.text).join('\n'),
+    [item.lines],
+  );
+  const lineHeight = Math.round(
+    styles.hymnText.fontSize * fontScale * HYMN_LINE_HEIGHT_MULTIPLIER,
+  );
+  const lineFontSize = styles.hymnText.fontSize * fontScale;
+
+  return (
+    <View style={styles.stanzaBlock}>
+      <Pressable
+        style={[styles.hymnStanza, {backgroundColor: stanzaCardBackground}]}
+        onLongPress={() => onHymnLongPress?.(item.verseNumber, stanzaText)}
+        disabled={!onHymnLongPress}
+      >
+        <Text
+          style={[
+            styles.hymnNumber,
+            {
+              fontSize: styles.hymnNumber.fontSize * fontScale,
+              color: verseNumberColor,
+            },
+          ]}>
+          {item.verseNumber}
+        </Text>
+        <View style={styles.hymnTextContainer}>
+          {item.lines.map((line) => (
+            <Text
+              key={line.id}
+              style={[
+                styles.hymnText,
+                {
+                  fontSize: lineFontSize,
+                  lineHeight,
+                  color: readerText,
+                },
+              ]}>
+              {line.text}
+            </Text>
+          ))}
+        </View>
+      </Pressable>
+
+      {chorusLines.length > 0 ? (
+        <View style={[styles.chorusBlock, {backgroundColor: chorusBackground}]}>
+          <Text
+            style={[
+              styles.chorusLabel,
+              {
+                fontSize: styles.chorusLabel.fontSize * fontScale,
+                color: verseNumberColor,
+              },
+            ]}
+          >
+            Refrain
+          </Text>
+          <View style={styles.chorusTextContainer}>
+            {chorusLines.map((line) => (
+              <Text
+                key={`chorus-${line.id}`}
+                style={[
+                  styles.hymnText,
+                  {
+                    fontSize: lineFontSize,
+                    lineHeight,
+                    color: readerText,
+                  },
+                ]}
+              >
+                {line.text}
+              </Text>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}, (prev, next) =>
+  prev.item.verseNumber === next.item.verseNumber &&
+  prev.fontScale === next.fontScale &&
+  prev.readerText === next.readerText &&
+  prev.verseNumberColor === next.verseNumberColor &&
+  prev.stanzaCardBackground === next.stanzaCardBackground &&
+  prev.chorusBackground === next.chorusBackground &&
+  prev.chorusLines === next.chorusLines
+);
+
 const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   hymnVerses,
   isLoading,
@@ -50,6 +164,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   onHymnLongPress,
 }) => {
   const { theme } = useTheme();
+  const { isLowEndMode } = useLowEndMode();
   const insets = useSafeAreaInsets();
 
   const hasTitle = typeof hymnTitle === 'string' && hymnTitle.trim().length > 0;
@@ -97,17 +212,61 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   }
 
   const stanzaCardBackground = theme.isDark
-    ? hexToRgba('#FFFFFF', 0.06)
-    : hexToRgba('#000000', 0.04);
+    ? hexToRgba('#FFFFFF', 0.015)
+    : hexToRgba('#000000', 0.01);
 
   const chorusBackground = theme.isDark
-    ? hexToRgba('#FFFFFF', 0.08)
-    : hexToRgba('#000000', 0.05);
+    ? hexToRgba('#FFFFFF', 0.02)
+    : hexToRgba('#000000', 0.015);
+
+  const keyExtractor = useCallback((item: HymnStanza) => item.verseNumber.toString(), []);
+
+  const renderItem = useCallback(
+    ({item}: {item: HymnStanza}) => (
+      <HymnStanzaItem
+        item={item}
+        fontScale={fontScale}
+        readerText={theme.colors.readerText}
+        verseNumberColor={theme.colors.verseNumber}
+        stanzaCardBackground={stanzaCardBackground}
+        chorusBackground={chorusBackground}
+        chorusLines={chorusLines}
+        onHymnLongPress={onHymnLongPress}
+      />
+    ),
+    [
+      fontScale,
+      theme.colors.readerText,
+      theme.colors.verseNumber,
+      stanzaCardBackground,
+      chorusBackground,
+      chorusLines,
+      onHymnLongPress,
+    ],
+  );
+
+  // Mirror BibleReaderView's tuning so low-end phones get the same treatment.
+  // Hymn stanza counts are small (typically 4-8), so high values won't hurt either.
+  const listProps = isLowEndMode
+    ? {
+        initialNumToRender: 6,
+        maxToRenderPerBatch: 4,
+        updateCellsBatchingPeriod: 60,
+        windowSize: 5,
+        removeClippedSubviews: false,
+      }
+    : {
+        initialNumToRender: 10,
+        maxToRenderPerBatch: 8,
+        updateCellsBatchingPeriod: 40,
+        windowSize: 8,
+        removeClippedSubviews: Platform.OS === 'android',
+      };
 
   return (
     <FlatList
       data={hymnStanzas}
-      keyExtractor={(item) => item.verseNumber.toString()}
+      keyExtractor={keyExtractor}
       contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
       ListHeaderComponent={
         hasTitle ? (
@@ -128,87 +287,8 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
           </View>
         ) : null
       }
-      renderItem={({ item }) => {
-        const stanzaText = item.lines.map(line => line.text).join('\n');
-
-        return (
-          <View style={styles.stanzaBlock}>
-            <Pressable
-              style={[styles.hymnStanza, {backgroundColor: stanzaCardBackground}]}
-              onLongPress={() => onHymnLongPress?.(item.verseNumber, stanzaText)}
-              disabled={!onHymnLongPress}
-            >
-              <Text
-                style={[
-                  styles.hymnNumber,
-                  {
-                    fontSize: styles.hymnNumber.fontSize * fontScale,
-                    color: theme.colors.verseNumber,
-                  },
-                ]}>
-                {item.verseNumber}
-              </Text>
-              <View style={styles.hymnTextContainer}>
-                {item.lines.map((line) => (
-                  <Text
-                    key={line.id}
-                    style={[
-                      styles.hymnText,
-                      {
-                        fontSize: styles.hymnText.fontSize * fontScale,
-                        lineHeight: Math.round(
-                          styles.hymnText.fontSize *
-                            fontScale *
-                            HYMN_LINE_HEIGHT_MULTIPLIER
-                        ),
-                        color: theme.colors.readerText,
-                      },
-                    ]}>
-                    {line.text}
-                  </Text>
-                ))}
-              </View>
-            </Pressable>
-
-            {chorusLines.length > 0 ? (
-              <View style={[styles.chorusBlock, {backgroundColor: chorusBackground}]}> 
-                <Text
-                  style={[
-                    styles.chorusLabel,
-                    {
-                      fontSize: styles.chorusLabel.fontSize * fontScale,
-                      color: theme.colors.verseNumber,
-                    },
-                  ]}
-                >
-                  Refrain
-                </Text>
-                <View style={styles.chorusTextContainer}>
-                  {chorusLines.map((line) => (
-                    <Text
-                      key={`chorus-${line.id}`}
-                      style={[
-                        styles.hymnText,
-                        {
-                          fontSize: styles.hymnText.fontSize * fontScale,
-                          lineHeight: Math.round(
-                            styles.hymnText.fontSize *
-                              fontScale *
-                              HYMN_LINE_HEIGHT_MULTIPLIER
-                          ),
-                          color: theme.colors.readerText,
-                        },
-                      ]}
-                    >
-                      {line.text}
-                    </Text>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-          </View>
-        );
-      }}
+      renderItem={renderItem}
+      {...listProps}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />
   );

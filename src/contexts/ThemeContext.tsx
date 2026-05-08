@@ -1,6 +1,11 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Animated, StyleSheet, View} from 'react-native';
+import {
+  getStoredPrimaryColor,
+  setStoredPrimaryColor,
+  isValidHexColor,
+} from '../utils/primaryColorStorage';
 
 interface ThemeColors {
   backgroundPrimary: string;
@@ -34,6 +39,8 @@ type ThemeContextValue = {
   enableLowEndMode: () => void;
   disableLowEndMode: () => void;
   isLowEndMode: boolean;
+  primaryColor: string | null;
+  setPrimaryColor: (hex: string | null) => void;
 };
 
 const STORAGE_KEY_DARK_MODE = 'settings.darkMode';
@@ -82,6 +89,7 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isLowEndMode, setIsLowEndMode] = useState(false);
+  const [primaryColor, setPrimaryColorState] = useState<string | null>(null);
   const transitionOpacity = useRef(new Animated.Value(0)).current;
   const [transitionColor, setTransitionColor] = useState<string>('transparent');
 
@@ -105,10 +113,21 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
         if (lowEndMode === 'true') {
           setIsLowEndMode(true);
         }
+
+        const storedPrimary = await getStoredPrimaryColor();
+        if (storedPrimary) {
+          setPrimaryColorState(storedPrimary);
+        }
       } finally {
         setIsReady(true);
       }
     })();
+  }, []);
+
+  const setPrimaryColor = useCallback((hex: string | null) => {
+    if (hex !== null && !isValidHexColor(hex)) return;
+    setPrimaryColorState(hex);
+    setStoredPrimaryColor(hex);
   }, []);
 
   const persist = useCallback(async (enabled: boolean) => {
@@ -174,13 +193,21 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
     persistLowEnd(false);
   }, [persistLowEnd]);
 
-  const theme: Theme = useMemo(
-    () => ({
+  const theme: Theme = useMemo(() => {
+    const base = isDarkMode ? darkColors : lightColors;
+    if (!primaryColor) {
+      return {isDark: isDarkMode, colors: base};
+    }
+    return {
       isDark: isDarkMode,
-      colors: isDarkMode ? darkColors : lightColors,
-    }),
-    [isDarkMode]
-  );
+      colors: {
+        ...base,
+        accentBlue: primaryColor,
+        navBackground: primaryColor,
+        verseNumber: primaryColor,
+      },
+    };
+  }, [isDarkMode, primaryColor]);
 
   const value: ThemeContextValue = useMemo(
     () => ({
@@ -192,8 +219,10 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
       enableLowEndMode,
       disableLowEndMode,
       isLowEndMode,
+      primaryColor,
+      setPrimaryColor,
     }),
-    [theme, isDarkMode, setDarkMode, toggleDarkMode, isReady, enableLowEndMode, disableLowEndMode, isLowEndMode]
+    [theme, isDarkMode, setDarkMode, toggleDarkMode, isReady, enableLowEndMode, disableLowEndMode, isLowEndMode, primaryColor, setPrimaryColor]
   );
 
   return (

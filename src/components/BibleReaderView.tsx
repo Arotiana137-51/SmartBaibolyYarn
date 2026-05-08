@@ -20,6 +20,7 @@ import {
   type VerseSpan,
 } from '../utils/chapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
+import {dimHighlightForDarkMode} from '../utils/colorUtils';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
@@ -202,7 +203,11 @@ const VerseItem = React.memo(
                           seg.italic ? {fontStyle: 'italic'} : null,
                           markStyles,
                           hasHighlight && seg.highlightColor
-                            ? {backgroundColor: seg.highlightColor}
+                            ? {
+                                backgroundColor: theme.isDark
+                                  ? dimHighlightForDarkMode(seg.highlightColor)
+                                  : seg.highlightColor,
+                              }
                             : null,
                         ]}
                       >
@@ -255,6 +260,7 @@ const VerseItem = React.memo(
     prev.selectedVerseNumber === next.selectedVerseNumber &&
     prev.verseMarks === next.verseMarks &&
     prev.theme.colors.textPrimary === next.theme.colors.textPrimary &&
+    prev.theme.colors.verseNumber === next.theme.colors.verseNumber &&
     prev.theme.colors.textWatermark === next.theme.colors.textWatermark
 );
 

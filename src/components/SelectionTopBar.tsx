@@ -6,6 +6,20 @@ import {useTheme} from '../contexts/ThemeContext';
 const TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
 const EXTRA_TOP_PADDING = 6;
 
+ const lightenColor = (hex: string, percent: number): string => {
+   const num = parseInt(hex.replace('#', ''), 16);
+   const amt = Math.round(2.55 * percent);
+   const R = (num >> 16) + amt;
+   const G = ((num >> 8) & 0x00ff) + amt;
+   const B = (num & 0x0000ff) + amt;
+   const newR = R < 255 ? (R < 1 ? 0 : R) : 255;
+   const newG = G < 255 ? (G < 1 ? 0 : G) : 255;
+   const newB = B < 255 ? (B < 1 ? 0 : B) : 255;
+   return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
+     .toString(16)
+     .slice(1)}`;
+ };
+
 export interface SelectionTab<T extends string> {
   key: T;
   label: string;
@@ -44,11 +58,11 @@ function SelectionTopBarInner<T extends string>({
           return (
             <Pressable
               key={tab.key}
-              android_ripple={{color: theme.colors.accentBlue + '40', borderless: false}}
+              android_ripple={{color: lightenColor(theme.colors.accentBlue, 40) + '60', borderless: false}}
               style={({pressed}) => [
                 styles.tab,
                 !isLast && {borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: 'rgba(255,255,255,0.28)'},
-                active ? {backgroundColor: theme.colors.accentBlue} : null,
+                active ? {backgroundColor: lightenColor(theme.colors.accentBlue, 25)} : null,
                 pressed && {opacity: 0.92},
               ]}
               onPress={() => onTabPress(tab.key)}

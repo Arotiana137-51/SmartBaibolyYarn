@@ -11,13 +11,15 @@ import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
 import ToggleThemeButton from './ToggleThemeButton';
 import {useJesusName} from '../contexts/JesusNameContext';
+import {getRelativeLuminance, lightenHex} from '../utils/colorUtils';
 
 export type HamburgerMenuItemKey =
   | 'favorites'
   | 'history'
   | 'search'
   | 'misc'
-  | 'about';
+  | 'about'
+  | 'personalization';
 
 type Props = {
   visible: boolean;
@@ -54,6 +56,24 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 }) => {
   const {theme, isLowEndMode} = useTheme();
   const {variant: jesusNameVariant, setVariant: setJesusNameVariant} = useJesusName();
+
+  // In dark mode the menu card uses backgroundSecondary (#1C1C1E), so an accent
+  // like Deep Navy or Espresso reads as dark-on-dark. Lighten the accent only
+  // for text/marks inside this menu, only in dark mode. Light mode is untouched.
+  const menuAccent = useMemo(() => {
+    if (!theme.isDark) return theme.colors.navBackground;
+    const luminance = getRelativeLuminance(theme.colors.navBackground);
+    // Darker accents need more lift; cap so it never becomes fluorescent.
+    const amount = luminance < 0.05 ? 0.55 : luminance < 0.12 ? 0.45 : 0.3;
+    return lightenHex(theme.colors.navBackground, amount);
+  }, [theme.isDark, theme.colors.navBackground]);
+
+  const menuCheckAccent = useMemo(() => {
+    if (!theme.isDark) return theme.colors.accentBlue;
+    const luminance = getRelativeLuminance(theme.colors.accentBlue);
+    const amount = luminance < 0.05 ? 0.55 : luminance < 0.12 ? 0.45 : 0.3;
+    return lightenHex(theme.colors.accentBlue, amount);
+  }, [theme.isDark, theme.colors.accentBlue]);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
 
@@ -112,6 +132,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'history' as const, label: t('menu.history')},
         {key: 'search' as const, label: t('menu.search')},
         {key: 'misc' as const, label: t('menu.misc')},
+        {key: 'personalization' as const, label: t('menu.personalization')},
         {key: 'about' as const, label: t('menu.about')},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,
     []
@@ -224,7 +245,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                   styles.menuItem,
                   pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null
                 ]}>
-                <Text style={[styles.menuItemText, {color: theme.colors.navBackground}]}>
+                <Text style={[styles.menuItemText, {color: menuAccent}]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -243,8 +264,8 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                   styles.variantRow,
                   pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null,
                 ]}>
-                <Text style={[styles.variantLabel, {color: theme.colors.navBackground}]}>Jesosy</Text>
-                <Text style={[styles.variantMark, {color: theme.colors.accentBlue}]}>
+                <Text style={[styles.variantLabel, {color: menuAccent}]}>Jesosy</Text>
+                <Text style={[styles.variantMark, {color: menuCheckAccent}]}>
                   {jesusNameVariant === 'jesosy' ? '✓' : ''}
                 </Text>
               </Pressable>
@@ -255,8 +276,8 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                   styles.variantRow,
                   pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null,
                 ]}>
-                <Text style={[styles.variantLabel, {color: theme.colors.navBackground}]}>Jesoa</Text>
-                <Text style={[styles.variantMark, {color: theme.colors.accentBlue}]}>
+                <Text style={[styles.variantLabel, {color: menuAccent}]}>Jesoa</Text>
+                <Text style={[styles.variantMark, {color: menuCheckAccent}]}>
                   {jesusNameVariant === 'jesoa' ? '✓' : ''}
                 </Text>
               </Pressable>
