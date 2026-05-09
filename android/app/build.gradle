@@ -104,13 +104,29 @@ android {
             useLegacyPackaging = false
         }
     }
+
     defaultConfig {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "1.0.2"
+        versionCode 7
+        versionName "1.0.3"
         resConfigs "fr"
+
+        // 16KB page size support - ensures native libs are aligned to 16KB boundaries
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+
+        // Force 16KB page size alignment via CMake flags
+        externalNativeBuild {
+            cmake {
+                cppFlags "-O2"
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
+                          "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+            }
+        }
     }
     // Disabled for AAB builds (Play Store). AAB format handles ABI splits automatically.
     // splits {

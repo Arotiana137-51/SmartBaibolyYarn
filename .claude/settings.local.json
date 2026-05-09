@@ -36,7 +36,10 @@
       "Bash(./gradlew bundleRelease)",
       "Bash(npx tsc *)",
       "Bash(echo \"EXIT=$?\")",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:security.snyk.io)",
+      "Bash(yarn install *)",
+      "Bash(snyk test *)"
     ]
   }
 }
