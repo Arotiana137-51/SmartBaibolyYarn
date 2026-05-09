@@ -77,6 +77,11 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     return Math.max(52, Math.floor(base * 0.8));
   }, [windowWidth]);
 
+  const actionButtonColor = useMemo(
+    () => lightenColor(theme.colors.accentBlue, 15),
+    [theme.colors.accentBlue],
+  );
+
   const filteredHymns = useMemo(() => {
     return hymns
       .filter(hymn => hymn.category === selectedCategory)
@@ -166,7 +171,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                     borderRadius: Math.max(8, Math.floor(keypadButtonSize * 0.12)),
                     backgroundColor: theme.colors.navBackground,
                   },
-                  button === 'OK' && { backgroundColor: theme.colors.accentBlue },
+                  button === 'OK' && { backgroundColor: actionButtonColor },
                   button === 'OK' && styles.doubleWidthButton,
                   pressed && { opacity: 0.8 },
                 ]}
@@ -256,7 +261,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                     {
                       width: Math.round(keypadButtonSize * 1.3),
                       height: keypadButtonSize,
-                      backgroundColor: theme.colors.accentBlue,
+                      backgroundColor: actionButtonColor,
                     },
                     pressed && { opacity: 0.8 },
                   ]}

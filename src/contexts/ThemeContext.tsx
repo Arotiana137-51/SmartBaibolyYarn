@@ -1,6 +1,6 @@
-import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {Animated, StyleSheet, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {
   getStoredPrimaryColor,
   setStoredPrimaryColor,
@@ -90,8 +90,6 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
   const [isReady, setIsReady] = useState(false);
   const [isLowEndMode, setIsLowEndMode] = useState(false);
   const [primaryColor, setPrimaryColorState] = useState<string | null>(null);
-  const transitionOpacity = useRef(new Animated.Value(0)).current;
-  const [transitionColor, setTransitionColor] = useState<string>('transparent');
 
   useEffect(() => {
     (async () => {
@@ -149,34 +147,10 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
 
   const setDarkMode = useCallback(
     (enabled: boolean) => {
-      const nextColors = enabled ? darkColors : lightColors;
-      if (isLowEndMode) {
-        transitionOpacity.stopAnimation();
-        transitionOpacity.setValue(0);
-        setTransitionColor(nextColors.backgroundPrimary);
-        setIsDarkMode(enabled);
-        persist(enabled);
-        return;
-      }
-
-      setTransitionColor(nextColors.backgroundPrimary);
-      Animated.sequence([
-        Animated.timing(transitionOpacity, {
-          toValue: 1,
-          duration: 120,
-          useNativeDriver: true,
-        }),
-        Animated.timing(transitionOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
       setIsDarkMode(enabled);
       persist(enabled);
     },
-    [isLowEndMode, persist, transitionOpacity]
+    [persist]
   );
 
   const toggleDarkMode = useCallback(() => {
@@ -232,16 +206,6 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
         {isDarkMode ? (
           <View pointerEvents="none" style={styles.blueLightFilterOverlay} />
         ) : null}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.transitionOverlay,
-            {
-              backgroundColor: transitionColor,
-              opacity: transitionOpacity,
-            },
-          ]}
-        />
       </View>
     </ThemeContext.Provider>
   );
@@ -263,9 +227,6 @@ export const useLowEndMode = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  transitionOverlay: {
-    ...StyleSheet.absoluteFillObject,
   },
   blueLightFilterOverlay: {
     ...StyleSheet.absoluteFillObject,

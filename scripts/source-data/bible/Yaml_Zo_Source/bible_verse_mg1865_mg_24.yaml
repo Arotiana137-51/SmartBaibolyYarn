@@ -917,7 +917,7 @@ mg1865::mg_24::5::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah o, tsy mijery ny toe-panahy mahatoky va ny masonao? Namely azy Ianao, nefa tsy nahatsiaro naharary izy; Nandany azy Ianao, nefa tsy nety nino anatra izy; Nohamafisiny mihoatra noho ny harambato ny tarehiny, tsy nety niverina izy.'
+  verse_text: 'Jehovah ô, tsy mijery ny toe-panahy mahatoky va ny masonao? Namely azy Ianao, nefa tsy nahatsiaro naharary izy; Nandany azy Ianao, nefa tsy nety nino anatra izy; Nohamafisiny mihoatra noho ny harambato ny tarehiny, tsy nety niverina izy.'
 mg1865::mg_24::5::4:
   verse_version: mg1865
   verse_book: mg_24
@@ -2085,7 +2085,7 @@ mg1865::mg_24::10::6:
   verse_number: 6
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Tsy misy tokoa izay tahaka Anao, Jehovah o; Lehibe Ianao, ary lehibe amin''ny hery ny anaranao.'
+  verse_text: 'Tsy misy tokoa izay tahaka Anao, Jehovah ô; Lehibe Ianao, ary lehibe amin''ny hery ny anaranao.'
 mg1865::mg_24::10::7:
   verse_version: mg1865
   verse_book: mg_24
@@ -2221,7 +2221,7 @@ mg1865::mg_24::10::23:
   verse_number: 23
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah o, fantatro fa tsy an''ny olombelona ny lalan-kalehany, na an''ny mpandeha ny hahalavorary ny diany'
+  verse_text: 'Jehovah ô, fantatro fa tsy an''ny olombelona ny lalan-kalehany, na an''ny mpandeha ny hahalavorary ny diany'
 mg1865::mg_24::10::24:
   verse_version: mg1865
   verse_book: mg_24
@@ -2229,7 +2229,7 @@ mg1865::mg_24::10::24:
   verse_number: 24
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah o, anaro aho, nefa araka ny antonony ihany, fa tsy amin''ny fahatezeranao, fandrao hataonao tonga tsinontsinona aho.'
+  verse_text: 'Jehovah ô, anaro aho, nefa araka ny antonony ihany, fa tsy amin''ny fahatezeranao, fandrao hataonao tonga tsinontsinona aho.'
 mg1865::mg_24::10::25:
   verse_version: mg1865
   verse_book: mg_24
@@ -2277,7 +2277,7 @@ mg1865::mg_24::11::5:
   verse_number: 5
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mba hotoviko ny fianianana izay nianianako tamin''ny razanareo, dia ny hanomezana azy tany tondra-dronono sy tantely tahaka ny amin''izao anio izao. Dia namaly aho ka nanao hoe: Ho izany tokoa anie*, Jehovah o! [*Hebreo: Amena]'
+  verse_text: 'Mba hotoviko ny fianianana izay nianianako tamin''ny razanareo, dia ny hanomezana azy tany tondra-dronono sy tantely tahaka ny amin''izao anio izao. Dia namaly aho ka nanao hoe: Ho izany tokoa anie*, Jehovah ô! [*Hebreo: Amena]'
 mg1865::mg_24::11::6:
   verse_version: mg1865
   verse_book: mg_24
@@ -2429,7 +2429,7 @@ mg1865::mg_24::12::1:
   verse_number: 1
   verse_date_revised: null
   verse_title: 'Ny fitarainana nataon''i Jeremia noho ny nanambinana ny ratsy fanahy, sy ny navalin''i Jehovah azy'
-  verse_text: 'Raha mifandahatra aminao aho, Jehovah o dia Ianao no marina; Nefa kosa aoka ihany mba handahatra aminao aho: Nahoana ary no ambinina ny lalan''ny ratsy fanahy? Nahoana no miadana ny mpiodina rehetra?'
+  verse_text: 'Raha mifandahatra aminao aho, Jehovah ô dia Ianao no marina; Nefa kosa aoka ihany mba handahatra aminao aho: Nahoana ary no ambinina ny lalan''ny ratsy fanahy? Nahoana no miadana ny mpiodina rehetra?'
 mg1865::mg_24::12::2:
   verse_version: mg1865
   verse_book: mg_24
@@ -2445,7 +2445,7 @@ mg1865::mg_24::12::3:
   verse_number: 3
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa Ianao, Jehovah o, mahalala ahy; Mahita ahy Ianao sady mizaha toetra ny foko ny aminao; Sariho toy ny ondry hovonoina ireny, ary atokàny* ho amin''ny andro hamonoana. [*Hebreo: hamasino]'
+  verse_text: 'Fa Ianao, Jehovah ô, mahalala ahy; Mahita ahy Ianao sady mizaha toetra ny foko ny aminao; Sariho toy ny ondry hovonoina ireny, ary atokàny* ho amin''ny andro hamonoana. [*Hebreo: hamasino]'
 mg1865::mg_24::12::4:
   verse_version: mg1865
   verse_book: mg_24
@@ -2829,7 +2829,7 @@ mg1865::mg_24::14::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ry Jehovah o, na dia miampanga anay aza ny helokay, miasà ihany Ianao noho ny anaranao; Fa be ny fiodinanay, taminao no nanotanay.'
+  verse_text: 'Ry Jehovah ô, na dia miampanga anay aza ny helokay, miasà ihany Ianao noho ny anaranao; Fa be ny fiodinanay, taminao no nanotanay.'
 mg1865::mg_24::14::8:
   verse_version: mg1865
   verse_book: mg_24
@@ -2845,7 +2845,7 @@ mg1865::mg_24::14::9:
   verse_number: 9
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Nahoana Ianao no dia toy ny olona ankona ary toy ny lehilahy mahery tsy mahavonjy? Nefa mbola ato aminay ihany Ianao, Jehovah o, ary ny anaranao dia efa nantsoina taminay; Aza dia mandao anay.'
+  verse_text: 'Nahoana Ianao no dia toy ny olona ankona ary toy ny lehilahy mahery tsy mahavonjy? Nefa mbola ato aminay ihany Ianao, Jehovah ô, ary ny anaranao dia efa nantsoina taminay; Aza dia mandao anay.'
 mg1865::mg_24::14::10:
   verse_version: mg1865
   verse_book: mg_24
@@ -2933,7 +2933,7 @@ mg1865::mg_24::14::20:
   verse_number: 20
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah o, tsaroanay ny faharatsianay sy ny heloky ny razanay; Fa efa nanota taminao izahay.'
+  verse_text: 'Jehovah ô, tsaroanay ny faharatsianay sy ny heloky ny razanay; Fa efa nanota taminao izahay.'
 mg1865::mg_24::14::21:
   verse_version: mg1865
   verse_book: mg_24
@@ -3069,7 +3069,7 @@ mg1865::mg_24::15::15:
   verse_number: 15
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Ianao no mahalala, Jehovah o; Tsarovy aho, ka vangio, ary valio izay manenjika ahy; Aza dia mandefitra aminy Ianao, fandrao ho afaka ny aiko; Aoka ho fantatrao fa noho ny aminao no nitondrako latsa.'
+  verse_text: 'Ianao no mahalala, Jehovah ô; Tsarovy aho, ka vangio, ary valio izay manenjika ahy; Aza dia mandefitra aminy Ianao, fandrao ho afaka ny aiko; Aoka ho fantatrao fa noho ny aminao no nitondrako latsa.'
 mg1865::mg_24::15::16:
   verse_version: mg1865
   verse_book: mg_24
@@ -3269,7 +3269,7 @@ mg1865::mg_24::16::19:
   verse_number: 19
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah o, ry heriko sy fiarovana mafy ho ahy ary fandosirako amin''ny andro fahoriana o! Ho tonga aminao ny jentilisa avy any amin''ny faran''ny tany dia hanao hoe: Eny, tokoa lainga no nolovan''ny razanay, dia zava-poana sady tsy misy mahasoa.'
+  verse_text: 'Jehovah ô, ry heriko sy fiarovana mafy ho ahy ary fandosirako amin''ny andro fahoriana o! Ho tonga aminao ny jentilisa avy any amin''ny faran''ny tany dia hanao hoe: Eny, tokoa lainga no nolovan''ny razanay, dia zava-poana sady tsy misy mahasoa.'
 mg1865::mg_24::16::20:
   verse_version: mg1865
   verse_book: mg_24
@@ -3397,7 +3397,7 @@ mg1865::mg_24::17::14:
   verse_number: 14
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Jehovah o, sitrano aho, dia ho sitrana; Vonjeo aho, dia ho voavonjy; Fa Ianao no fiderako.'
+  verse_text: 'Jehovah ô, sitrano aho, dia ho sitrana; Vonjeo aho, dia ho voavonjy; Fa Ianao no fiderako.'
 mg1865::mg_24::17::15:
   verse_version: mg1865
   verse_book: mg_24
@@ -3653,7 +3653,7 @@ mg1865::mg_24::18::19:
   verse_number: 19
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Mihainoa ahy, Jehovah o; Ary mihainoa ny tenin''izay miady amiko'
+  verse_text: 'Mihainoa ahy, Jehovah ô; Ary mihainoa ny tenin''izay miady amiko'
 mg1865::mg_24::18::20:
   verse_version: mg1865
   verse_book: mg_24
@@ -3685,7 +3685,7 @@ mg1865::mg_24::18::23:
   verse_number: 23
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa Ianao, Jehovah o, no mahalala ny fisainana rehetra ataony hamelezany ahy ho faty; Aza avela ny helony; Ary aza vonoina tsy ho eo imasonao ny fahotany, fa aoka ho solafaka eo anatrehanao izy; Mameleza azy amin''ny andro fahatezeranao.'
+  verse_text: 'Fa Ianao, Jehovah ô, no mahalala ny fisainana rehetra ataony hamelezany ahy ho faty; Aza avela ny helony; Ary aza vonoina tsy ho eo imasonao ny fahotany, fa aoka ho solafaka eo anatrehanao izy; Mameleza azy amin''ny andro fahatezeranao.'
 mg1865::mg_24::19::1:
   verse_version: mg1865
   verse_book: mg_24
@@ -3861,7 +3861,7 @@ mg1865::mg_24::20::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: 'Ny fitarainana nataon''i Jeremia'
-  verse_text: 'Jehovah o, notaominao aho ka voataona; Nosamborinao aho ka resinao; Tonga fihomehezana mandritra ny andro aho; Izy rehetra dia maneso ahy.'
+  verse_text: 'Jehovah ô, notaominao aho ka voataona; Nosamborinao aho ka resinao; Tonga fihomehezana mandritra ny andro aho; Izy rehetra dia maneso ahy.'
 mg1865::mg_24::20::8:
   verse_version: mg1865
   verse_book: mg_24
@@ -6013,7 +6013,7 @@ mg1865::mg_24::31::7:
   verse_number: 7
   verse_date_revised: null
   verse_title: null
-  verse_text: 'Fa izao no lazain''i Jehovah: Mihobia amin''ny fifaliana noho ny amin''i Jakoba, ary mifalia noho ny amin''ny lohan''ny firenena, torionareo, deraonareo, ka ataovy hoe: Jehovah o, vonjeo ny olonao, dia ny sisa amin''ny Isiraely.'
+  verse_text: 'Fa izao no lazain''i Jehovah: Mihobia amin''ny fifaliana noho ny amin''i Jakoba, ary mifalia noho ny amin''ny lohan''ny firenena, torionareo, deraonareo, ka ataovy hoe: Jehovah ô, vonjeo ny olonao, dia ny sisa amin''ny Isiraely.'
 mg1865::mg_24::31::8:
   verse_version: mg1865
   verse_book: mg_24
@@ -10621,7 +10621,7 @@ mg1865::mg_24::51::62:
   verse_number: 62
   verse_date_revised: null
   verse_title: null
-  verse_text: 'ka manaova hoe: Jehovah o, Ianao no niteny hamely ity tany ity handringana azy, ka tsy hisy hitoetra eto, na olona na biby, fa ho tany lao mandrakizay izy.'
+  verse_text: 'ka manaova hoe: Jehovah ô, Ianao no niteny hamely ity tany ity handringana azy, ka tsy hisy hitoetra eto, na olona na biby, fa ho tany lao mandrakizay izy.'
 mg1865::mg_24::51::63:
   verse_version: mg1865
   verse_book: mg_24

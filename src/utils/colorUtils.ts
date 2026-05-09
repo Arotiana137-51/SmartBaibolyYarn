@@ -80,6 +80,17 @@ export const dimHighlightForDarkMode = (color: string): string => {
   return darkenHex(desaturated, 0.45);
 };
 
+// Render-time transform for highlight colors in light mode: lighten the color
+// by 15% (mix toward white) so dark verse text stays clearly visible without
+// losing the highlight cue.
+// Passes non-hex strings through unchanged.
+export const dimHighlightForLightMode = (color: string): string => {
+  if (typeof color !== 'string') return color;
+  const trimmed = color.trim();
+  if (!trimmed.startsWith('#')) return trimmed;
+  return lightenHex(trimmed, 0.37);
+};
+
 // WCAG-style relative luminance for "is this color dark?" decisions.
 export const getRelativeLuminance = (hex: string): number => {
   const parsed = parseHex(hex);

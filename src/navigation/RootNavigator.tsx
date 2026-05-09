@@ -31,7 +31,7 @@ export type RootStackParamList = {
   FanekemDetails: {title: string; content: string};
   About: undefined;
   PrivacyPolicy: {mandatory?: boolean} | undefined;
-  Personalization: undefined;
+  Personalization: {firstRun?: boolean} | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

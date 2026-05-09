@@ -1,7 +1,7 @@
-import React, {useMemo} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useMemo} from 'react';
+import {BackHandler, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {t} from '../i18n/strings';
@@ -15,10 +15,23 @@ import type {RootStackParamList} from '../navigation/RootNavigator';
 const SWATCH_SIZE = 64;
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type PersonalizationRouteProp = RouteProp<RootStackParamList, 'Personalization'>;
 
 const PersonalizationScreen = () => {
   const {theme, primaryColor, setPrimaryColor} = useTheme();
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<PersonalizationRouteProp>();
+  const isFirstRun = route.params?.firstRun === true;
+
+  useEffect(() => {
+    if (!isFirstRun) {
+      return;
+    }
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => {
+      sub.remove();
+    };
+  }, [isFirstRun]);
 
   const selectedHex = useMemo(() => {
     if (primaryColor) return primaryColor.toLowerCase();
@@ -26,13 +39,21 @@ const PersonalizationScreen = () => {
     return def ? def.hex.toLowerCase() : null;
   }, [primaryColor]);
 
+  const goToHome = () => {
+    if (isFirstRun) {
+      navigation.reset({index: 0, routes: [{name: 'Home'}]});
+    } else {
+      navigation.navigate('Home');
+    }
+  };
+
   const handleSelect = (option: PrimaryColorOption) => {
     if (option.id === DEFAULT_PRIMARY_COLOR_ID) {
       setPrimaryColor(null);
     } else {
       setPrimaryColor(option.hex);
     }
-    navigation.navigate('Home');
+    goToHome();
   };
 
   return (
@@ -85,7 +106,7 @@ const PersonalizationScreen = () => {
         <Pressable
           onPress={() => {
             setPrimaryColor(null);
-            navigation.navigate('Home');
+            goToHome();
           }}
           style={[
             styles.resetButton,
