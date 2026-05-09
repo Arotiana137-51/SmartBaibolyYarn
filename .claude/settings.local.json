@@ -39,7 +39,10 @@
       "mcp__ide__getDiagnostics",
       "WebFetch(domain:security.snyk.io)",
       "Bash(yarn install *)",
-      "Bash(snyk test *)"
+      "Bash(snyk test *)",
+      "Read(//c/Users/Arotiana/.android/ndk/**)",
+      "Read(//c/Users/Arotiana/.android/cmdline-tools/**)",
+      "Read(//c/Users/Arotiana/.android/cmdline-tools/latest/bin/**)"
     ]
   }
 }

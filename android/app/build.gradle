@@ -109,7 +109,7 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
+        versionCode 8
         versionName "1.0.3"
         resConfigs "fr"
 
@@ -118,15 +118,7 @@ android {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
 
-        // Force 16KB page size alignment via CMake flags
-        externalNativeBuild {
-            cmake {
-                cppFlags "-O2"
-                arguments "-DANDROID_STL=c++_shared",
-                          "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384",
-                          "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
-            }
-        }
+        // NDK r28+ automatically aligns to 16KB page size
     }
     // Disabled for AAB builds (Play Store). AAB format handles ABI splits automatically.
     // splits {
