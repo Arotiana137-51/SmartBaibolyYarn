@@ -85,6 +85,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
         disabled={!onHymnLongPress}
       >
         <Text
+          maxFontSizeMultiplier={1.3}
           style={[
             styles.hymnNumber,
             {
@@ -98,6 +99,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
           {item.lines.map((line) => (
             <Text
               key={line.id}
+              maxFontSizeMultiplier={1.3}
               style={[
                 styles.hymnText,
                 {
@@ -115,6 +117,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
       {chorusLines.length > 0 ? (
         <View style={[styles.chorusBlock, {backgroundColor: chorusBackground}]}>
           <Text
+            maxFontSizeMultiplier={1.3}
             style={[
               styles.chorusLabel,
               {
@@ -129,6 +132,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
             {chorusLines.map((line) => (
               <Text
                 key={`chorus-${line.id}`}
+                maxFontSizeMultiplier={1.3}
                 style={[
                   styles.hymnText,
                   {
@@ -273,6 +277,7 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
           <View style={styles.headerContainer}>
             {hasTitle ? (
               <Text
+                maxFontSizeMultiplier={1.3}
                 style={[
                   styles.headerTitle,
                   {

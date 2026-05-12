@@ -140,3 +140,19 @@ export const scaleFontSize = (baseSize: number, scale: number = 1) => {
 export const getAccessibleFontSize = (size: number) => {
   return Math.max(size, 16);
 };
+
+/**
+ * Device-aware font scaling.
+ * Combines design base size with user pref AND device width, so the same
+ * 18pt body text isn't crushed on a 320dp phone or stretched on a tablet.
+ * Width factor is clamped to [0.85, 1.25]; user scale capped at 2.0.
+ */
+export const responsiveFontSize = (
+  baseSize: number,
+  userScale: number = 1,
+  deviceWidth: number = 375,
+) => {
+  const widthFactor = Math.min(Math.max(deviceWidth / 375, 0.85), 1.25);
+  const cappedUser = Math.min(Math.max(userScale, 0.5), 2);
+  return Math.max(12, Math.round(baseSize * cappedUser * widthFactor));
+};

@@ -119,6 +119,7 @@ const VerseItem = React.memo(
         disabled={!onVerseDoubleTap && !onVerseLongPress}
       >
         <Text
+          maxFontSizeMultiplier={1.3}
           style={[
             TEXT_STYLES.body,
             {

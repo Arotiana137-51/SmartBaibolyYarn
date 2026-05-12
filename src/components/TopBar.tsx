@@ -1,11 +1,11 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View, StatusBar, Platform} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {Pressable, StyleSheet, Text, View, StatusBar} from 'react-native';
 import {AppMode} from '../screens/MainScreen';
 import AnimatedHamburger from './AnimatedHamburger';
 import {useTheme} from '../contexts/ThemeContext';
+import {useAdaptiveInsets} from '../hooks/useAdaptiveInsets';
+import {useResponsive} from '../theme/responsive';
 
-const TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
 const EXTRA_TOP_PADDING = 6;
 
 const HYMNAL_CATEGORIES = [
@@ -38,7 +38,13 @@ const TopBar: React.FC<TopBarProps> = ({
   onHymnalCategoryChange,
 }) => {
   const {theme} = useTheme();
-  const insets = useSafeAreaInsets();
+  const insets = useAdaptiveInsets();
+  const {isAndroid, isSmall, isXSmall, scale, fontFor} = useResponsive();
+  const toolbarHeight = Math.max(isAndroid ? 56 : 44, scale(isAndroid ? 52 : 44));
+  const iconButtonWidth = Math.max(40, scale(44));
+  const arrowFontSize = fontFor(isXSmall ? 28 : 32);
+  const titleFontSize = fontFor(isSmall ? 16 : 18);
+  const tabFontSize = fontFor(isXSmall ? 12 : isSmall ? 13 : 14);
   const handleTitlePress = () => {
     if (appMode === 'hymnal' && onHymnalCategoryChange && currentHymnalCategory) {
       // Cycle through hymnal categories
@@ -62,7 +68,7 @@ const TopBar: React.FC<TopBarProps> = ({
         {
           backgroundColor: theme.colors.navBackground,
           paddingTop: insets.top + EXTRA_TOP_PADDING,
-          height: TOOLBAR_HEIGHT + insets.top + EXTRA_TOP_PADDING,
+          height: toolbarHeight + insets.top + EXTRA_TOP_PADDING,
         },
       ]}
     >
@@ -79,11 +85,12 @@ const TopBar: React.FC<TopBarProps> = ({
         }}
         style={({pressed}) => [
           styles.iconButton,
+          {width: iconButtonWidth},
           pressed && {opacity: 0.85},
         ]}
         onPress={onPreviousPress}
       >
-        <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>‹‹</Text>
+        <Text style={[styles.buttonText, {color: '#FFFFFF', fontSize: arrowFontSize}]}>‹‹</Text>
       </Pressable>
       
       {appMode === 'hymnal' && onHymnalCategoryChange ? (
@@ -114,9 +121,13 @@ const TopBar: React.FC<TopBarProps> = ({
               onPress={() => onHymnalCategoryChange(category.key)}
             >
               <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
                 style={[
                   styles.categoryTabText,
                   {
+                    fontSize: tabFontSize,
                     color:
                       currentHymnalCategory === category.key
                         ? '#FFFFFF'
@@ -140,7 +151,14 @@ const TopBar: React.FC<TopBarProps> = ({
           style={({pressed}) => [styles.titleContainer, pressed && {opacity: 0.92}]}
           onPress={handleTitlePress}
         >
-          <Text style={[styles.title, {color: '#FFFFFF'}]}>{displayTitle}</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            style={[styles.title, {color: '#FFFFFF', fontSize: titleFontSize}]}
+          >
+            {displayTitle}
+          </Text>
         </Pressable>
       )}
       
@@ -153,11 +171,12 @@ const TopBar: React.FC<TopBarProps> = ({
         }}
         style={({pressed}) => [
           styles.iconButton,
+          {width: iconButtonWidth},
           pressed && {opacity: 0.85},
         ]}
         onPress={onNextPress}
       >
-        <Text style={[styles.buttonText, {color: '#FFFFFF'}]}>{'››'}</Text>
+        <Text style={[styles.buttonText, {color: '#FFFFFF', fontSize: arrowFontSize}]}>{'››'}</Text>
       </Pressable>
 
       {/* Hamburger menu - always present */}
@@ -192,7 +211,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconButton: {
-    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
@@ -200,7 +218,6 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 36,
     fontWeight: '900',
   },
   titleContainer: {
@@ -211,7 +228,6 @@ const styles = StyleSheet.create({
   },
   title: {
     color: 'white',
-    fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.15,
     textAlign: 'center',
@@ -230,15 +246,14 @@ const styles = StyleSheet.create({
   },
   categoryTab: {
     flex: 1,
-    paddingHorizontal: 10,
+    flexShrink: 1,
+    paddingHorizontal: 6,
     paddingVertical: 8,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 60,
   },
   categoryTabText: {
-    fontSize: 14,
     fontWeight: '500',
     color: '#ecf0f1',
   },

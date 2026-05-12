@@ -41,6 +41,7 @@ import {useTheme} from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
+import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
 import {
   enqueueIssueReport,
@@ -48,7 +49,7 @@ import {
   IssueReport,
 } from '../services/reporting/issueReportQueue';
 
-const TOP_BAR_TOOLBAR_HEIGHT = Platform.OS === 'android' ? 56 : 44;
+const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
 const HAMBURGER_CARET_HEIGHT = 12;
 
@@ -62,6 +63,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const {theme, isDarkMode, setDarkMode} = useTheme();
   const insets = useSafeAreaInsets();
+  const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
+  const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const flatListRef = useRef<FlatList>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);

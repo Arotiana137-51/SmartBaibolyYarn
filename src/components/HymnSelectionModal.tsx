@@ -8,11 +8,11 @@ import {
   View,
   Alert,
   useWindowDimensions,
-  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Hymn } from '../hooks/useHymnsData';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAdaptiveInsets } from '../hooks/useAdaptiveInsets';
+import { useResponsive } from '../theme/responsive';
 
 interface HymnSelectionModalProps {
   visible: boolean;
@@ -42,7 +42,7 @@ const lightenColor = (hex: string, percent: number): string => {
   return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1)}`;
 };
 
-const TAB_ROW_HEIGHT = 60;
+const TAB_ROW_BASE_HEIGHT = 60;
 
 const CATEGORY_MAX: Record<string, number> = {
   ffpm: 827,
@@ -59,9 +59,15 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   onHymnSelect,
 }) => {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const insets = useAdaptiveInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const tabsTopInset = Platform.OS === 'ios' ? insets.top : 0;
+  const { verticalScale, fontFor, isSmall } = useResponsive();
+  const tabsTopInset = insets.top;
+  const tabRowHeight = Math.max(TAB_ROW_BASE_HEIGHT - (isSmall ? 8 : 0), verticalScale(TAB_ROW_BASE_HEIGHT));
+  const inputFieldHeight = Math.max(44, verticalScale(56));
+  const tabFontSize = fontFor(isSmall ? 15 : 18);
+  const inputFontSize = fontFor(isSmall ? 20 : 22);
+  const keypadFontSize = fontFor(22);
   const [selectedCategory, setSelectedCategory] = useState<string>(currentCategory || 'ffpm');
   const [inputNumber, setInputNumber] = useState<string>('');
 
@@ -187,8 +193,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                 <Text
                   style={[
                     styles.keypadText,
-                    { color: '#FFFFFF' },
-                    button === 'OK' && styles.keypadSpecialText,
+                    { color: '#FFFFFF', fontSize: button === 'OK' ? Math.round(keypadFontSize * 0.85) : keypadFontSize },
                   ]}
                 >
                   {button}
@@ -211,7 +216,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.15)' }]} onPress={handleClose}>
         <View style={styles.modalContent} pointerEvents="box-none">
           <View style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset, backgroundColor: theme.colors.navBackground }]}>
-            <View style={styles.categoryTabsRow}>
+            <View style={[styles.categoryTabsRow, { height: tabRowHeight }]}>
               {CATEGORIES.map((category) => (
                 <Pressable
                   key={category.key}
@@ -228,9 +233,12 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                   onPress={() => handleCategoryChange(category.key)}
                 >
                   <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
                     style={[
                       styles.categoryTabText,
-                      { color: '#FFFFFF' },
+                      { color: '#FFFFFF', fontSize: tabFontSize },
                     ]}
                   >
                     {category.label}
@@ -240,18 +248,19 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
             </View>
           </View>
 
-          <View style={[styles.keypadPanel, { top: tabsTopInset + TAB_ROW_HEIGHT }]} pointerEvents="box-none">
+          <View style={[styles.keypadPanel, { top: tabsTopInset + tabRowHeight }]} pointerEvents="box-none">
             <Pressable style={styles.keypadCard} onPress={() => {}}>
               <View style={[styles.inputContainer, { width: keypadWidth }]}>
                 <View style={[
-                  styles.inputField, 
-                  { 
+                  styles.inputField,
+                  {
+                    height: inputFieldHeight,
                     marginRight: Math.max(8, Math.floor(keypadButtonSize * 0.12)),
                     backgroundColor: theme.colors.backgroundPrimary,
                     borderColor: theme.colors.divider,
                   }
                 ]}>
-                  <Text style={[styles.inputText, { color: theme.colors.textPrimary }]}>
+                  <Text style={[styles.inputText, { color: theme.colors.textPrimary, fontSize: inputFontSize }]}>
                     {inputNumber}
                   </Text>
                 </View>
@@ -297,7 +306,7 @@ const styles = StyleSheet.create({
   },
   categoryTabsRow: {
     flexDirection: 'row',
-    height: TAB_ROW_HEIGHT,
+    height: TAB_ROW_BASE_HEIGHT,
   },
   categoryTab: {
     flex: 1,
@@ -317,7 +326,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    top: TAB_ROW_HEIGHT,
+    top: TAB_ROW_BASE_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },

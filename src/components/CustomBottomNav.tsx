@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppMode } from '../screens/MainScreen';
 import {useTheme} from '../contexts/ThemeContext';
+import { useAdaptiveInsets } from '../hooks/useAdaptiveInsets';
+import { SPACING, useResponsive } from '../theme/responsive';
 
 interface CustomBottomNavProps {
   activeMode: AppMode;
@@ -27,8 +28,11 @@ const hexToRgba = (hex: string, alpha: number) => {
 };
 
 const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress }) => {
-  const insets = useSafeAreaInsets();
+  const insets = useAdaptiveInsets();
   const {theme} = useTheme();
+  const { verticalScale, fontFor, isSmall } = useResponsive();
+  const segmentHeight = Math.max(38, verticalScale(42));
+  const labelFontSize = fontFor(isSmall ? 14 : 16);
 
   const trackBackground = theme.isDark
     ? hexToRgba(theme.colors.readerBackground, 0.85)
@@ -49,7 +53,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
         styles.container,
         {
           backgroundColor: 'transparent',
-          bottom: Math.max(insets.bottom, 0) + 15,
+          bottom: insets.bottom + SPACING.md,
           paddingBottom: 0,
         },
       ]}
@@ -67,6 +71,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           onPress={() => onTabPress('bible')}
           style={({pressed}) => [
             styles.segment,
+            { height: segmentHeight },
             activeMode === 'bible'
               ? {backgroundColor: theme.colors.navBackground}
               : null,
@@ -78,6 +83,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           <Text
             style={[
               styles.segmentText,
+              { fontSize: labelFontSize },
               activeMode === 'bible'
                 ? {color: '#FFFFFF', fontWeight: '700'}
                 : {color: theme.colors.textPrimary, fontWeight: '600'},
@@ -91,6 +97,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           onPress={() => onTabPress('hymnal')}
           style={({pressed}) => [
             styles.segment,
+            { height: segmentHeight },
             activeMode === 'hymnal'
               ? {backgroundColor: theme.colors.navBackground}
               : null,
@@ -102,6 +109,7 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           <Text
             style={[
               styles.segmentText,
+              { fontSize: labelFontSize },
               activeMode === 'hymnal'
                 ? {color: '#FFFFFF', fontWeight: '700'}
                 : {color: theme.colors.textPrimary, fontWeight: '600'},
