@@ -128,25 +128,63 @@ const buildHtml = (
     return Array.prototype.slice.call(editor.querySelectorAll('.vt'));
   }
 
+  function cumulativeOffsetBefore(vtNodes, i) {
+    var total = 0;
+    for (var k = 0; k < i; k++) {
+      total += vtNodes[k].textContent.length;
+      total += SEPARATOR.length;
+    }
+    return total;
+  }
+
+  function vtStartRange(vt) {
+    var r = document.createRange();
+    r.setStart(vt, 0);
+    r.setEnd(vt, 0);
+    return r;
+  }
+
   // Map a DOM range endpoint (node, offset) to an index in concatenated chapterText.
   // chapterText = vt[0].textContent + SEP + vt[1].textContent + SEP + ...
+  // Handles three cases:
+  //   1) endpoint is inside a .vt — measure inner range
+  //   2) endpoint is on an ancestor (e.g., <p> or #editor) that does not match
+  //      vt === node || vt.contains(node) — clamp to the nearest .vt boundary
+  //      using DOM position comparison. Without this, multi-paragraph selections
+  //      land their endContainer on a <p>, the loop falls through, and the
+  //      highlight overshoots into the end of the chapter.
   function endpointToOffset(node, offset) {
     var vtNodes = getVtNodes();
-    var total = 0;
+    if (!vtNodes.length) return 0;
+
     for (var i = 0; i < vtNodes.length; i++) {
       var vt = vtNodes[i];
       if (vt === node || vt.contains(node)) {
-        // Build a range from start of vt to (node, offset) and measure.
         var r = document.createRange();
         r.setStart(vt, 0);
         try { r.setEnd(node, offset); } catch (e) { r.setEnd(vt, vt.childNodes.length); }
-        var inner = r.toString().length;
-        return total + inner;
+        return cumulativeOffsetBefore(vtNodes, i) + r.toString().length;
       }
-      total += vt.textContent.length;
-      if (i < vtNodes.length - 1) total += SEPARATOR.length;
     }
-    return total;
+
+    var probe;
+    try {
+      probe = document.createRange();
+      probe.setStart(node, offset);
+      probe.setEnd(node, offset);
+    } catch (e) { return 0; }
+
+    for (var j = 0; j < vtNodes.length; j++) {
+      var vtStart = vtStartRange(vtNodes[j]);
+      if (probe.compareBoundaryPoints(Range.START_TO_START, vtStart) <= 0) {
+        if (j === 0) return 0;
+        var prev = vtNodes[j - 1];
+        return cumulativeOffsetBefore(vtNodes, j - 1) + prev.textContent.length;
+      }
+    }
+
+    var lastIdx = vtNodes.length - 1;
+    return cumulativeOffsetBefore(vtNodes, lastIdx) + vtNodes[lastIdx].textContent.length;
   }
 
   function getSelectionOffsets() {
@@ -402,6 +440,14 @@ const buildHtml = (
       if (!off) { rn({ type: 'NO_SELECTION' }); return; }
       clearVisualFormatting(off.start, off.end);
       rn({ type: 'ERASE_RANGE', start: off.start, end: off.end });
+    },
+    eraseRange: function(start, end) {
+      if (typeof start !== 'number' || typeof end !== 'number' || end <= start) {
+        rn({ type: 'NO_SELECTION' });
+        return;
+      }
+      clearVisualFormatting(start, end);
+      rn({ type: 'ERASE_RANGE', start: start, end: end });
     }
   };
 
@@ -415,6 +461,27 @@ const buildHtml = (
     // Don't spam RN while applying initial marks.
     if (__suppressMarkPosts) return;
     notifySelection();
+  });
+
+  // Tap on an existing highlight -> ask RN to show a delete popover. Skip when
+  // there's an active text selection so we don't pre-empt the native selection
+  // toolbar.
+  editor.addEventListener('click', function(ev) {
+    var t = ev.target;
+    while (t && t !== editor) {
+      if (t.nodeType === 1 && t.tagName === 'MARK' && t.classList && t.classList.contains('hl')) {
+        var sel = window.getSelection();
+        if (sel && !sel.isCollapsed) return;
+        var start = endpointToOffset(t, 0);
+        var end = endpointToOffset(t, t.childNodes.length);
+        if (end > start) {
+          var color = (t.style && t.style.backgroundColor) || '';
+          rn({ type: 'HIGHLIGHT_TAP', start: start, end: end, color: color });
+        }
+        return;
+      }
+      t = t.parentNode;
+    }
   });
 
   applyInitial();
@@ -445,6 +512,9 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   const [selectionOffsets, setSelectionOffsets] = useState<
     {start: number; end: number} | null
   >(null);
+  const [tappedHighlight, setTappedHighlight] = useState<
+    {start: number; end: number; color: string} | null
+  >(null);
   
   const highlightColors = [
     '#FFEB3B', // Yellow
@@ -462,7 +532,10 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   ];
 
   React.useEffect(() => {
-    if (visible) setPendingMarks(initialMarks);
+    if (visible) {
+      setPendingMarks(initialMarks);
+      setTappedHighlight(null);
+    }
   }, [visible, initialMarks]);
 
   const fontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
@@ -516,10 +589,16 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
     try {
       const msg = JSON.parse(e.nativeEvent.data);
       if (msg.type === 'MARK' && msg.mark) {
+        const maxLen = chapter?.chapterText.length ?? Number.MAX_SAFE_INTEGER;
+        const rawStart = Number(msg.mark.start);
+        const rawEnd = Number(msg.mark.end);
+        const start = Math.max(0, Math.min(maxLen, rawStart));
+        const end = Math.max(0, Math.min(maxLen, rawEnd));
+        if (!(end > start)) return;
         const m: ChapterMark = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          start: msg.mark.start,
-          end: msg.mark.end,
+          start,
+          end,
           style: msg.mark.style as MarkStyle,
           color:
             msg.mark.style === 'highlight'
@@ -581,17 +660,29 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
           return next;
         });
         setSelectionOffsets(null);
+        setTappedHighlight(null);
       } else if (msg.type === 'NO_SELECTION') {
         setSelectionOffsets(null);
       } else if (msg.type === 'CLEARED') {
         setPendingMarks([]);
         setSelectionOffsets(null);
+        setTappedHighlight(null);
       } else if (msg.type === 'SELECTION') {
         const off = msg.offsets;
         if (off && typeof off.start === 'number' && typeof off.end === 'number') {
           setSelectionOffsets({start: off.start, end: off.end});
         } else {
           setSelectionOffsets(null);
+        }
+      } else if (msg.type === 'HIGHLIGHT_TAP') {
+        const hStart = Number(msg.start);
+        const hEnd = Number(msg.end);
+        if (Number.isFinite(hStart) && Number.isFinite(hEnd) && hEnd > hStart) {
+          setTappedHighlight({
+            start: hStart,
+            end: hEnd,
+            color: typeof msg.color === 'string' ? msg.color : '',
+          });
         }
       }
     } catch {
@@ -609,6 +700,14 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
     // onMessage. This avoids the race where RN's selectionOffsets state may
     // be cleared by the time the user taps Fafao.
     inject('window.RNEditor && window.RNEditor.eraseSelection && window.RNEditor.eraseSelection(); true;');
+  };
+
+  const handleDeleteTappedHighlight = () => {
+    if (!tappedHighlight) return;
+    inject(
+      `window.RNEditor && window.RNEditor.eraseRange && window.RNEditor.eraseRange(${tappedHighlight.start}, ${tappedHighlight.end}); true;`,
+    );
+    setTappedHighlight(null);
   };
 
   return (
@@ -702,6 +801,66 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
               />
             ) : null}
           </View>
+
+          {tappedHighlight ? (
+            <View
+              style={[
+                styles.highlightTapBar,
+                {
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  borderColor: theme.colors.divider,
+                },
+              ]}>
+              <View style={styles.highlightTapInfo}>
+                {tappedHighlight.color ? (
+                  <View
+                    style={[
+                      styles.highlightSwatch,
+                      {backgroundColor: tappedHighlight.color},
+                    ]}
+                  />
+                ) : null}
+                <Text
+                  style={[
+                    styles.highlightTapLabel,
+                    {color: theme.colors.textPrimary},
+                  ]}>
+                  Loko voafidy
+                </Text>
+              </View>
+              <View style={styles.highlightTapActions}>
+                <Pressable
+                  style={[
+                    styles.highlightTapButton,
+                    {backgroundColor: theme.colors.backgroundSecondary},
+                  ]}
+                  onPress={() => setTappedHighlight(null)}>
+                  <Text
+                    style={[
+                      styles.highlightTapButtonText,
+                      {color: theme.colors.textPrimary},
+                    ]}>
+                    Hidio
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.highlightTapButton,
+                    styles.highlightTapDelete,
+                    {backgroundColor: theme.colors.accentBlue},
+                  ]}
+                  onPress={handleDeleteTappedHighlight}>
+                  <Text
+                    style={[
+                      styles.highlightTapButtonText,
+                      {color: '#FFFFFF'},
+                    ]}>
+                    Fafao
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
 
           <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
             <Pressable
@@ -859,6 +1018,52 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
     borderRadius: 8,
+  },
+  highlightTapBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  highlightTapInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+  },
+  highlightSwatch: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.2)',
+  },
+  highlightTapLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  highlightTapActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  highlightTapButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  highlightTapDelete: {
+    minWidth: 72,
+  },
+  highlightTapButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   footer: {
     flexDirection: 'row',
