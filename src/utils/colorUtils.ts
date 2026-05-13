@@ -88,7 +88,7 @@ export const dimHighlightForLightMode = (color: string): string => {
   if (typeof color !== 'string') return color;
   const trimmed = color.trim();
   if (!trimmed.startsWith('#')) return trimmed;
-  return lightenHex(trimmed, 0.37);
+  return lightenHex(trimmed, 0.23);
 };
 
 // WCAG-style relative luminance for "is this color dark?" decisions.
