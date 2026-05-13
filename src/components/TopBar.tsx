@@ -72,10 +72,7 @@ const TopBar: React.FC<TopBarProps> = ({
         },
       ]}
     >
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={theme.colors.navBackground}
-      />
+      <StatusBar barStyle="light-content" translucent />
       <Pressable
         accessibilityLabel="Previous chapter"
         android_ripple={{

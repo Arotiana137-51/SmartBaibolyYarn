@@ -130,13 +130,13 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     }
 
     if (number > maxNumber) {
-      Alert.alert('Tsy mety', `Tsy maintsy latsaky na mitovy amin'ny ${maxNumber} ny laharana.`);
+      Alert.alert('Tsy hita', "Tsy misy an'io hira io anaty fihirana");
       return;
     }
 
     const hymn = filteredHymns.find(h => h.number === number);
     if (!hymn) {
-      Alert.alert('Tsy hita', `Tsy misy hira laharana ${number} amin'ity sokajy ity.`);
+      Alert.alert('Tsy hita', "Tsy misy an'io hira io anaty fihirana");
       return;
     }
 

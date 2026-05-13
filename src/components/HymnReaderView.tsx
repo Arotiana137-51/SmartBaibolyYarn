@@ -207,14 +207,6 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     return {chorusLines: chorus, hymnStanzas: stanzas};
   }, [hymnVerses]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
   const stanzaCardBackground = theme.isDark
     ? hexToRgba('#FFFFFF', 0.015)
     : hexToRgba('#000000', 0.01);
@@ -248,6 +240,14 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       onHymnLongPress,
     ],
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   // Mirror BibleReaderView's tuning so low-end phones get the same treatment.
   // Hymn stanza counts are small (typically 4-8), so high values won't hurt either.

@@ -50,7 +50,7 @@ function SelectionTopBarInner<T extends string>({
         },
       ]}
     >
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.navBackground} />
+      <StatusBar barStyle="light-content" translucent />
       <View style={styles.tabsRow}>
         {tabs.map((tab, index) => {
           const active = tab.key === activeKey;

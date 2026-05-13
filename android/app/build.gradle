@@ -109,8 +109,8 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.0.3"
+        versionCode 9
+        versionName "1.0.4"
         resConfigs "fr"
 
         // 16KB page size support - ensures native libs are aligned to 16KB boundaries
@@ -185,6 +185,11 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+    // Provides Activity.enableEdgeToEdge(), the SDK 35-compatible replacement
+    // for the deprecated WindowCompat.setDecorFitsSystemWindows + statusBarColor
+    // / navigationBarColor APIs flagged by Play Console.
+    implementation("androidx.activity:activity-ktx:1.9.3")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
