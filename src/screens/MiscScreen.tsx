@@ -17,6 +17,7 @@ import {normalizeTextPreservingMarkers} from '../utils/bibleTextUtils';
 type FanekemItem = {
   id: string;
   title: string;
+  displayTitle: string;
   content: string;
 };
 
@@ -35,7 +36,12 @@ const LAHARANA_3_SORATRA_MASINA =
 const LAHARANA_4_VAVOLOMBELONA =
   "Manambara ny finoantsika an’i Jesoa Kristy isika, dia:\n- araka ny tenin’i Jaona Mpanao Batisa hoe: “Indro ny Zanak’ondrin’ Andriamanitra Izay manaisotra ny fahotan ‘izao tontolo izao” (Jao. 1: 29)\n- sy araka ny teny nataon’i Andrea hoe: “Efa nahita ny Mesia izahay” (Jao. 1: 41)\n- sy araka ny teny nataon’i Natanaela hoe: “Raby ô, Ianao no zanak’Andriamanitra, Ianao no Mpanjaka ny Israely” (Jao. 1: 49)\n- sy araka ny teny nataon’ny Samaritana hoe: “Ny tenanay no nandre, ka fantatray fa Izy tokoa no Mpamonjy izao tontolo izao” (Jao. 4: 42)\n- sy araka ny teny nataon’i Petera hoe: “Ianao no Kristy Zanak’Andriamanitra velona”, “Ianao no manana ny tenin’ny fiainana mandrakizay” (Mat. 16: 16; Jao. 6: 68)\n- ary araka ny teny nataon’i Tomasy hoe: “Tompoko sy Andriamanitro”. (Jao. 20: 28)\n\nAmen.";
 
-const BASE_ITEMS: Array<{id: string; title: string; content: string}> = [
+const BASE_ITEMS: Array<{
+  id: string;
+  title: string;
+  displayTitle?: string;
+  content: string;
+}> = [
   {
     id: 'divers-1-fanekem-apostolika',
     title: 'Fanekem-pinoana Apostolika',
@@ -49,11 +55,16 @@ const BASE_ITEMS: Array<{id: string; title: string; content: string}> = [
   {
     id: 'divers-3-fanekem-soratra-masina',
     title: 'Fanekem-pinoana araka ny Soratra Masina',
+    // Split across 2 lines so the label doesn't overflow on narrower screens.
+    displayTitle: 'Fanekem-pinoana\naraka ny Soratra Masina',
     content: LAHARANA_3_SORATRA_MASINA,
   },
   {
     id: 'divers-4-fanekem-vavolombelona',
     title: "Fanekem-pinoan'ireo vavolombelona niara-belona tamin'ny Tompo",
+    // Split across 3 lines for cross-platform readability.
+    displayTitle:
+      "Fanekem-pinoan'ireo\nvavolombelona niara-belona\ntamin'ny Tompo",
     content: LAHARANA_4_VAVOLOMBELONA,
   },
   {
@@ -69,10 +80,16 @@ const MiscScreen = () => {
   const {theme} = useTheme();
   const navigation = useNavigation<MiscScreenNavigationProp>();
 
-  const items: FanekemItem[] = BASE_ITEMS.map(item => ({
-    ...item,
-    title: normalizeTextPreservingMarkers(item.title),
-  }));
+  const items: FanekemItem[] = BASE_ITEMS.map(item => {
+    const normalizedTitle = normalizeTextPreservingMarkers(item.title);
+    return {
+      ...item,
+      title: normalizedTitle,
+      displayTitle: item.displayTitle
+        ? normalizeTextPreservingMarkers(item.displayTitle)
+        : normalizedTitle,
+    };
+  });
 
   const styles = useMemo(() => {
     return StyleSheet.create({
@@ -154,7 +171,7 @@ const MiscScreen = () => {
               <View style={styles.numberBadge}>
                 <Text style={styles.numberText}>{index + 1}</Text>
               </View>
-              <Text style={styles.buttonText}>{item.title}</Text>
+              <Text style={styles.buttonText}>{item.displayTitle}</Text>
             </View>
           </Pressable>
         ))}

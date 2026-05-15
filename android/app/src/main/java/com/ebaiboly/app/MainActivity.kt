@@ -17,7 +17,9 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
-    super.onCreate(savedInstanceState)
+    // Pass null to prevent restoration of react-native-screens fragments
+    // (see https://github.com/software-mansion/react-native-screens/issues/17)
+    super.onCreate(null)
 
     val controller = WindowCompat.getInsetsController(window, window.decorView)
     controller.isAppearanceLightStatusBars = true

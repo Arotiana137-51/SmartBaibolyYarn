@@ -56,6 +56,19 @@ export const useBibleHistory = () => {
     }
   }, []);
 
+  // Remove a single entry by id
+  const removeItem = useCallback(async (id: string) => {
+    try {
+      setHistory(prev => {
+        const updated = prev.filter(item => item.id !== id);
+        AsyncStorage.setItem(BIBLE_HISTORY_KEY, JSON.stringify(updated));
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error removing Bible history item:', error);
+    }
+  }, []);
+
   // Clear all history
   const clearHistory = useCallback(async () => {
     try {
@@ -75,6 +88,7 @@ export const useBibleHistory = () => {
     history,
     isLoading,
     logAccess,
+    removeItem,
     clearHistory,
     loadHistory,
   };

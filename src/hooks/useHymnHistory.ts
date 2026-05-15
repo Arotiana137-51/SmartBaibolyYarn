@@ -55,6 +55,19 @@ export const useHymnHistory = () => {
     }
   }, []);
 
+  // Remove a single entry by id
+  const removeItem = useCallback(async (id: string) => {
+    try {
+      setHistory(prev => {
+        const updated = prev.filter(item => item.id !== id);
+        AsyncStorage.setItem(HYMN_HISTORY_KEY, JSON.stringify(updated));
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error removing hymn history item:', error);
+    }
+  }, []);
+
   // Clear all history
   const clearHistory = useCallback(async () => {
     try {
@@ -74,6 +87,7 @@ export const useHymnHistory = () => {
     history,
     isLoading,
     logAccess,
+    removeItem,
     clearHistory,
     loadHistory,
   };

@@ -24,34 +24,57 @@ const FanekemDetailsScreen = () => {
                           normalizedContent.includes('Jaona Mpanao Batisa');
 
   const styles = useMemo(() => {
+    // Body size drives vertical rhythm so spacing scales with Dynamic Type.
+    const BODY_SIZE = 18;
+    const BODY_LINE_HEIGHT = 28; // ~1.55× — generous but not cavernous.
+
+    // Detect a closing "Amen(a)" so we can give it a small hierarchy bump.
     return StyleSheet.create({
       container: {
         flex: 1,
         backgroundColor: theme.colors.backgroundPrimary,
       },
       content: {
-        paddingHorizontal: 16,
-        paddingVertical: 16,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 32,
       },
       title: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: '800',
+        letterSpacing: 0.2,
         color: textColor,
-        marginBottom: 12,
+        marginBottom: 20,
         textAlign: 'left',
       },
       body: {
-        fontSize: 18,
-        lineHeight: 30,
+        fontSize: BODY_SIZE,
+        lineHeight: BODY_LINE_HEIGHT,
         color: textColor,
-        textAlign: 'justify',
-        marginBottom: 16,
+        // Left-aligned, not justified: justify creates ugly word gaps on
+        // narrow mobile widths.
+        textAlign: 'left',
+        marginBottom: BODY_SIZE * 0.7,
+      },
+      amen: {
+        fontSize: BODY_SIZE,
+        lineHeight: BODY_LINE_HEIGHT,
+        color: theme.colors.accentBlue,
+        fontWeight: '700',
+        textAlign: 'left',
+        marginTop: 4,
+        marginBottom: BODY_SIZE * 0.7,
       },
       emptyLine: {
-        height: 20,
+        // Small breathing space between paragraphs; the marginBottom on
+        // the paragraph itself does most of the work.
+        height: 4,
       },
     });
   }, [theme, textColor]);
+
+  // A short paragraph that is just "Amena"/"Amen." gets a distinct style.
+  const isAmenParagraph = (s: string) => /^amen[a]?\.?!?$/i.test(s.trim());
 
   return (
     <SafeAreaView style={styles.container}>
@@ -63,6 +86,13 @@ const FanekemDetailsScreen = () => {
           normalizedContent.split('\n').map((para, index) => {
             if (para.trim() === '') {
               return <View key={index} style={styles.emptyLine} />;
+            }
+            if (isAmenParagraph(para)) {
+              return (
+                <Text key={index} style={styles.amen}>
+                  {para}
+                </Text>
+              );
             }
             return (
               <Text key={index} style={styles.body}>
