@@ -94,7 +94,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     route.params?.selectedBook || null
   );
   const [currentChapter, setCurrentChapter] = useState<number>(
-    route.params?.selectedChapter || 119
+    route.params?.selectedChapter || 16
   );
   const [selectedVerseNumber, setSelectedVerseNumber] = useState<number | null>(
     route.params?.selectedVerse || null
@@ -262,7 +262,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
 
-    const defaultBook = books.find(b => b.name === 'Salamo') ?? books[0];
+    const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
     setCurrentBook({ id: defaultBook.id, name: defaultBook.name });
   }, [books, currentBook]);
 
