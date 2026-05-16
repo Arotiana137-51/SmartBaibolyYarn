@@ -10,6 +10,7 @@ import {
   renderBibleLineForReader,
   processBibleTextWithMetadataForReader,
 } from '../utils/bibleTextUtils';
+import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   buildChapterDisplay,
   buildLineSegments,
@@ -40,6 +41,8 @@ const FLOATING_BOTTOM_NAV_SPACER = {
 
 const EMPTY_MARKS: ChapterMark[] = [];
 
+export type SelectedVerseRange = {start: number; end: number} | null;
+
 const styleToTextStyle = (
   marks: ChapterMark[],
 ): {fontWeight?: 'bold'; fontStyle?: 'italic'; textDecorationLine?: 'underline'} => {
@@ -59,10 +62,12 @@ const VerseItem = React.memo(
     fontScale,
     transformText,
     selectedVerseNumber,
+    selectedVerseRange,
     verseMarks,
     isScrollingRef,
     onVerseDoubleTap,
     onVerseLongPress,
+    onInlineRefPress,
   }: {
     item: BibleVerse;
     theme: any;
@@ -70,10 +75,12 @@ const VerseItem = React.memo(
     jesusNameVariant: string;
     transformText: (text: string) => string;
     selectedVerseNumber?: number | null;
+    selectedVerseRange?: SelectedVerseRange;
     verseMarks: ChapterMark[];
     isScrollingRef: React.MutableRefObject<boolean>;
     onVerseDoubleTap?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
+    onInlineRefPress?: (ref: InlineBibleRef) => void;
   }) => {
     const isPsalmsOrProverbs = item.book_id === PSALMS_BOOK_ID || item.book_id === PROVERBS_BOOK_ID;
     const hasTitle = typeof item.title === 'string' && item.title.trim().length > 0;
@@ -86,13 +93,28 @@ const VerseItem = React.memo(
     const lineOffsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
     const hasMarks = verseMarks.length > 0;
 
+    const isInSelectedRange =
+      selectedVerseRange != null &&
+      item.verse_number >= selectedVerseRange.start &&
+      item.verse_number <= selectedVerseRange.end;
     const isSelected =
-      typeof selectedVerseNumber === 'number' && item.verse_number === selectedVerseNumber;
+      isInSelectedRange ||
+      (typeof selectedVerseNumber === 'number' &&
+        item.verse_number === selectedVerseNumber);
 
     const verseFontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
     const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER) + 3;
 
     const lastTapRef = useRef(0);
+
+    const handleInlineRefPress = useCallback(
+      (ref: InlineBibleRef) => {
+        // Avoid treating a ref tap as the first half of a verse double-tap.
+        lastTapRef.current = 0;
+        onInlineRefPress?.(ref);
+      },
+      [onInlineRefPress],
+    );
 
     const handlePress = () => {
       if (isScrollingRef.current) return;
@@ -230,6 +252,13 @@ const VerseItem = React.memo(
                     fontSize: Math.max(10, Math.round(verseFontSize * 0.92)),
                     fontStyle: 'italic',
                   },
+                  refTextStyle: onInlineRefPress
+                    ? {
+                        fontStyle: 'italic',
+                        color: theme.colors.accentBlue ?? theme.colors.verseNumber,
+                      }
+                    : undefined,
+                  onRefPress: handleInlineRefPress,
                 })}
               </Text>
             );
@@ -259,6 +288,9 @@ const VerseItem = React.memo(
     prev.fontScale === next.fontScale &&
     prev.jesusNameVariant === next.jesusNameVariant &&
     prev.selectedVerseNumber === next.selectedVerseNumber &&
+    prev.selectedVerseRange?.start === next.selectedVerseRange?.start &&
+    prev.selectedVerseRange?.end === next.selectedVerseRange?.end &&
+    prev.onInlineRefPress === next.onInlineRefPress &&
     prev.verseMarks === next.verseMarks &&
     prev.theme.colors.textPrimary === next.theme.colors.textPrimary &&
     prev.theme.colors.verseNumber === next.theme.colors.verseNumber &&
@@ -272,6 +304,8 @@ interface BibleReaderViewProps {
   onVerseDoubleTap?: (verse: BibleVerse) => void;
   onVerseLongPress?: (verse: BibleVerse) => void;
   selectedVerseNumber?: number | null;
+  selectedVerseRange?: SelectedVerseRange;
+  onInlineRefPress?: (ref: InlineBibleRef) => void;
   flatListRef?: React.RefObject<FlatList<any> | null>;
   headerText?: string | null;
   chapterMarks?: ChapterMark[];
@@ -284,6 +318,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   onVerseDoubleTap,
   onVerseLongPress,
   selectedVerseNumber,
+  selectedVerseRange,
+  onInlineRefPress,
   flatListRef,
   headerText,
   chapterMarks,
@@ -351,14 +387,27 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           jesusNameVariant={jesusNameVariant}
           transformText={transformText}
           selectedVerseNumber={selectedVerseNumber}
+          selectedVerseRange={selectedVerseRange}
           verseMarks={verseMarks}
           isScrollingRef={isScrollingRef}
           onVerseDoubleTap={onVerseDoubleTap}
           onVerseLongPress={onVerseLongPress}
+          onInlineRefPress={onInlineRefPress}
         />
       );
     },
-    [theme, fontScale, jesusNameVariant, transformText, selectedVerseNumber, marksByVerseId, onVerseDoubleTap, onVerseLongPress],
+    [
+      theme,
+      fontScale,
+      jesusNameVariant,
+      transformText,
+      selectedVerseNumber,
+      selectedVerseRange,
+      marksByVerseId,
+      onVerseDoubleTap,
+      onVerseLongPress,
+      onInlineRefPress,
+    ],
   );
 
   const onScrollToIndexFailed = useCallback(

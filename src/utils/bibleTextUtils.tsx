@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
+import { parseInlineBibleRefs, type InlineBibleRef } from './bibleRefs';
 
 const INLINE_ITALIC_START = '\u0002';
 const INLINE_ITALIC_END = '\u0003';
@@ -353,7 +354,64 @@ export const renderBibleLine = (line: string, baseTextStyle?: any) => {
   return renderInlineItalicSegments(line, baseTextStyle);
 };
 
-const renderInlineFootnoteSegments = (text: string, options: { baseTextStyle?: any; footnoteTextStyle?: any }) => {
+type InlineRefOptions = {
+  /** Style applied to the parenthesized ref text. */
+  refTextStyle?: any;
+  /** Invoked when the user taps an inline ref. */
+  onRefPress?: (ref: InlineBibleRef) => void;
+};
+
+/**
+ * Render a single plain text chunk (no `[*footnote]` markers) with optional
+ * Bible-reference linking. Inline italic markers are still honored inside
+ * the plain pieces between refs.
+ */
+const renderPlainWithRefs = (
+  text: string,
+  options: { baseTextStyle?: any } & InlineRefOptions,
+  keyPrefix: string,
+): React.ReactNode[] => {
+  const {baseTextStyle, refTextStyle, onRefPress} = options;
+  // Cheap fast path: if the chunk has no '(' at all it can't contain a ref,
+  // so skip the regex split entirely.
+  if (!text.includes('(')) {
+    return [
+      <Text key={`${keyPrefix}-nr`} style={baseTextStyle}>
+        {renderInlineItalicSegments(text, undefined)}
+      </Text>,
+    ];
+  }
+
+  const segments = parseInlineBibleRefs(text);
+  return segments.map((seg, idx) => {
+    if (seg.kind === 'ref') {
+      return (
+        <Text
+          key={`${keyPrefix}-ref-${idx}`}
+          // We attach onPress here so React Native treats the segment as a
+          // tap target without disrupting the surrounding inline flow.
+          onPress={onRefPress ? () => onRefPress(seg) : undefined}
+          suppressHighlighting={!onRefPress}
+          style={[baseTextStyle, refTextStyle]}>
+          {seg.text}
+        </Text>
+      );
+    }
+    return (
+      <Text key={`${keyPrefix}-tx-${idx}`} style={baseTextStyle}>
+        {renderInlineItalicSegments(seg.text, undefined)}
+      </Text>
+    );
+  });
+};
+
+const renderInlineFootnoteSegments = (
+  text: string,
+  options: {
+    baseTextStyle?: any;
+    footnoteTextStyle?: any;
+  } & InlineRefOptions,
+) => {
   if (!text) {
     return null;
   }
@@ -376,10 +434,18 @@ const renderInlineFootnoteSegments = (text: string, options: { baseTextStyle?: a
       return;
     }
 
+    // Plain text between footnote markers — still potentially contains
+    // parenthesized Bible refs.
     children.push(
-      <Text key={`tx-${idx}`} style={options.baseTextStyle}>
-        {renderInlineItalicSegments(part, undefined)}
-      </Text>
+      ...renderPlainWithRefs(
+        part,
+        {
+          baseTextStyle: options.baseTextStyle,
+          refTextStyle: options.refTextStyle,
+          onRefPress: options.onRefPress,
+        },
+        `tx-${idx}`,
+      ),
     );
   });
 
@@ -388,11 +454,17 @@ const renderInlineFootnoteSegments = (text: string, options: { baseTextStyle?: a
 
 export const renderBibleLineForReader = (
   line: string,
-  options?: { baseTextStyle?: any; footnoteTextStyle?: any }
+  options?: {
+    baseTextStyle?: any;
+    footnoteTextStyle?: any;
+  } & InlineRefOptions,
 ) => {
-  const baseTextStyle = options?.baseTextStyle;
-  const footnoteTextStyle = options?.footnoteTextStyle;
-  return renderInlineFootnoteSegments(line, { baseTextStyle, footnoteTextStyle });
+  return renderInlineFootnoteSegments(line, {
+    baseTextStyle: options?.baseTextStyle,
+    footnoteTextStyle: options?.footnoteTextStyle,
+    refTextStyle: options?.refTextStyle,
+    onRefPress: options?.onRefPress,
+  });
 };
 
 /**

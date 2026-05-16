@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useState, useRef} from 'react';
 import {
   Modal,
   Pressable,
@@ -15,7 +15,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
-import BibleReaderView from '../components/BibleReaderView';
+import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
@@ -43,6 +43,7 @@ import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
 import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   enqueueIssueReport,
   flushIssueReports,
@@ -98,6 +99,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [selectedVerseNumber, setSelectedVerseNumber] = useState<number | null>(
     route.params?.selectedVerse || null
   );
+  const [selectedVerseRange, setSelectedVerseRange] = useState<SelectedVerseRange>(null);
   const [bibleSelectionVisible, setBibleSelectionVisible] = useState(false);
 
   const [bibleSelectionProgress, setBibleSelectionProgress] = useState<{
@@ -137,6 +139,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
     if (typeof params.selectedVerse === 'number') {
       setMode('bible');
+      setSelectedVerseRange(null);
       setSelectedVerseNumber(params.selectedVerse);
       setShouldScrollToVerse(params.selectedVerse);
     }
@@ -317,19 +320,33 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   // Auto-scroll to selected verse when verses are loaded
   useEffect(() => {
-    if (shouldScrollToVerse !== null && verses.length > 0) {
-      const verseIndex = verses.findIndex(verse => verse.verse_number === shouldScrollToVerse);
-      if (verseIndex !== -1 && flatListRef.current) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToIndex({
-            index: verseIndex,
-            viewPosition: 0.2, // Position verse at 20% from top
-            animated: true,
-          });
-          setShouldScrollToVerse(null); // Reset after scrolling
-        }, 100);
-      }
+    if (shouldScrollToVerse === null || verses.length === 0) {
+      return;
     }
+
+    const verseIndex = verses.findIndex(
+      verse => verse.verse_number === shouldScrollToVerse,
+    );
+    if (verseIndex === -1) {
+      // Target verse missing in this chapter — unblock future scroll requests.
+      setShouldScrollToVerse(null);
+      return;
+    }
+
+    if (!flatListRef.current) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      flatListRef.current?.scrollToIndex({
+        index: verseIndex,
+        viewPosition: 0.2, // Position verse at 20% from top
+        animated: true,
+      });
+      setShouldScrollToVerse(null);
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [verses, shouldScrollToVerse]);
 
   useEffect(() => {
@@ -350,6 +367,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     if (mode !== 'bible') {
       setBibleSelectionVisible(false);
       setSelectedVerseNumber(null);
+      setSelectedVerseRange(null);
     }
   }, [mode]);
 
@@ -383,8 +401,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             : 'Fihirana '
         }${currentHymnNumber ?? ''}`.trim();
 
+  const handleInlineBibleRefPress = useCallback((ref: InlineBibleRef) => {
+    setMode('bible');
+    setSelectedVerseNumber(null);
+    setSelectedVerseRange({start: ref.verseStart, end: ref.verseEnd});
+    setCurrentBook({id: ref.bookId, name: ref.bookName});
+    setCurrentChapter(ref.chapter);
+    // Reset then re-set so repeated taps to the same verse still scroll.
+    setShouldScrollToVerse(null);
+    setTimeout(() => setShouldScrollToVerse(ref.verseStart), 0);
+  }, []);
+
   const handlePreviousChapter = () => {
     if (mode === 'bible' && currentBook && currentChapter > 1) {
+      setSelectedVerseRange(null);
+      setSelectedVerseNumber(null);
       setCurrentChapter(currentChapter - 1);
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory && currentHymnNumber > 1) {
       // Find previous hymn within the same category
@@ -399,6 +430,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
   const handleNextChapter = () => {
     if (mode === 'bible' && currentBook && currentChapter < 150) {
+      setSelectedVerseRange(null);
+      setSelectedVerseNumber(null);
       setCurrentChapter(currentChapter + 1);
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory) {
       // Find next hymn within the same category
@@ -659,6 +692,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               setMode('bible');
               setCurrentBook({ id: bookId, name: bookName });
               setCurrentChapter(chapter);
+              setSelectedVerseRange(null);
               setSelectedVerseNumber(verse);
               setShouldScrollToVerse(verse);
               setBibleSelectionVisible(false);
@@ -693,6 +727,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
                 setChapterEditorVisible(true);
               }}
               selectedVerseNumber={selectedVerseNumber}
+              selectedVerseRange={selectedVerseRange}
+              onInlineRefPress={handleInlineBibleRefPress}
               flatListRef={flatListRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
               chapterMarks={chapterMarks}

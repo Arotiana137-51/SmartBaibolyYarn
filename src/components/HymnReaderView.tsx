@@ -135,6 +135,7 @@ const HymnStanzaItem = React.memo<HymnStanzaItemProps>(({
                 maxFontSizeMultiplier={1.3}
                 style={[
                   styles.hymnText,
+                  styles.chorusLine,
                   {
                     fontSize: lineFontSize,
                     lineHeight,
@@ -357,6 +358,11 @@ const styles = StyleSheet.create({
   },
   chorusTextContainer: {
     paddingLeft: 8,
+  },
+  chorusLine: {
+    // The refrain is set in italics so it reads as a sung aside, visually
+    // distinct from the numbered stanzas around it.
+    fontStyle: 'italic',
   },
 });
 

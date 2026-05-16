@@ -109,8 +109,8 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10
-        versionName "1.1.0"
+        versionCode 11
+        versionName "1.1.1"
         resConfigs "fr"
 
         // 16KB page size support - ensures native libs are aligned to 16KB boundaries
