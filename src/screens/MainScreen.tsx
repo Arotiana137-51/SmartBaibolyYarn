@@ -17,7 +17,7 @@ import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
 import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
-import BibleSelectionModal from '../components/BibleSelectionModal';
+import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
 import CustomBottomNav from '../components/CustomBottomNav';
 import ReportIssueModal from '../components/ReportIssueModal';
@@ -324,6 +324,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       return;
     }
 
+    // When a range is active, the reader filters its FlatList down to just
+    // the range, so the target verse is at index 0 — no scroll needed, and
+    // scrolling against the full-chapter index would crash with
+    // "scrollToIndex out of range" because the visible list is shorter.
+    if (selectedVerseRange) {
+      setShouldScrollToVerse(null);
+      return;
+    }
+
     const verseIndex = verses.findIndex(
       verse => verse.verse_number === shouldScrollToVerse,
     );
@@ -347,7 +356,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [verses, shouldScrollToVerse]);
+  }, [verses, shouldScrollToVerse, selectedVerseRange]);
 
   useEffect(() => {
     if (mode === 'bible' && currentBook && verses.length > 0) {
@@ -638,7 +647,20 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
 
     if (mode === 'bible') {
-      setBibleSelectionVisible(visible => !visible);
+      // When opening, pre-seed the SelectionTopBar's known state so the
+      // Toko/Andininy tabs are immediately tappable (same-book switching).
+      // The modal itself receives initialBook/initialChapter below.
+      setBibleSelectionVisible(visible => {
+        const next = !visible;
+        if (next && currentBook) {
+          setBibleSelectionProgress({
+            step: 'book',
+            selectedBook: {id: currentBook.id, name: currentBook.name},
+            selectedChapter: currentChapter ?? null,
+          });
+        }
+        return next;
+      });
     }
   };
 
@@ -688,17 +710,37 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               setRequestedBibleSelectionStep(null);
               setBibleSelectionProgress({step: 'book', selectedBook: null, selectedChapter: null});
             }}
-            onBibleSelect={(bookId, bookName, chapter, verse) => {
+            onBibleSelect={(bookId, bookName, chapter, selection: VerseSelection) => {
               setMode('bible');
               setCurrentBook({ id: bookId, name: bookName });
               setCurrentChapter(chapter);
-              setSelectedVerseRange(null);
-              setSelectedVerseNumber(verse);
-              setShouldScrollToVerse(verse);
+
+              if (selection.kind === 'single') {
+                setSelectedVerseRange(null);
+                setSelectedVerseNumber(selection.verse);
+                setShouldScrollToVerse(selection.verse);
+              } else if (selection.kind === 'range') {
+                setSelectedVerseNumber(null);
+                setSelectedVerseRange({start: selection.start, end: selection.end});
+                setShouldScrollToVerse(selection.start);
+              } else {
+                // whole chapter
+                setSelectedVerseRange(null);
+                setSelectedVerseNumber(null);
+                setShouldScrollToVerse(null);
+              }
+
               setBibleSelectionVisible(false);
               setRequestedBibleSelectionStep(null);
             }}
             requestedStep={requestedBibleSelectionStep}
+            initialBook={(() => {
+              if (!currentBook) return null;
+              const match = books.find(b => b.id === currentBook.id);
+              if (!match) return null;
+              return {id: match.id, name: match.name, chapters: match.chapters};
+            })()}
+            initialChapter={currentChapter ?? null}
             onProgressChange={(progress) => {
               setBibleSelectionProgress((prev) => {
                 if (
@@ -732,6 +774,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               flatListRef={flatListRef}
               headerText={mode === 'bible' ? bibleTitleLong : null}
               chapterMarks={chapterMarks}
+              currentBookName={currentBook?.name ?? null}
+              onClearRange={() => setSelectedVerseRange(null)}
             />
           ) : (
             <HymnReaderView

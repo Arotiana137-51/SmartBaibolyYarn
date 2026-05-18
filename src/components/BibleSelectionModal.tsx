@@ -15,10 +15,22 @@ import {getBibleBookShortName} from '../utils/bibleBookNames';
 
 type SelectionStep = 'book' | 'chapter' | 'verse';
 
+export type VerseSelection =
+  | {kind: 'single'; verse: number}
+  | {kind: 'range'; start: number; end: number}
+  | {kind: 'whole'};
+
 interface BibleSelectionModalOptimizedProps {
   onClose: () => void;
-  onBibleSelect: (bookId: number, bookName: string, chapter: number, verse: number) => void;
+  onBibleSelect: (
+    bookId: number,
+    bookName: string,
+    chapter: number,
+    selection: VerseSelection,
+  ) => void;
   requestedStep?: SelectionStep | null;
+  initialBook?: {id: number; name: string; chapters: number} | null;
+  initialChapter?: number | null;
   onProgressChange?: (progress: {
     step: SelectionStep;
     selectedBook: {id: number; name: string} | null;
@@ -30,16 +42,25 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   onClose,
   onBibleSelect,
   requestedStep = null,
+  initialBook = null,
+  initialChapter = null,
   onProgressChange,
 }) => {
   const {theme} = useTheme();
   const insets = useSafeAreaInsets();
   const { books, isLoading, getVerseCount } = useBibleData();
+
+  // Always land on the book step. The initial book/chapter are just
+  // "remembered" so the Toko/Andininy tabs in SelectionTopBar can jump
+  // directly to those steps via requestedStep.
   const [currentStep, setCurrentStep] = useState<SelectionStep>('book');
-  const [selectedBook, setSelectedBook] = useState<{ id: number; name: string; chapters: number } | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedBook, setSelectedBook] = useState<{ id: number; name: string; chapters: number } | null>(initialBook);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(
+    initialBook && initialChapter != null ? initialChapter : null,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [verseCount, setVerseCount] = useState(0);
+  const [pendingStartVerse, setPendingStartVerse] = useState<number | null>(null);
 
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
@@ -82,6 +103,10 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   }, [selectedBook]);
 
   useEffect(() => {
+    setPendingStartVerse(null);
+  }, [selectedBook?.id, selectedChapter]);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (currentStep !== 'verse' || !selectedBook || selectedChapter === null) {
@@ -110,20 +135,16 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
 
   const handleBookPress = useCallback((bookId: number, bookName: string, chapters: number) => {
     setSelectedBook({ id: bookId, name: bookName, chapters });
+    setSelectedChapter(null);
+    setPendingStartVerse(null);
     setCurrentStep('chapter');
   }, []);
 
   const handleChapterPress = useCallback((chapter: number) => {
     setSelectedChapter(chapter);
+    setPendingStartVerse(null);
     setCurrentStep('verse');
   }, []);
-
-  const handleVersePress = useCallback((verse: number) => {
-    if (selectedBook && selectedChapter !== null) {
-      onBibleSelect(selectedBook.id, selectedBook.name, selectedChapter, verse);
-      handleClose();
-    }
-  }, [selectedBook, selectedChapter, onBibleSelect]);
 
   const handleClose = useCallback(() => {
     setCurrentStep('book');
@@ -131,8 +152,45 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     setSelectedChapter(null);
     setSearchQuery('');
     setVerseCount(0);
+    setPendingStartVerse(null);
     onClose();
   }, [onClose]);
+
+  const handleVersePress = useCallback((verse: number) => {
+    if (!selectedBook || selectedChapter === null) return;
+
+    if (pendingStartVerse === null) {
+      // First tap: arm the range start, keep the modal open so the user can
+      // pick the end. Tapping the same verse again will resolve to a single
+      // verse.
+      setPendingStartVerse(verse);
+      return;
+    }
+
+    if (verse === pendingStartVerse) {
+      onBibleSelect(selectedBook.id, selectedBook.name, selectedChapter, {
+        kind: 'single',
+        verse,
+      });
+    } else {
+      const start = Math.min(pendingStartVerse, verse);
+      const end = Math.max(pendingStartVerse, verse);
+      onBibleSelect(selectedBook.id, selectedBook.name, selectedChapter, {
+        kind: 'range',
+        start,
+        end,
+      });
+    }
+    handleClose();
+  }, [selectedBook, selectedChapter, pendingStartVerse, onBibleSelect, handleClose]);
+
+  const handleWholeChapterPress = useCallback(() => {
+    if (!selectedBook || selectedChapter === null) return;
+    onBibleSelect(selectedBook.id, selectedBook.name, selectedChapter, {
+      kind: 'whole',
+    });
+    handleClose();
+  }, [selectedBook, selectedChapter, onBibleSelect, handleClose]);
 
   const onProgressChangeRef = useRef(onProgressChange);
   useEffect(() => {
@@ -171,6 +229,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   }, [currentStep, requestedStep, selectedBook, selectedChapter]);
 
   const handleBack = useCallback(() => {
+    setPendingStartVerse(null);
     if (currentStep === 'verse') {
       setCurrentStep('chapter');
     } else if (currentStep === 'chapter') {
@@ -184,12 +243,20 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
         return 'Fisafidianana boky';
       case 'chapter':
         return `Fisafidianana toko${selectedBook ? ` - ${selectedBookShortName}` : ''}`;
-      case 'verse':
-        return `Fisafidianana andininy${selectedBook && selectedChapter !== null ? ` - ${selectedBookShortName} ${selectedChapter}` : ''}`;
+      case 'verse': {
+        if (!selectedBook || selectedChapter === null) {
+          return 'Fisafidianana andininy';
+        }
+        const base = `${selectedBookShortName} ${selectedChapter}`;
+        if (pendingStartVerse !== null) {
+          return `Fisafidianana farany - ${base} (manomboka ${pendingStartVerse})`;
+        }
+        return `Fisafidianana andininy - ${base}`;
+      }
       default:
         return 'Fisafidianana boky';
     }
-  }, [currentStep, selectedBook, selectedBookShortName, selectedChapter]);
+  }, [currentStep, selectedBook, selectedBookShortName, selectedChapter, pendingStartVerse]);
 
   const sections = [
     { title: 'Testamenta Taloha', data: oldTestament },
@@ -296,19 +363,57 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           ]}
           numColumns={7}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            verseCount > 0 ? (
+              <View style={styles.verseHeader}>
+                {pendingStartVerse === null ? (
+                  <Pressable
+                    style={[
+                      styles.wholeChapterButton,
+                      {backgroundColor: theme.colors.accentBlue},
+                    ]}
+                    onPress={handleWholeChapterPress}>
+                    <Text style={styles.wholeChapterText}>
+                      Toko manontolo (1–{verseCount})
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Text style={[styles.verseHint, {color: theme.colors.textSecondary}]}>
+                  {pendingStartVerse === null
+                    ? 'Tsindrio ny andininy voalohany.'
+                    : 'Tsindrio ny andininy farany (na ny voalohany indray raha andininy tokana).'}
+                </Text>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <Text style={[styles.infoText, {color: theme.colors.textSecondary}]}>
               {verseCount === 0 ? 'Mitady...' : 'Tsy misy andininy.'}
             </Text>
           }
-          renderItem={({ item }) => (
-            <Pressable
-              style={[styles.verseButton, {backgroundColor: theme.colors.backgroundTertiary}]}
-              onPress={() => handleVersePress(item)}
-            >
-              <Text style={[styles.verseNumber, {color: theme.colors.textPrimary}]}>{item}</Text>
-            </Pressable>
-          )}
+          renderItem={({ item }) => {
+            const isPendingStart = pendingStartVerse === item;
+            return (
+              <Pressable
+                style={[
+                  styles.verseButton,
+                  {backgroundColor: theme.colors.backgroundTertiary},
+                  isPendingStart && {
+                    backgroundColor: theme.colors.accentBlue,
+                  },
+                ]}
+                onPress={() => handleVersePress(item)}>
+                <Text
+                  style={[
+                    styles.verseNumber,
+                    {color: theme.colors.textPrimary},
+                    isPendingStart && styles.verseNumberPending,
+                  ]}>
+                  {item}
+                </Text>
+              </Pressable>
+            );
+          }}
         />
       ) : null}
     </View>
@@ -436,6 +541,29 @@ const styles = StyleSheet.create({
     color: '#3A86FF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  verseNumberPending: {
+    color: '#ffffff',
+  },
+  verseHeader: {
+    paddingHorizontal: 6,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  wholeChapterButton: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  wholeChapterText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  verseHint: {
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 6,
   },
 });
 

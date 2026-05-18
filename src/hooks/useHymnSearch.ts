@@ -65,6 +65,28 @@ const makeFtsPrefixQuery = (normalized: string) => {
   return list.length === 1 ? list[0] : list.map(s => `(${s})`).join(' OR ');
 };
 
+const makeFtsWholeWordQuery = (normalized: string) => {
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return '';
+
+  const phrases = new Set<string>([`"${tokens.join(' ')}"`]);
+
+  // Mirror makeFtsPrefixQuery's Jesus-name expansion: the dataset stores
+  // "Jesoa"/"Jesosy", never bare "Jeso", so a quoted phrase starting with
+  // "jeso ..." would otherwise miss those titles.
+  if (containsJesusNameVariant(normalized)) {
+    for (const variant of JESUS_VARIANTS) {
+      const replaced = tokens
+        .map(tok => (looksLikeJesusPrefix(tok) ? variant : tok))
+        .join(' ');
+      phrases.add(`"${replaced}"`);
+    }
+  }
+
+  const list = Array.from(phrases).filter(Boolean);
+  return list.length === 1 ? list[0] : list.join(' OR ');
+};
+
 export interface HymnSearchResult {
   id: string;
   number: number;
@@ -97,8 +119,10 @@ export const useHymnSearch = () => {
         return [];
       }
 
-      // Substring: prefix query per token; Whole word: quoted phrase.
-      const ftsParam = matchWholeWord ? `"${normalizedQuery}"` : makeFtsPrefixQuery(normalizedQuery);
+      // Substring: prefix query per token; Whole word: quoted phrase (with Jesus-name expansion).
+      const ftsParam = matchWholeWord
+        ? makeFtsWholeWordQuery(normalizedQuery)
+        : makeFtsPrefixQuery(normalizedQuery);
       
       // HymnVersesFts is contentless: hymn_id/verse_number live on HymnVerses
       // and must be read through the rowid join, not selected from f.*.

@@ -22,6 +22,7 @@ import {
 } from '../utils/chapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
+import {getBibleBookShortName} from '../utils/bibleBookNames';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
@@ -93,14 +94,12 @@ const VerseItem = React.memo(
     const lineOffsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
     const hasMarks = verseMarks.length > 0;
 
-    const isInSelectedRange =
-      selectedVerseRange != null &&
-      item.verse_number >= selectedVerseRange.start &&
-      item.verse_number <= selectedVerseRange.end;
+    // A range selection already filters the reader down to just those verses,
+    // so the filtered view itself is the emphasis — no per-verse highlight.
+    // Single-verse selection still gets the highlight + scroll.
     const isSelected =
-      isInSelectedRange ||
-      (typeof selectedVerseNumber === 'number' &&
-        item.verse_number === selectedVerseNumber);
+      typeof selectedVerseNumber === 'number' &&
+      item.verse_number === selectedVerseNumber;
 
     const verseFontSize = scaleFontSize(TEXT_STYLES.body.fontSize, fontScale);
     const verseLineHeight = Math.round(verseFontSize * BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER) + 3;
@@ -309,6 +308,8 @@ interface BibleReaderViewProps {
   flatListRef?: React.RefObject<FlatList<any> | null>;
   headerText?: string | null;
   chapterMarks?: ChapterMark[];
+  onClearRange?: () => void;
+  currentBookName?: string | null;
 }
 
 const BibleReaderView: React.FC<BibleReaderViewProps> = ({
@@ -323,12 +324,34 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   flatListRef,
   headerText,
   chapterMarks,
+  onClearRange,
+  currentBookName,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
   const {variant: jesusNameVariant, transformText} = useJesusName();
   const insets = useSafeAreaInsets();
   const isScrollingRef = useRef(false);
+
+  const visibleVerses = useMemo(() => {
+    if (!selectedVerseRange) return verses;
+    return verses.filter(
+      v =>
+        v.verse_number >= selectedVerseRange.start &&
+        v.verse_number <= selectedVerseRange.end,
+    );
+  }, [verses, selectedVerseRange]);
+
+  const rangeBanner = useMemo(() => {
+    if (!selectedVerseRange || verses.length === 0) return null;
+    const first = verses[0];
+    const shortName = getBibleBookShortName(currentBookName ?? '', first.book_id);
+    const ref =
+      selectedVerseRange.start === selectedVerseRange.end
+        ? `${shortName} ${first.chapter}:${selectedVerseRange.start}`
+        : `${shortName} ${first.chapter}:${selectedVerseRange.start}–${selectedVerseRange.end}`;
+    return {ref};
+  }, [selectedVerseRange, verses, currentBookName]);
 
   const verseSpans: VerseSpan[] = useMemo(() => {
     if (!verses.length) return [];
@@ -446,16 +469,43 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   return (
     <FlatList
       ref={flatListRef}
-      data={verses}
+      data={visibleVerses}
       keyExtractor={keyExtractor}
       contentContainerStyle={[
         styles.contentContainer,
         {paddingBottom: BIBLE_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted},
       ]}
       ListHeaderComponent={
-        headerText ? (
-          <View style={styles.headerContainer}>
-            <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>{headerText}</Text>
+        rangeBanner || headerText ? (
+          <View>
+            {rangeBanner ? (
+              <View
+                style={[
+                  styles.rangeBanner,
+                  {backgroundColor: 'rgba(10, 132, 255, 0.10)'},
+                ]}>
+                <Text
+                  style={[styles.rangeBannerRef, {color: theme.colors.textPrimary}]}>
+                  {rangeBanner.ref}
+                </Text>
+                {onClearRange ? (
+                  <Pressable onPress={onClearRange} style={styles.rangeClearButton}>
+                    <Text
+                      style={[
+                        styles.rangeClearText,
+                        {color: theme.colors.accentBlue},
+                      ]}>
+                      Asehoy ny toko manontolo
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+            {headerText ? (
+              <View style={styles.headerContainer}>
+                <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>{headerText}</Text>
+              </View>
+            ) : null}
           </View>
         ) : null
       }
@@ -510,6 +560,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 132, 255, 0.16)',
     borderRadius: 12,
     padding: 12,
+  },
+  rangeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  rangeBannerRef: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  rangeClearButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  rangeClearText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

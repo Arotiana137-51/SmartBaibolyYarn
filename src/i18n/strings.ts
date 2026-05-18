@@ -107,7 +107,7 @@ const translations: Translations = {
     'menu.favorites': 'Ankafizina',
     'menu.history': 'Tsiahy',
     'menu.search': 'Fikarohana',
-    'menu.misc': 'Samihafa',
+    'menu.misc': 'Fanekem-pinoana',
     'menu.about': 'Mombamomba',
     'menu.personalization': 'Loko manokana',
     'personalization.title': 'Loko manokana',

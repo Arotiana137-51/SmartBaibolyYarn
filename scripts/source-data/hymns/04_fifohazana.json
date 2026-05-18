@@ -1169,8 +1169,8 @@
             }
         ]
     },
-    "fifo_59": {
-        "laharana": "59",
+    "fifo_51": {
+        "laharana": "51",
         "sokajy": "fifo",
         "lohateny": "Tanora ô! mba mihevera fatratra",
         "mpanoratra": [],
@@ -1197,15 +1197,15 @@
             }
         ]
     },
-    "fifo_60": {
-        "laharana": "60",
+    "fifo_52": {
+        "laharana": "52",
         "sokajy": "fifo",
         "lohateny": "Tokana ihany ny lalana",
         "mpanoratra": [],
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Ry tanora manan-tsaina\nVoninahitry ny tany\nTadidio ao an-tsaina\nFa ny andro mora lany.",
+                "tononkira": "Ry tanora manan-tsaina\nVoninahitry ny tany\nTadidio ao an-tsaina\nFa ny andro mora lany",
                 "fiverenany": false
             },
             {
@@ -1215,23 +1215,18 @@
             },
             {
                 "andininy": 3,
-                "tononkira": "Lamba indramina ny aina\nIzy Tompony ao ambony\nRaha tiany mba halaina\nTsy azo tanana intsony.",
+                "tononkira": "Lamba indramina ny aina\nIzy Tompony ao ambony Raha tiany mba halaina\nTsy azo tanana intsony",
                 "fiverenany": false
             },
             {
                 "andininy": 4,
-                "tononkira": "Na ny antim-potsivolo\nNa ny Zoky na ny Zandry\nTsy mahay mifampisolo\nRehefa lasa hodimandry.",
+                "tononkira": "Na ny antim-potsivolo\nNa ny Zoky na ny Zandry\nTsy mahay mifampisolo\nRehefa lasa hodimandry\nFiv Any, any an-koatra ilay Jordana\nAny an-danitra,\nAny an-danitra ambony\nAmbony no misy ny fitsaharana\nTsara dia tsara ny eo anilany\nEo anilany madio",
                 "fiverenany": false
-            },
-            {
-                "andininy": "fiverenany",
-                "tononkira": "Any, any an-koatra ilay Jordana\nAny an-danitra, Any an-danitra ambony\nAmbony no misy ny fitsaharana\nTsara dia tsara ny eo anilany\nEo anilany madio.",
-                "fiverenany": true
             }
         ]
     },
-    "fifo_61": {
-        "laharana": "61",
+    "fifo_53": {
+        "laharana": "53",
         "sokajy": "fifo",
         "lohateny": "Tsy an-tery re, tsy vozonina",
         "mpanoratra": [],
@@ -1258,36 +1253,21 @@
             }
         ]
     },
-    "fifo_62": {
-        "laharana": "62",
+    "fifo_54": {
+        "laharana": "54",
         "sokajy": "fifo",
         "lohateny": "Tsy barabaraina",
         "mpanoratra": [],
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Tsy barabaraina ny lanitra\nFa misy ny fepetra ny lanitra\nTsy azo tambazam-bola ny lanitra\nNy marina an-danitra\nRy olombelona jereo ny lanitra.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 2,
-                "tononkira": "Ireo mpijangajanga tsy hiditra\nIreo manompo sampy tsy hiditra\nNy marina an-danitra\nRy olombelona jereo ny lanitra.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 3,
-                "tononkira": "Jesosy no mialoha ny ialana\nIzay marina an-danitra\nMitady marina miezaka\nTsy afenina aminao ny lanitra.",
-                "fiverenany": false
-            },
-            {
-                "andininy": 4,
-                "tononkira": "Ireo mpangalatra tsy hiditra\nIreo mpimamo lava tsy hiditra\nRombaho rombaho ny lanitra.",
+                "tononkira": "Tsy barabaraina ny lanitra\nFa misy ny fepetra ny lanitra\nTsy azo tambazam-bola ny lanitra\nNy marina an-danitra\nRy olombelona jereo ny lanitra\nNy marina an-danitra\nRy olombelona jereo ny lanitra\nJesosy no mialoha ny Ialana\nIzay marina an-danitra\nMitady marina miezaka\nTsy afenina aminao ny lanitra\nRombaho rombaho ny lanitra",
                 "fiverenany": false
             }
         ]
     },
-    "fifo_65": {
-        "laharana": "65",
+    "fifo_55": {
+        "laharana": "55",
         "sokajy": "fifo",
         "lohateny": "Tsy misy soa ho ahy",
         "mpanoratra": [],
@@ -1309,8 +1289,8 @@
             }
         ]
     },
-    "fifo_64": {
-        "laharana": "64",
+    "fifo_56": {
+        "laharana": "56",
         "sokajy": "fifo",
         "lohateny": "Vita izao ny fandresena",
         "mpanoratra": [],
@@ -1337,8 +1317,8 @@
             }
         ]
     },
-    "fifo_65": {
-        "laharana": "65",
+    "fifo_57": {
+        "laharana": "57",
         "sokajy": "fifo",
         "lohateny": "Zava-tsoa re ny aty",
         "mpanoratra": [],
