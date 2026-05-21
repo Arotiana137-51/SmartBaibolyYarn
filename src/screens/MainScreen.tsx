@@ -38,6 +38,7 @@ import HamburgerMenuPopover, {
   HamburgerMenuItemKey,
 } from '../components/HamburgerMenuPopover';
 import {useTheme} from '../contexts/ThemeContext';
+import {useCultMode} from '../contexts/CultModeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
@@ -49,6 +50,26 @@ import {
   flushIssueReports,
   IssueReport,
 } from '../services/reporting/issueReportQueue';
+
+// Mix a hex color with a given alpha. Used for the cult-mode chevrons so
+// the pill follows the active theme's navBackground with a touch of
+// transparency (no need to duplicate the helper from CustomBottomNav at
+// runtime — chevrons are rendered alongside but in a different component).
+const hexToRgba = (hex: string, alpha: number): string => {
+  const normalized = hex.replace('#', '');
+  const parsed =
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map(ch => ch + ch)
+          .join('')
+      : normalized;
+  const int = parseInt(parsed, 16);
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
@@ -161,6 +182,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const { addToFavorites: addToHymnFavorites } = useHymnFavorites();
   const { logAccess: logBibleAccess } = useBibleHistory();
   const { logAccess: logHymnAccess } = useHymnHistory();
+  const cultMode = useCultMode();
 
   const [crossRefModalVisible, setCrossRefModalVisible] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
@@ -421,7 +443,45 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     setTimeout(() => setShouldScrollToVerse(ref.verseStart), 0);
   }, []);
 
+  // Cult mode propagator: when the active entry changes, drive the reader
+  // (mode + book/chapter/range or hymn id/number/category) from it.
+  // Whole-chapter Bible entries use verseEnd=999 as a sentinel — translate
+  // back to a null range so no banner shows.
+  useEffect(() => {
+    if (!cultMode.isActive || !cultMode.currentEntry) return;
+    const entry = cultMode.currentEntry;
+    if (entry.type === 'bible') {
+      setMode('bible');
+      setCurrentBook({id: entry.bookId, name: entry.bookName});
+      setCurrentChapter(entry.chapter);
+      setSelectedVerseNumber(null);
+      const isWholeChapter =
+        entry.verseStart === 1 && entry.verseEnd >= 999;
+      if (isWholeChapter) {
+        setSelectedVerseRange(null);
+        setShouldScrollToVerse(null);
+      } else {
+        setSelectedVerseRange({
+          start: entry.verseStart,
+          end: entry.verseEnd,
+        });
+        // Re-set so repeated steps to the same verse still scroll.
+        setShouldScrollToVerse(null);
+        setTimeout(() => setShouldScrollToVerse(entry.verseStart), 0);
+      }
+    } else {
+      setMode('hymnal');
+      setCurrentHymnId(entry.hymnId);
+      setCurrentHymnNumber(entry.hymnNumber);
+      setCurrentHymnCategory(entry.category || null);
+    }
+  }, [cultMode.isActive, cultMode.currentEntry]);
+
   const handlePreviousChapter = () => {
+    if (cultMode.isActive) {
+      cultMode.goPrev();
+      return;
+    }
     if (mode === 'bible' && currentBook && currentChapter > 1) {
       setSelectedVerseRange(null);
       setSelectedVerseNumber(null);
@@ -438,6 +498,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   const handleNextChapter = () => {
+    if (cultMode.isActive) {
+      cultMode.goNext();
+      return;
+    }
     if (mode === 'bible' && currentBook && currentChapter < 150) {
       setSelectedVerseRange(null);
       setSelectedVerseNumber(null);
@@ -474,6 +538,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         return;
       case 'personalization':
         navigation.navigate('Personalization');
+        return;
+      case 'cultMode':
+        navigation.navigate('CultMode');
         return;
       default: {
         const _exhaustiveCheck: never = key;
@@ -789,7 +856,43 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         )}
 
       </View>
-      <CustomBottomNav activeMode={mode} onTabPress={setMode} />
+      <CustomBottomNav
+        activeMode={mode}
+        onTabPress={setMode}
+        compact={cultMode.isActive}
+      />
+      {cultMode.isActive ? (
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.cultChevronOverlay,
+            {bottom: insets.bottom + 16},
+          ]}>
+          <Pressable
+            onPress={cultMode.goPrev}
+            disabled={cultMode.isFirst}
+            hitSlop={12}
+            style={[
+              styles.cultChevron,
+              {backgroundColor: hexToRgba(theme.colors.navBackground, 0.75)},
+              cultMode.isFirst && styles.cultChevronDisabled,
+            ]}>
+            <Text style={styles.cultChevronText}>‹</Text>
+          </Pressable>
+          <View style={styles.cultChevronSpacer} pointerEvents="none" />
+          <Pressable
+            onPress={cultMode.goNext}
+            disabled={cultMode.isLast}
+            hitSlop={12}
+            style={[
+              styles.cultChevron,
+              {backgroundColor: hexToRgba(theme.colors.navBackground, 0.75)},
+              cultMode.isLast && styles.cultChevronDisabled,
+            ]}>
+            <Text style={styles.cultChevronText}>›</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <ReportIssueModal
         visible={reportModalVisible}
@@ -948,6 +1051,32 @@ const styles = StyleSheet.create({
   readerContainer: {
     flex: 1,
     paddingBottom: 24,
+  },
+  cultChevronOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  cultChevronSpacer: {flex: 1},
+  cultChevron: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor is set inline from theme.colors.navBackground at ~75%
+    // alpha so the pill follows the active theme (teal in both modes today,
+    // any future theme override automatically) with a slight see-through.
+  },
+  cultChevronDisabled: {opacity: 0.35},
+  cultChevronText: {
+    fontSize: 26,
+    lineHeight: 28,
+    fontWeight: '400',
+    color: '#FFFFFF',
   },
   modalBackdrop: {
     flex: 1,

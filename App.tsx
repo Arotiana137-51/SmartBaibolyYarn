@@ -7,6 +7,7 @@ import {ActivityIndicator, View, Text, StyleSheet} from 'react-native';
 import RootNavigator from './src/navigation/RootNavigator';
 import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
+import {CultModeProvider} from './src/contexts/CultModeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 
@@ -72,9 +73,11 @@ const App = () => {
         <ThemeProvider>
           <JesusNameProvider>
             <DatabaseProvider>
-              <NavigationContainer>
-                <AppContent />
-              </NavigationContainer>
+              <CultModeProvider>
+                <NavigationContainer>
+                  <AppContent />
+                </NavigationContainer>
+              </CultModeProvider>
             </DatabaseProvider>
           </JesusNameProvider>
         </ThemeProvider>

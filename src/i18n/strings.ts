@@ -7,6 +7,16 @@ type TranslationKey =
   | 'menu.misc'
   | 'menu.about'
   | 'menu.personalization'
+  | 'menu.cultMode'
+  | 'cultMode.title'
+  | 'cultMode.activate'
+  | 'cultMode.deactivate'
+  | 'cultMode.emptyState'
+  | 'cultMode.addBible'
+  | 'cultMode.addHymn'
+  | 'cultMode.deleteTitle'
+  | 'cultMode.deleteMessage'
+  | 'cultMode.cannotActivateEmpty'
   | 'personalization.title'
   | 'personalization.subtitle'
   | 'personalization.reset'
@@ -110,6 +120,16 @@ const translations: Translations = {
     'menu.misc': 'Fanekem-pinoana',
     'menu.about': 'Mombamomba',
     'menu.personalization': 'Loko manokana',
+    'menu.cultMode': 'Fotoam-pivavahana',
+    'cultMode.title': 'Fotoam-pivavahana',
+    'cultMode.activate': 'Velomy ny fotoana',
+    'cultMode.deactivate': 'Ajanony',
+    'cultMode.emptyState': "Mbola tsy misy zavatra eto. Ampio Baiboly na Fihirana.",
+    'cultMode.addBible': 'Hampio Baiboly',
+    'cultMode.addHymn': 'Hampio Fihirana',
+    'cultMode.deleteTitle': 'Esorina',
+    'cultMode.deleteMessage': "Tena esorina ao amin'ny lisitra ve ity?",
+    'cultMode.cannotActivateEmpty': 'Ampio aloha ny zavatra ho hirahana.',
     'personalization.title': 'Loko manokana',
     'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
     'personalization.reset': 'Avereno tany am-boalohany',

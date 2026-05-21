@@ -8,6 +8,7 @@ import { SPACING, useResponsive } from '../theme/responsive';
 interface CustomBottomNavProps {
   activeMode: AppMode;
   onTabPress: (mode: AppMode) => void;
+  compact?: boolean;
 }
 
 const hexToRgba = (hex: string, alpha: number) => {
@@ -27,12 +28,18 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress }) => {
+const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress, compact = false }) => {
   const insets = useAdaptiveInsets();
   const {theme} = useTheme();
   const { verticalScale, fontFor, isSmall } = useResponsive();
-  const segmentHeight = Math.max(38, verticalScale(42));
-  const labelFontSize = fontFor(isSmall ? 14 : 16);
+  const segmentHeight = compact
+    ? Math.max(30, verticalScale(34))
+    : Math.max(38, verticalScale(42));
+  const labelFontSize = compact
+    ? fontFor(isSmall ? 12 : 13)
+    : fontFor(isSmall ? 14 : 16);
+  const trackMaxWidth = compact ? 240 : 380;
+  const trackHorizontalMargin = compact ? 72 : 0;
 
   const trackBackground = theme.isDark
     ? hexToRgba(theme.colors.readerBackground, 0.85)
@@ -64,6 +71,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
           {
             backgroundColor: trackBackground,
             borderColor: trackBorder,
+            maxWidth: trackMaxWidth,
+            marginHorizontal: trackHorizontalMargin,
           },
         ]}
       >

@@ -12,6 +12,7 @@ import FanekemDetailsScreen from '../screens/FanekemDetailsScreen';
 import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import PersonalizationScreen from '../screens/PersonalizationScreen';
+import CultModeScreen from '../screens/CultModeScreen';
 
 export type RootStackParamList = {
   Home:
@@ -32,6 +33,7 @@ export type RootStackParamList = {
   About: undefined;
   PrivacyPolicy: {mandatory?: boolean} | undefined;
   Personalization: {firstRun?: boolean} | undefined;
+  CultMode: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -114,6 +116,11 @@ const RootNavigator = ({
         name="Personalization"
         component={PersonalizationScreen}
         options={{title: t('personalization.title'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="CultMode"
+        component={CultModeScreen}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="PrivacyPolicy"

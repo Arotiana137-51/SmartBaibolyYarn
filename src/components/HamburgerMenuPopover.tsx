@@ -19,7 +19,8 @@ export type HamburgerMenuItemKey =
   | 'search'
   | 'misc'
   | 'about'
-  | 'personalization';
+  | 'personalization'
+  | 'cultMode';
 
 type Props = {
   visible: boolean;
@@ -132,6 +133,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'history' as const, label: t('menu.history')},
         {key: 'search' as const, label: t('menu.search')},
         {key: 'misc' as const, label: t('menu.misc')},
+        {key: 'cultMode' as const, label: t('menu.cultMode')},
         {key: 'personalization' as const, label: t('menu.personalization')},
         {key: 'about' as const, label: t('menu.about')},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,

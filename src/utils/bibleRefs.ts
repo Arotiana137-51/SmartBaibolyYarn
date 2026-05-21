@@ -35,7 +35,7 @@ export type BibleRefSegment =
 // descending length so multi-word names ("I Mpanjaka", "II Korintiana",
 // "Asan'ny Apostoly") are matched before any single-word prefix could
 // shadow them. Generated from `select id, name from Books order by id`.
-const BOOKS: ReadonlyArray<{id: number; name: string}> = [
+export const BOOKS: ReadonlyArray<{id: number; name: string}> = [
   {id: 1, name: 'Genesisy'},
   {id: 2, name: 'Eksodosy'},
   {id: 3, name: 'Levitikosy'},
@@ -108,12 +108,16 @@ const BOOKS: ReadonlyArray<{id: number; name: string}> = [
 // and "Salamo" before any shorter prefix. Then escape regex specials
 // (apostrophes in "Asan'ny Apostoly" are safe, but the dash in
 // "Tonon-kiran'i Solomona" must not be eaten).
-const BOOKS_BY_LENGTH = [...BOOKS].sort((a, b) => b.name.length - a.name.length);
+export const BOOKS_BY_LENGTH = [...BOOKS].sort(
+  (a, b) => b.name.length - a.name.length,
+);
 
-const escapeRegex = (s: string) =>
+export const escapeRegex = (s: string) =>
   s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const BOOK_NAME_ALT = BOOKS_BY_LENGTH.map(b => escapeRegex(b.name)).join('|');
+export const BOOK_NAME_ALT = BOOKS_BY_LENGTH.map(b =>
+  escapeRegex(b.name),
+).join('|');
 
 // Whole-string regex for one parenthesized ref. We allow:
 //   - one or more spaces between book name and chapter
@@ -124,7 +128,7 @@ const REF_REGEX = new RegExp(
   'g',
 );
 
-const BOOK_BY_NAME = new Map<string, {id: number; name: string}>(
+export const BOOK_BY_NAME = new Map<string, {id: number; name: string}>(
   BOOKS.map(b => [b.name, b]),
 );
 
