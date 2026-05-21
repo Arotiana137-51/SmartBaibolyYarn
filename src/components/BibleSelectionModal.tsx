@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
-  SectionList,
   FlatList,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -237,40 +236,100 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     }
   }, [currentStep]);
 
-  const getStepTitle = useCallback(() => {
+  // Returns the header label as { title, subtitle }. Subtitle is rendered on
+  // its own line below the title so long references (e.g. "Marka 16
+  // (manomboka 15)") don't overflow and get clipped behind the × close
+  // button on narrower screens.
+  const getStepTitle = useCallback((): {title: string; subtitle: string | null} => {
     switch (currentStep) {
       case 'book':
-        return 'Fisafidianana boky';
+        return {title: 'Fisafidianana boky', subtitle: null};
       case 'chapter':
-        return `Fisafidianana toko${selectedBook ? ` - ${selectedBookShortName}` : ''}`;
+        return {
+          title: 'Fisafidianana toko',
+          subtitle: selectedBook ? selectedBookShortName : null,
+        };
       case 'verse': {
         if (!selectedBook || selectedChapter === null) {
-          return 'Fisafidianana andininy';
+          return {title: 'Fisafidianana andininy', subtitle: null};
         }
         const base = `${selectedBookShortName} ${selectedChapter}`;
         if (pendingStartVerse !== null) {
-          return `Fisafidianana farany - ${base} (manomboka ${pendingStartVerse})`;
+          return {
+            title: 'Fisafidianana farany',
+            subtitle: `${base} (manomboka ${pendingStartVerse})`,
+          };
         }
-        return `Fisafidianana andininy - ${base}`;
+        return {title: 'Fisafidianana andininy', subtitle: base};
       }
       default:
-        return 'Fisafidianana boky';
+        return {title: 'Fisafidianana boky', subtitle: null};
     }
   }, [currentStep, selectedBook, selectedBookShortName, selectedChapter, pendingStartVerse]);
 
-  const sections = [
-    { title: 'Testamenta Taloha', data: oldTestament },
-    { title: 'Testamenta Vaovao', data: newTestament },
-  ];
+  // Book step renders Old Testament on the left, New Testament on the right
+  // as parallel single-column lists of theme-colored buttons. Each column
+  // scrolls independently so long lists (39 books in the Old vs 27 in the
+  // New) don't force one side to be padded out.
+  const renderBookButton = (item: {id: number; name: string; chapters: number}) => (
+    <Pressable
+      key={item.id}
+      style={[
+        styles.bookButton,
+        {backgroundColor: theme.colors.backgroundTertiary},
+      ]}
+      onPress={() => handleBookPress(item.id, item.name, item.chapters)}>
+      <Text
+        style={[styles.bookButtonText, {color: theme.colors.textPrimary}]}
+        numberOfLines={1}>
+        {getBibleBookShortName(item.name, item.id)}
+      </Text>
+    </Pressable>
+  );
 
   return (
     <View style={[styles.screen, {backgroundColor: theme.colors.backgroundSecondary}]}>
       {/* Header */}
       <View style={[styles.header, {borderBottomColor: theme.colors.divider}]}>
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Text style={[styles.backButtonText, {color: theme.colors.accentBlue}]}>←</Text>
+        <Pressable
+          style={[
+            styles.backButton,
+            currentStep === 'book' && styles.backButtonDisabled,
+          ]}
+          onPress={handleBack}
+          disabled={currentStep === 'book'}>
+          <Text
+            style={[
+              styles.backButtonText,
+              {color: theme.colors.accentBlue},
+              currentStep === 'book' && styles.backButtonTextDisabled,
+            ]}>
+            ←
+          </Text>
         </Pressable>
-        <Text style={[styles.headerTitle, {color: theme.colors.textPrimary}]}>{getStepTitle()}</Text>
+        {(() => {
+          const {title, subtitle} = getStepTitle();
+          return (
+            <View style={styles.headerTitleBlock}>
+              <Text
+                style={[styles.headerTitle, {color: theme.colors.textPrimary}]}
+                numberOfLines={1}>
+                {title}
+              </Text>
+              {subtitle ? (
+                <Text
+                  style={[
+                    styles.headerSubtitle,
+                    {color: theme.colors.textSecondary},
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+          );
+        })()}
         <Pressable style={styles.closeButton} onPress={handleClose}>
           <Text style={[styles.closeButtonText, {color: theme.colors.textPrimary}]}>×</Text>
         </Pressable>
@@ -297,39 +356,55 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
 
       {/* Content */}
       {currentStep === 'book' ? (
-        <SectionList
-          key="book-list"
-          sections={sections}
-          keyExtractor={(item) => item.id.toString()}
-          style={styles.content}
-          contentContainerStyle={[
-            styles.contentContainer,
-            {paddingBottom: 12 + bottomScrollSpacerAdjusted},
-          ]}
-          showsVerticalScrollIndicator={false}
-          renderSectionHeader={({ section }) => (
-            <Text style={[styles.testamentTitle, {color: theme.colors.textSecondary}]}>
-              {section.title}
+        oldTestament.length === 0 && newTestament.length === 0 ? (
+          <View style={styles.content}>
+            <Text
+              style={[styles.infoText, {color: theme.colors.textSecondary}]}>
+              {isLoading ? 'Mitady...' : 'Tsy misy valiny.'}
             </Text>
-          )}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.bookRow}
-              onPress={() => handleBookPress(item.id, item.name, item.chapters)}
-            >
-              <Text style={[styles.bookName, {color: theme.colors.textPrimary}]}> {getBibleBookShortName(item.name, item.id)} </Text>
-            </Pressable>
-          )}
-          ItemSeparatorComponent={() => <View style={[styles.separator, {backgroundColor: theme.colors.divider}]} />}
-          SectionSeparatorComponent={() => <View style={styles.sectionSpacer} />}
-          ListEmptyComponent={
-            isLoading ? (
-              <Text style={[styles.infoText, {color: theme.colors.textSecondary}]}>Mitady...</Text>
-            ) : (
-              <Text style={[styles.infoText, {color: theme.colors.textSecondary}]}>Tsy misy valiny.</Text>
-            )
-          }
-        />
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.twoColumnRow,
+              {paddingBottom: 12 + bottomScrollSpacerAdjusted},
+            ]}>
+            <View style={styles.column}>
+              <Text
+                style={[
+                  styles.testamentTitle,
+                  {color: theme.colors.textSecondary},
+                ]}>
+                Testamenta Taloha
+              </Text>
+              <FlatList
+                key="ot-col"
+                data={oldTestament}
+                keyExtractor={item => item.id.toString()}
+                renderItem={({item}) => renderBookButton(item)}
+                contentContainerStyle={styles.columnContent}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+            <View style={styles.column}>
+              <Text
+                style={[
+                  styles.testamentTitle,
+                  {color: theme.colors.textSecondary},
+                ]}>
+                Testamenta Vaovao
+              </Text>
+              <FlatList
+                key="nt-col"
+                data={newTestament}
+                keyExtractor={item => item.id.toString()}
+                renderItem={({item}) => renderBookButton(item)}
+                contentContainerStyle={styles.columnContent}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          </View>
+        )
       ) : currentStep === 'chapter' && selectedBook ? (
         <FlatList
           key={`chapter-grid-${selectedBook.id}`}
@@ -366,6 +441,15 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           ListHeaderComponent={
             verseCount > 0 ? (
               <View style={styles.verseHeader}>
+                <Text
+                  style={[
+                    styles.verseHint,
+                    {color: theme.colors.textSecondary},
+                  ]}>
+                  {pendingStartVerse === null
+                    ? 'Tsindrio ny andininy voalohany.'
+                    : 'Tsindrio ny andininy farany (na ny voalohany indray raha andininy tokana).'}
+                </Text>
                 {pendingStartVerse === null ? (
                   <Pressable
                     style={[
@@ -378,11 +462,6 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
                     </Text>
                   </Pressable>
                 ) : null}
-                <Text style={[styles.verseHint, {color: theme.colors.textSecondary}]}>
-                  {pendingStartVerse === null
-                    ? 'Tsindrio ny andininy voalohany.'
-                    : 'Tsindrio ny andininy farany (na ny voalohany indray raha andininy tokana).'}
-                </Text>
               </View>
             ) : null
           }
@@ -434,31 +513,67 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.08)',
   },
   backButton: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(77, 150, 255, 0.12)',
+    width: 56,
+    height: 56,
+    marginTop: -15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  backButtonDisabled: {},
   backButtonText: {
     color: '#1982C4',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 52,
+    lineHeight: 52,
+    fontWeight: '900',
+    width: 56,
+    height: 56,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+  backButtonTextDisabled: {
+    opacity: 0.25,
+  },
+  headerTitleBlock: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   headerTitle: {
     color: '#111111',
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 22,
     fontWeight: '700',
-    flex: 1,
     textAlign: 'center',
+    includeFontPadding: false,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 2,
+    includeFontPadding: false,
   },
   closeButton: {
-    padding: 8,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeButtonText: {
     color: '#111111',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 26,
+    lineHeight: 26,
+    fontWeight: '600',
+    width: 40,
+    height: 40,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   searchContainer: {
     padding: 16,
@@ -478,31 +593,41 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  contentContainer: {
-    paddingHorizontal: 16,
+  twoColumnRow: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
     paddingVertical: 12,
+    gap: 12,
+  },
+  column: {
+    flex: 1,
+  },
+  columnContent: {
+    paddingBottom: 8,
   },
   testamentTitle: {
     color: '#1982C4',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
-    paddingTop: 10,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 10,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  bookRow: {
-    paddingVertical: 14,
+  bookButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    minHeight: 44,
   },
-  bookName: {
-    fontSize: 18,
-    color: '#111111',
-    fontWeight: '500',
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  sectionSpacer: {
-    height: 14,
+  bookButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   infoText: {
     paddingVertical: 18,
@@ -561,9 +686,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   verseHint: {
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
     paddingHorizontal: 6,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
 });
 
