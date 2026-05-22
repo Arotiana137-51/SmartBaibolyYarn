@@ -98,6 +98,25 @@ async function applyBuildPragmas(db) {
   await runAsync(db, `PRAGMA foreign_keys = ON`);
 }
 
+// Stamp the content version into the DB header via PRAGMA user_version.
+// The app reads this on launch and compares against the constant in
+// src/services/database/dbVersions.ts — if the bundled value is newer
+// than the user's writable copy, the writable copy is replaced.
+// Must be a non-negative 32-bit integer (SQLite limit). YYYYMMDD fits.
+async function stampUserVersion(db, version) {
+  if (!Number.isInteger(version) || version < 0 || version > 0x7fffffff) {
+    throw new Error(`Invalid user_version: ${version}`);
+  }
+  await runAsync(db, `PRAGMA user_version = ${version}`);
+  const [{user_version}] = await allAsync(db, `PRAGMA user_version`);
+  if (Number(user_version) !== version) {
+    throw new Error(
+      `user_version write failed: expected ${version}, got ${user_version}`,
+    );
+  }
+  console.log(`  user_version stamped: ${version}`);
+}
+
 // ---------------------------------------------------------------------------
 // ZIP (max compression — what ships in production)
 // ---------------------------------------------------------------------------
@@ -154,6 +173,7 @@ module.exports = {
   finalizeAsync,
   closeAsync,
   applyBuildPragmas,
+  stampUserVersion,
   createZipFromDb,
   sha256,
   fmtKB,

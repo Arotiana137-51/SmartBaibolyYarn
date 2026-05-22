@@ -15,7 +15,9 @@
         "build:database": "node scripts/buildDatabase.js",
         "build:bible": "node scripts/buildBibleDatabase.js",
         "build:hymns": "node scripts/buildHymnsDatabase.js",
-        "check:db": "node scripts/checkDevDb.js"
+        "check:db": "node scripts/checkDevDb.js",
+        "bump:db-version": "node scripts/bumpDbVersion.js",
+        "build:patch": "node scripts/buildPatch.js"
     },
     "dependencies": {
         "@react-native-async-storage/async-storage": "^1.17.11",

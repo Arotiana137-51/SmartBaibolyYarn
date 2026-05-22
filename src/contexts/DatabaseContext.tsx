@@ -1,6 +1,7 @@
 ﻿// src/contexts/DatabaseContext.tsx
 import React, {createContext, useContext, useEffect, useState} from 'react';
 import { bibleDatabaseService, hymnsDatabaseService } from '../services/database/DatabaseService';
+import { patchManager } from '../services/database/PatchManager';
 
 type DatabaseContextType = {
   isInitialized: boolean;
@@ -23,10 +24,17 @@ export const DatabaseProvider: React.FC<{children: React.ReactNode}> = ({
         bibleDatabaseService.initDatabase(),
         hymnsDatabaseService.initDatabase(),
       ]);
+      // Mark ready BEFORE patches: the OTA channel must never block the UI.
+      // PatchManager swallows its own errors, so this `await` is safe; we
+      // still keep the call inside the try in case its module load fails.
       setIsInitialized(true);
       if (__DEV__) {
         console.log('Database initialized successfully');
       }
+      // Fire-and-forget: patches apply in the background while the user
+      // is already reading. Next launch picks up anything that finishes
+      // mid-session.
+      patchManager.checkAndApply();
     } catch (error) {
       console.error('Failed to initialize database:', error);
     }

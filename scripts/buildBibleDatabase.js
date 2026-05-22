@@ -25,10 +25,13 @@ const {
   finalizeAsync,
   closeAsync,
   applyBuildPragmas,
+  stampUserVersion,
   createZipFromDb,
   reportSize,
   sqlite3,
 } = require('./utils/buildDb');
+
+const { BIBLE_DB_VERSION } = require('./utils/dbVersions');
 
 async function buildBible(dbPath) {
   console.log('📖 Building Bible...');
@@ -218,6 +221,9 @@ async function buildBible(dbPath) {
   await runAsync(db, `INSERT INTO VersesFts(VersesFts) VALUES('optimize')`);
   await runAsync(db, `ANALYZE`);
   await runAsync(db, `VACUUM`);
+
+  // Stamp content version AFTER VACUUM so the value lands in the final header.
+  await stampUserVersion(db, BIBLE_DB_VERSION);
 
   await closeAsync(db);
   console.log(`✅ Bible built: ${normalizePathForDisplay(dbPath)}`);
