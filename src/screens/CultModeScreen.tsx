@@ -255,6 +255,13 @@ const CultModeScreen = () => {
             <View style={styles.emptyContainer}>
               <Text
                 style={[
+                  styles.introText,
+                  {color: theme.colors.textSecondary},
+                ]}>
+                {t('cultMode.intro')}
+              </Text>
+              <Text
+                style={[
                   styles.emptyText,
                   {color: theme.colors.textSecondary},
                 ]}>
@@ -361,7 +368,14 @@ const styles = StyleSheet.create({
   emptyContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  introText: {
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   emptyText: {fontSize: 16, textAlign: 'center'},
 });

@@ -11,6 +11,7 @@ type TranslationKey =
   | 'cultMode.title'
   | 'cultMode.activate'
   | 'cultMode.deactivate'
+  | 'cultMode.intro'
   | 'cultMode.emptyState'
   | 'cultMode.addBible'
   | 'cultMode.addHymn'
@@ -124,6 +125,8 @@ const translations: Translations = {
     'cultMode.title': 'Fotoam-pivavahana',
     'cultMode.activate': 'Velomy ny fotoana',
     'cultMode.deactivate': 'Ajanony',
+    'cultMode.intro':
+      'Ito dia fampidirana ny programam-pivavahana ka rehefa alahatrao mialoha eto ireo tokony ho vakianao mandritra ny fotoana dia tsy mila mikaroka boky/fihirana intsony ianao fa manindry ny teboka (prev, next) ery ambany fotsiny. Alaminao otrany ireny mandamina “Playlist” ireny izy ity mba hanamorana ny fampiasanao ny appli e-Baiboly mandritra ny fotoam-bavaka.',
     'cultMode.emptyState': "Mbola tsy misy zavatra eto. Ampio Baiboly na Fihirana.",
     'cultMode.addBible': 'Hampio Baiboly',
     'cultMode.addHymn': 'Hampio Fihirana',

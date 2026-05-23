@@ -477,15 +477,25 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   }, [cultMode.isActive, cultMode.currentEntry]);
 
+  // Topnav chevrons always navigate chapters (Bible) or hymns within the
+  // current category (hymnal) — even when cult mode is active. Playlist
+  // navigation lives on the dedicated bottom overlay (`‹` / `›`) rendered
+  // below; the two controls are deliberately separate so the user keeps
+  // free chapter-by-chapter browsing during a prayer session.
   const handlePreviousChapter = () => {
-    if (cultMode.isActive) {
-      cultMode.goPrev();
-      return;
-    }
-    if (mode === 'bible' && currentBook && currentChapter > 1) {
+    if (mode === 'bible' && currentBook) {
       setSelectedVerseRange(null);
       setSelectedVerseNumber(null);
-      setCurrentChapter(currentChapter - 1);
+      if (currentChapter > 1) {
+        setCurrentChapter(currentChapter - 1);
+      } else {
+        // At chapter 1 → jump to last chapter of previous book
+        const prevBook = books.find(b => b.id === currentBook.id - 1);
+        if (prevBook) {
+          setCurrentBook({ id: prevBook.id, name: prevBook.name });
+          setCurrentChapter(prevBook.chapters);
+        }
+      }
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory && currentHymnNumber > 1) {
       // Find previous hymn within the same category
       const prevHymn = hymns.find(h => h.category === currentHymnCategory && h.number === currentHymnNumber - 1);
@@ -498,14 +508,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   };
 
   const handleNextChapter = () => {
-    if (cultMode.isActive) {
-      cultMode.goNext();
-      return;
-    }
-    if (mode === 'bible' && currentBook && currentChapter < 150) {
+    if (mode === 'bible' && currentBook) {
       setSelectedVerseRange(null);
       setSelectedVerseNumber(null);
-      setCurrentChapter(currentChapter + 1);
+      const currentBookMeta = books.find(b => b.id === currentBook.id);
+      const lastChapter = currentBookMeta?.chapters ?? currentChapter;
+      if (currentChapter < lastChapter) {
+        setCurrentChapter(currentChapter + 1);
+      } else {
+        // At last chapter → jump to chapter 1 of next book
+        const nextBook = books.find(b => b.id === currentBook.id + 1);
+        if (nextBook) {
+          setCurrentBook({ id: nextBook.id, name: nextBook.name });
+          setCurrentChapter(1);
+        }
+      }
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory) {
       // Find next hymn within the same category
       const nextHymn = hymns.find(h => h.category === currentHymnCategory && h.number === currentHymnNumber + 1);
