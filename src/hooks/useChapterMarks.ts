@@ -8,7 +8,8 @@ const isMark = (m: any): m is ChapterMark =>
   typeof m.start === 'number' &&
   typeof m.end === 'number' &&
   typeof m.style === 'string' &&
-  m.end > m.start;
+  m.end > m.start &&
+  (m.note === undefined || typeof m.note === 'string');
 
 export const useChapterMarks = (bookId: number | null, chapter: number | null) => {
   const [marks, setMarks] = useState<ChapterMark[]>([]);

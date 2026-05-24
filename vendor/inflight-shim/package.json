@@ -1,0 +1,8 @@
+{
+  "name": "inflight",
+  "version": "1.0.6",
+  "description": "In-repo shim replacing the unmaintained inflight@1.0.6 to address SNYK-JS-INFLIGHT-6095116. See ../../SECURITY.md.",
+  "main": "inflight.js",
+  "license": "ISC",
+  "repository": "private"
+}

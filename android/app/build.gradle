@@ -113,9 +113,13 @@ android {
         versionName "1.2.0"
         resConfigs "fr"
 
-        // 16KB page size support - ensures native libs are aligned to 16KB boundaries
+        // 16KB page size support - ensures native libs are aligned to 16KB boundaries.
+        // Must match reactNativeArchitectures in android/gradle.properties — listing
+        // x86 / x86_64 here while RN only builds arm causes SoLoader to crash on
+        // x86 devices (Chromebooks, Intel tablets) when loading native modules
+        // like react-native-gesture-handler.
         ndk {
-            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+            abiFilters "armeabi-v7a", "arm64-v8a"
         }
 
         // NDK r28+ automatically aligns to 16KB page size

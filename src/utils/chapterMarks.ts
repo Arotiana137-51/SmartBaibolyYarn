@@ -11,7 +11,7 @@ const ITALIC_END = '\u0003';
 export const PSALMS_BOOK_ID = 19;
 export const PROVERBS_BOOK_ID = 20;
 
-export type MarkStyle = 'highlight' | 'bold' | 'italic' | 'underline';
+export type MarkStyle = 'highlight' | 'bold' | 'italic' | 'underline' | 'note';
 
 export interface ChapterMark {
   id: string;
@@ -20,6 +20,11 @@ export interface ChapterMark {
   style: MarkStyle;
   color?: string;
   createdAt: string;
+  // Free-form user-authored note attached to the range. Always present when
+  // style === 'note'. Can also coexist on a 'highlight' mark for a "highlight
+  // + comment" pattern, in which case there is one ChapterMark with style
+  // 'highlight' AND a sibling mark with style 'note' covering the same range.
+  note?: string;
 }
 
 export interface VerseSpan {

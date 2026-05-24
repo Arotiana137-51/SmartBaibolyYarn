@@ -6,7 +6,6 @@ import {
   Pressable,
   Alert,
   Modal,
-  FlatList,
   Switch,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -245,44 +244,42 @@ const CultModeScreen = () => {
         />
       </View>
 
-      {entries.length === 0 ? (
-        <FlatList
-          data={[]}
-          keyExtractor={() => 'never'}
-          renderItem={() => null}
-          ListHeaderComponent={headerComponent}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text
-                style={[
-                  styles.introText,
-                  {color: theme.colors.textSecondary},
-                ]}>
-                {t('cultMode.intro')}
-              </Text>
-              <Text
-                style={[
-                  styles.emptyText,
-                  {color: theme.colors.textSecondary},
-                ]}>
-                {t('cultMode.emptyState')}
-              </Text>
-            </View>
-          }
-          contentContainerStyle={styles.listContent}
-        />
-      ) : (
-        <DraggableFlatList
-          data={entries}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          onDragEnd={({from, to}) => {
-            if (from !== to) reorderEntries(from, to);
-          }}
-          ListHeaderComponent={headerComponent}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
+      {/*
+        Always render DraggableFlatList — never swap component types at this
+        position. Swapping FlatList ⇄ DraggableFlatList when entries
+        transition from empty → non-empty caused a Fabric mount-item race
+        ("Unable to find viewState for tag …"). The single component handles
+        both states via ListEmptyComponent.
+      */}
+      <DraggableFlatList
+        data={entries}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+        onDragEnd={({from, to}) => {
+          if (from !== to) reorderEntries(from, to);
+        }}
+        ListHeaderComponent={headerComponent}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text
+              style={[
+                styles.introText,
+                {color: theme.colors.textSecondary},
+              ]}>
+              {t('cultMode.intro')}
+            </Text>
+            <Text
+              style={[
+                styles.emptyText,
+                {color: theme.colors.textSecondary},
+              ]}>
+              {t('cultMode.emptyState')}
+            </Text>
+          </View>
+        }
+        contentContainerStyle={styles.listContent}
+      />
+
 
       <Modal
         visible={bibleModalVisible}

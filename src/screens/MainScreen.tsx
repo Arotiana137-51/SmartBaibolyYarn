@@ -15,6 +15,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
+import NotificationGlow from '../components/NotificationGlow';
 import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
@@ -786,6 +787,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onNextPress={handleNextChapter}
         />
       )}
+      <NotificationGlow />
       <View style={styles.readerContainer} {...swipeResponder.panHandlers}>
         {mode === 'bible' && bibleSelectionVisible ? (
           <BibleSelectionModal

@@ -79,7 +79,8 @@
         "react-native-quick-sqlite/**/uuid": "11.1.1",
         "@react-native/community-cli-plugin/**/picomatch": "2.3.2",
         "metro/**/picomatch": "2.3.2",
-        "metro-config/**/yaml": "2.8.3"
+        "metro-config/**/yaml": "2.8.3",
+        "inflight": "file:./vendor/inflight-shim"
     },
     "main": "index.js",
     "license": "GPL-3.0-or-later"

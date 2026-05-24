@@ -1,9 +1,12 @@
 import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import {WebView, type WebViewMessageEvent} from 'react-native-webview';
@@ -515,6 +518,9 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   const [tappedHighlight, setTappedHighlight] = useState<
     {start: number; end: number; color: string} | null
   >(null);
+  const [noteComposer, setNoteComposer] = useState<
+    {start: number; end: number; text: string; editingId: string | null} | null
+  >(null);
   
   const highlightColors = [
     '#FFEB3B', // Yellow
@@ -694,6 +700,55 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
     onSave(pendingMarks);
   };
 
+  const openNoteComposer = useCallback(() => {
+    if (!selectionOffsets) return;
+    // Check for an existing note covering exactly this range — opening the
+    // composer on top of a note edits it instead of stacking duplicates.
+    const existing = pendingMarks.find(
+      m =>
+        m.style === 'note' &&
+        m.start === selectionOffsets.start &&
+        m.end === selectionOffsets.end,
+    );
+    setNoteComposer({
+      start: selectionOffsets.start,
+      end: selectionOffsets.end,
+      text: existing?.note ?? '',
+      editingId: existing?.id ?? null,
+    });
+  }, [pendingMarks, selectionOffsets]);
+
+  const cancelNoteComposer = useCallback(() => {
+    setNoteComposer(null);
+  }, []);
+
+  const saveNoteComposer = useCallback(() => {
+    if (!noteComposer) return;
+    const trimmed = noteComposer.text.trim();
+    setPendingMarks(prev => {
+      if (noteComposer.editingId) {
+        if (!trimmed) {
+          // Clearing the text removes the note entirely.
+          return prev.filter(m => m.id !== noteComposer.editingId);
+        }
+        return prev.map(m =>
+          m.id === noteComposer.editingId ? {...m, note: trimmed} : m,
+        );
+      }
+      if (!trimmed) return prev;
+      const newMark: ChapterMark = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        start: noteComposer.start,
+        end: noteComposer.end,
+        style: 'note',
+        note: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+      return [...prev, newMark];
+    });
+    setNoteComposer(null);
+  }, [noteComposer]);
+
   const handleEraseSelection = () => {
     // Delegate to the WebView. It reads the live DOM selection (or the cached
     // last-known selection) and posts ERASE_RANGE back, which we handle in
@@ -755,6 +810,12 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
               label="U"
               underline
               onPress={() => inject('window.RNEditor && window.RNEditor.underline(); true;')}
+              theme={theme}
+            />
+            <ToolbarButton
+              label="✎"
+              onPress={openNoteComposer}
+              disabled={!selectionOffsets}
               theme={theme}
             />
           </View>
@@ -890,6 +951,71 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={noteComposer != null}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelNoteComposer}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.noteBackdrop}>
+          <Pressable style={styles.noteBackdropDismiss} onPress={cancelNoteComposer} />
+          <View
+            style={[
+              styles.noteCard,
+              {backgroundColor: theme.colors.backgroundSecondary},
+            ]}>
+            <Text style={[styles.noteTitle, {color: theme.colors.textPrimary}]}>
+              {noteComposer?.editingId ? 'Ovay ny naoty' : 'Hanampy naoty'}
+            </Text>
+            <TextInput
+              value={noteComposer?.text ?? ''}
+              onChangeText={text =>
+                setNoteComposer(prev => (prev ? {...prev, text} : prev))
+              }
+              multiline
+              autoFocus
+              placeholder="Soraty eto ny naotinao…"
+              placeholderTextColor={theme.colors.textSecondary}
+              style={[
+                styles.noteInput,
+                {
+                  color: theme.colors.textPrimary,
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  borderColor: theme.colors.divider,
+                },
+              ]}
+            />
+            <View style={styles.noteActions}>
+              <Pressable
+                onPress={cancelNoteComposer}
+                style={[
+                  styles.noteButton,
+                  {backgroundColor: theme.colors.backgroundTertiary},
+                ]}>
+                <Text
+                  style={[
+                    styles.noteButtonText,
+                    {color: theme.colors.textPrimary},
+                  ]}>
+                  Hidio
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={saveNoteComposer}
+                style={[
+                  styles.noteButton,
+                  {backgroundColor: theme.colors.accentBlue},
+                ]}>
+                <Text style={[styles.noteButtonText, {color: '#FFFFFF'}]}>
+                  Tahirizo
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Modal>
   );
 };
@@ -1086,6 +1212,51 @@ const styles = StyleSheet.create({
     minWidth: 96,
   },
   footerButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  noteBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  noteBackdropDismiss: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  noteCard: {
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+  },
+  noteTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  noteInput: {
+    minHeight: 110,
+    maxHeight: 220,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlignVertical: 'top',
+  },
+  noteActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  noteButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 76,
+    alignItems: 'center',
+  },
+  noteButtonText: {
     fontSize: 14,
     fontWeight: '700',
   },

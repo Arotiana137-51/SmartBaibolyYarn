@@ -22,7 +22,7 @@ import {
 } from '../utils/chapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
-import {getBibleBookShortName} from '../utils/bibleBookNames';
+import ReaderRevealBanner from './ReaderRevealBanner';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
@@ -93,6 +93,7 @@ const VerseItem = React.memo(
 
     const lineOffsets = useMemo(() => buildVerseLineOffsets(lines), [lines]);
     const hasMarks = verseMarks.length > 0;
+    const hasNote = verseMarks.some(m => m.style === 'note');
 
     // A range selection already filters the reader down to just those verses,
     // so the filtered view itself is the emphasis — no per-verse highlight.
@@ -189,7 +190,17 @@ const VerseItem = React.memo(
               },
             ]}
           >
-            {item.verse_number}{' '}
+            {item.verse_number}
+            {hasNote ? (
+              <Text
+                style={{
+                  fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize * 0.85, fontScale),
+                  color: theme.colors.verseNumber,
+                }}>
+                {' ✎'}
+              </Text>
+            ) : null}
+            {' '}
           </Text>
 
           {lines.map((line, idx) => {
@@ -342,16 +353,12 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
     );
   }, [verses, selectedVerseRange]);
 
-  const rangeBanner = useMemo(() => {
+  const rangeSuffix = useMemo(() => {
     if (!selectedVerseRange || verses.length === 0) return null;
-    const first = verses[0];
-    const shortName = getBibleBookShortName(currentBookName ?? '', first.book_id);
-    const ref =
-      selectedVerseRange.start === selectedVerseRange.end
-        ? `${shortName} ${first.chapter}:${selectedVerseRange.start}`
-        : `${shortName} ${first.chapter}:${selectedVerseRange.start}–${selectedVerseRange.end}`;
-    return {ref};
-  }, [selectedVerseRange, verses, currentBookName]);
+    return selectedVerseRange.start === selectedVerseRange.end
+      ? `:${selectedVerseRange.start}`
+      : `:${selectedVerseRange.start}–${selectedVerseRange.end}`;
+  }, [selectedVerseRange, verses.length]);
 
   const verseSpans: VerseSpan[] = useMemo(() => {
     if (!verses.length) return [];
@@ -476,38 +483,39 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
         {paddingBottom: BIBLE_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted},
       ]}
       ListHeaderComponent={
-        rangeBanner || headerText ? (
-          <View>
-            {rangeBanner ? (
-              <View
-                style={[
-                  styles.rangeBanner,
-                  {backgroundColor: 'rgba(10, 132, 255, 0.10)'},
-                ]}>
-                <Text
-                  style={[styles.rangeBannerRef, {color: theme.colors.textPrimary}]}>
-                  {rangeBanner.ref}
-                </Text>
-                {onClearRange ? (
-                  <Pressable onPress={onClearRange} style={styles.rangeClearButton}>
-                    <Text
-                      style={[
-                        styles.rangeClearText,
-                        {color: theme.colors.accentBlue},
-                      ]}>
-                      Asehoy ny toko manontolo
-                    </Text>
-                  </Pressable>
+        <View>
+          <ReaderRevealBanner />
+          {headerText ? (
+            <View style={styles.headerContainer}>
+              <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>
+                {headerText}
+                {rangeSuffix ? (
+                  <Text style={{color: theme.colors.accentBlue}}>
+                    {' '}
+                    {rangeSuffix}
+                  </Text>
                 ) : null}
-              </View>
-            ) : null}
-            {headerText ? (
-              <View style={styles.headerContainer}>
-                <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>{headerText}</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null
+              </Text>
+            </View>
+          ) : null}
+          {rangeSuffix && onClearRange ? (
+            <View
+              style={[
+                styles.rangeBanner,
+                {backgroundColor: 'rgba(10, 132, 255, 0.10)'},
+              ]}>
+              <Pressable onPress={onClearRange} style={styles.rangeClearButton}>
+                <Text
+                  style={[
+                    styles.rangeClearText,
+                    {color: theme.colors.accentBlue},
+                  ]}>
+                  Asehoy ny toko manontolo
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
       }
       onScrollToIndexFailed={onScrollToIndexFailed}
       onScrollBeginDrag={onScrollBeginDrag}
@@ -562,17 +570,11 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   rangeBanner: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     marginBottom: 10,
-  },
-  rangeBannerRef: {
-    fontSize: 15,
-    fontWeight: '700',
   },
   rangeClearButton: {
     paddingVertical: 6,
