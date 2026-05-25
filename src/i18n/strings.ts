@@ -101,7 +101,8 @@ type TranslationKey =
   | 'bible.loading'
   | 'hymns.title'
   | 'hymns.homeTitle'
-  | 'hymns.placeholder';
+  | 'hymns.placeholder'
+  | 'devotional.title';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -217,6 +218,7 @@ const translations: Translations = {
     'hymns.title': 'Fihirana',
     'hymns.homeTitle': 'Fihirana',
     'hymns.placeholder': ' eo am-panamboarana',
+    'devotional.title': 'Fampahatsiarovana',
   },
 };
 

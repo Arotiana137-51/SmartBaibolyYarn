@@ -1,5 +1,7 @@
-import React, {useEffect, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {
   useInAppNotifications,
@@ -8,6 +10,7 @@ import {
 import {useDailyDevotional, type Devotional} from '../hooks/useDailyDevotional';
 import {useDevotionalTone, TOPIC_LABEL_MG} from '../devotional/topics';
 import {hexToRgba} from '../utils/colorUtils';
+import type {RootStackParamList} from '../navigation/RootNavigator';
 
 const DEVOTIONAL_EXCERPT_CHARS = 220;
 
@@ -50,6 +53,20 @@ export const ReaderRevealBanner: React.FC<Props> = ({
   const {data: devotional, status} = useDailyDevotional();
   const {notifications, unreadCount, markAllSeen, markAsRead} =
     useInAppNotifications();
+  // Default navigation target: dedicated DevotionalScreen. Callers can still
+  // override via onOpenDevotional (e.g. to show an in-context preview).
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const handleOpenDevotional = useCallback(
+    (d: Devotional) => {
+      if (onOpenDevotional) {
+        onOpenDevotional(d);
+        return;
+      }
+      navigation.navigate('Devotional');
+    },
+    [navigation, onOpenDevotional],
+  );
 
   const hasDevotional = status === 'success' && devotional != null;
   const hasNotifications = notifications.length > 0;
@@ -78,7 +95,7 @@ export const ReaderRevealBanner: React.FC<Props> = ({
     <View style={styles.container}>
       {hasDevotional && devotional ? (
         <Pressable
-          onPress={() => onOpenDevotional?.(devotional)}
+          onPress={() => handleOpenDevotional(devotional)}
           style={[
             styles.devotionalCard,
             {
