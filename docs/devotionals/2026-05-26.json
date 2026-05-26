@@ -1,45 +1,59 @@
 {
   "date": "2026-05-26",
-  "title": "Ny fanantenana izay tsy mahamenatra",
-  "topic": "hope",
-  "verseRef": "Romana 5:5",
+  "title": "Fitiavana mahari-po sy malemy fanahy",
+  "topic": "love",
+  "verseRef": "1 Korintiana 13:4-7",
   "author": "Fiangonana e-Baiboly",
-  "publishedAt": "2026-05-26T05:00:00+03:00",
+  "publishedAt": "2026-05-26T17:00:00+03:00",
   "blocks": [
     {
       "type": "paragraph",
-      "text": "Misy andro mavesatra ka toa lavitra ny mazava. Amin'izany fotoana izany no ilantsika indrindra ny fanantenana — tsy ny fanantenan'izao tontolo izao izay mety hivadika, fa ilay fanantenana avy amin'Andriamanitra izay tsy mahamenatra mihitsy."
+      "text": "Matetika no ataontsika fa tsotra ny fitiavana: fihetseham-po mafana, teny mamy, fihazonan-tanana. Nefa raha jerena akaiky ny fanazavan'i Paoly ao amin'ny Korintiana voalohany, dia hita fa zavatra atao no fitiavana — fanapahan-kevitra averina isan'andro, fa tsy hetsi-po manjavona."
     },
     {
       "type": "verse",
-      "ref": "Romana 5:5",
-      "text": "Ary ny fanantenana dia tsy mahamenatra, satria ny fitiavan'Andriamanitra dia efa nampidinina tao am-pontsika tamin'ny alalan'ny Fanahy Masina izay nomena antsika."
+      "ref": "1 Korintiana 13:4-5",
+      "text": "Ny fitiavana mahari-po sy mora fanahy; ny fitiavana tsy mialona, tsy mirehareha, tsy mieboebo, tsy manao izay tsy mety, tsy mitady ny azy, tsy mora sosotra, tsy manisa ny ratsy."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Inona no maha-samihafa azy?"
+      "text": "Tsy fihetsem-po fotsiny"
     },
     {
       "type": "paragraph",
-      "text": "Ny fanantenana kristiana dia tsy miankina amin'ny toe-javatra. Mifototra amin'ny tenin'Andriamanitra sy ny fitiavany izy, ka na manao ahoana na manao ahoana ny eo amin'ny manodidina, dia mijoro tsy mihontsina."
+      "text": "Misy fotoana ahafahantsika tia rehefa mora ny fiainana. Fa amin'ny andro mavesatra, rehefa miteraka tsy fifankahazoana ny ankohonana na rehefa mandratra antsika ny namana, dia tsy ny fihetseham-po no afaka mitazona antsika — fa ny safidy izay ataontsika hanaraka an'i Kristy."
     },
     {
       "type": "callout",
-      "text": "Ny fanantenana tsy fitsipaha-maso amin'ny zava-misy fa fiatrehana azy miaraka amin'Andriamanitra.",
+      "text": "Ny fitiavana marina dia hita amin'ny fomba itondrantsika ny olona izay sarotra tiavina.",
       "variant": "topic"
+    },
+    {
+      "type": "quote",
+      "text": "Ny fitiavana dia tsy mahita fa manjary jamba; tsy manjary jamba fa manjary mahita zavatra tsy hitan'ny hafa.",
+      "attribution": "Tenin-drazana"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Hahafahanao manatanteraka androany"
     },
     {
       "type": "list",
       "items": [
-        "Inona no toe-javatra mampihena ny fanantenanao izao?",
-        "Iza no teny fikasana azonao tsaroana amin'izao fotoana izao?",
-        "Ahoana no hanehoanao fanantenana amin'ny olona iray hifanenanao androany?"
+        "Iza no olona iray izay tianao hampaharetana androany?",
+        "Inona no teny malemy azonao atao ho fanoloana teny mafy efa nieritreretanao?",
+        "Ahoana no ahafahanao maneho fitiavana tsy mitady ny azy amin'ny ankohonanao anio?"
       ]
     },
     {
       "type": "prayer",
-      "text": "Ry Tompo ô, ento miorina amin'ny fanantenana izay tsy mahamenatra izahay. Aoka tsy hamela anay ho resin'ny haizina ny fonay, fa fenoy fitiavanao izahay mba hahafahanay ho vavolombelona mazava amin'izao taranaka izao. Amena."
+      "text": "Ry Tompo ô, ianao no loharanon'ny fitiavana. Ampianaro izahay handala ny fitiavana izay mahari-po, izay mora fanahy, izay tsy mitady ny azy. Aoka ny fitiavana izay nampisehoinao taminay teo amin'ny hazo fijaliana no hibaiko ny fihetsika rehetra ataonay anio. Amena."
+    },
+    {
+      "type": "paragraph",
+      "text": "Tadidio: ny fitiavana izay tsy lavo na oviana na oviana dia tsy iankinan'ny fihetseham-pontsika fa miankina amin'ny tenan'Andriamanitra izay fitiavana."
     }
   ]
 }
