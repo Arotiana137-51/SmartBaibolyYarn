@@ -13,8 +13,8 @@
  * "which day's data is in this device" answerable at a glance.
  *
  * IMPORTANT: keep this in sync with scripts/utils/dbVersions.js. Use the
- * `npm run bump:db-version` script — it updates both files atomically.
+ * `yarn bump:db-version` script — it updates both files atomically.
  */
 
 export const BIBLE_DB_VERSION = 20260521;
-export const HYMNS_DB_VERSION = 20260521;
+export const HYMNS_DB_VERSION = 20260527;

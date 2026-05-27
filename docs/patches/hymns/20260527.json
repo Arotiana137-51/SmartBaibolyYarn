@@ -1,0 +1,21 @@
+{
+  "version": 20260527,
+  "appliesTo": "hymns",
+  "hymns": [],
+  "hymnVerses": [
+    {
+      "hymn_id": "ff_15",
+      "verse_number": 1,
+      "text": "Tompo malala tsitoha,inty aho\nIzao vao nandre ilay feo niantso ahy\nTsapako anatiko ao ny herinao\nMitaona ahy mba hiverina aminao.\n\nRaiko ô ! Raiko ô ! Inty aho\nRaiso mba ho isan'ireo zanakao\nFa izaho izay nania dia hiova\nHanaraka ny didinao Raiko ô !",
+      "text_plain": "tompo malala tsitoha inty aho izao vao nandre ilay feo niantso ahy tsapako anatiko ao ny herinao mitaona ahy mba hiverina aminao raiko o raiko o inty aho raiso mba ho isan ireo zanakao fa izaho izay nania dia hiova hanaraka ny didinao raiko o",
+      "is_chorus": 0
+    },
+    {
+      "hymn_id": "ff_15",
+      "verse_number": 2,
+      "text": "Jesosy Zokiko ô ! Raiso aho\nHo isan'ireo zandrinao tianao\nNeniko ireny taloha,fa hiova\nRaiso aho ! Raiso aho Jesoa ! Ho anao.\n\nTompo ô ! Tompo ô ! Inty aho\nRaiso mba ho isan'ireo zandrinao\nFa izaho izay nanda dia hiova\nHanaraka ny didinao Jesoa.\n(J. RAMIANDRISOA)",
+      "text_plain": "jesosy zokiko o raiso aho ho isan ireo zandrinao tianao neniko ireny taloha fa hiova raiso aho raiso aho jesoa ho anao tompo o tompo o inty aho raiso mba ho isan ireo zandrinao fa izaho izay nanda dia hiova hanaraka ny didinao jesoa j ramiandrisoa",
+      "is_chorus": 0
+    }
+  ]
+}
