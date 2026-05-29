@@ -1,5 +1,9 @@
 import React, {useCallback, useMemo, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Platform, ListRenderItemInfo, RefreshControl } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  type SharedValue,
+} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { BibleVerse } from '../hooks/useBibleData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
@@ -22,7 +26,7 @@ import {
 } from '../utils/chapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
-import ReaderRevealBanner from './ReaderRevealBanner';
+import {useDevotionalPullTrigger} from '../hooks/useDevotionalPullTrigger';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
@@ -321,6 +325,13 @@ interface BibleReaderViewProps {
   chapterMarks?: ChapterMark[];
   onClearRange?: () => void;
   currentBookName?: string | null;
+  // Fired when the user pulls down past the platform threshold at the top
+  // of the reader. Opens the devotional overlay in MainScreen.
+  onPullToOpenDevotional?: () => void;
+  // Reader scroll offset shared with DevotionalGlow. Written via
+  // useAnimatedScrollHandler so the glow's ellipse can grow with scroll
+  // without round-tripping through React.
+  glowScrollY?: SharedValue<number>;
 }
 
 const BibleReaderView: React.FC<BibleReaderViewProps> = ({
@@ -337,6 +348,8 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   chapterMarks,
   onClearRange,
   currentBookName,
+  onPullToOpenDevotional,
+  glowScrollY,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
@@ -459,11 +472,23 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   const onMomentumScrollEnd = useCallback(() => {
     isScrollingRef.current = false;
   }, []);
+  const handlePullTrigger = useCallback(() => {
+    onPullToOpenDevotional?.();
+  }, [onPullToOpenDevotional]);
+  const {refreshing, onRefresh} = useDevotionalPullTrigger(handlePullTrigger);
   const onScrollEndDrag = useCallback(() => {
     setTimeout(() => {
       isScrollingRef.current = false;
     }, 80);
   }, []);
+
+  // Mirror the FlatList's scroll offset into the shared value that drives
+  // DevotionalGlow's ellipse radius. UI-thread only; no React re-renders.
+  // Math.max guards iOS overscroll which produces transient negative offsets.
+  const glowScrollHandler = useAnimatedScrollHandler(event => {
+    if (!glowScrollY) return;
+    glowScrollY.value = Math.max(0, event.contentOffset.y);
+  });
 
   if (isLoading) {
     return (
@@ -474,17 +499,18 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   }
 
   return (
-    <FlatList
-      ref={flatListRef}
+    <Animated.FlatList
+      ref={flatListRef as React.Ref<FlatList<any>>}
       data={visibleVerses}
       keyExtractor={keyExtractor}
+      onScroll={glowScrollHandler}
+      scrollEventThrottle={16}
       contentContainerStyle={[
         styles.contentContainer,
         {paddingBottom: BIBLE_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted},
       ]}
       ListHeaderComponent={
         <View>
-          <ReaderRevealBanner />
           {headerText ? (
             <View style={styles.headerContainer}>
               <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>
@@ -521,6 +547,15 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       onScrollBeginDrag={onScrollBeginDrag}
       onScrollEndDrag={onScrollEndDrag}
       onMomentumScrollEnd={onMomentumScrollEnd}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.colors.accentBlue}
+          colors={[theme.colors.accentBlue]}
+          progressBackgroundColor={theme.colors.backgroundPrimary}
+        />
+      }
       renderItem={renderItem}
       {...listProps}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}

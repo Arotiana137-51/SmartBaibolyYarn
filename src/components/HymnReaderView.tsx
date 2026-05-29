@@ -1,9 +1,13 @@
 import React, {useCallback, useMemo} from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Platform, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedScrollHandler,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
-import ReaderRevealBanner from './ReaderRevealBanner';
+import {useDevotionalPullTrigger} from '../hooks/useDevotionalPullTrigger';
 
 // Hymn-specific spacing configuration
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
@@ -41,6 +45,13 @@ interface HymnReaderViewProps {
   hymnTitle?: string | null;
   fontScale?: number;
   onHymnLongPress?: (stanzaNumber: number, stanzaText: string) => void;
+  // Fired when the user pulls down past the platform threshold at the top
+  // of the reader. Opens the devotional overlay in MainScreen.
+  onPullToOpenDevotional?: () => void;
+  // Reader scroll offset shared with DevotionalGlow. Written via
+  // useAnimatedScrollHandler so the glow's ellipse can grow with scroll
+  // without round-tripping through React.
+  glowScrollY?: SharedValue<number>;
 }
 
 interface HymnStanza {
@@ -168,6 +179,8 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
   hymnTitle,
   fontScale = 1,
   onHymnLongPress,
+  onPullToOpenDevotional,
+  glowScrollY,
 }) => {
   const { theme } = useTheme();
   const { isLowEndMode } = useLowEndMode();
@@ -243,6 +256,18 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
     ],
   );
 
+  const handlePullTrigger = useCallback(() => {
+    onPullToOpenDevotional?.();
+  }, [onPullToOpenDevotional]);
+  const {refreshing, onRefresh} = useDevotionalPullTrigger(handlePullTrigger);
+
+  // Mirror the FlatList's scroll offset into the shared value that drives
+  // DevotionalGlow's ellipse radius. UI-thread only; no React re-renders.
+  const glowScrollHandler = useAnimatedScrollHandler(event => {
+    if (!glowScrollY) return;
+    glowScrollY.value = Math.max(0, event.contentOffset.y);
+  });
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -270,13 +295,14 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       };
 
   return (
-    <FlatList
+    <Animated.FlatList
       data={hymnStanzas}
       keyExtractor={keyExtractor}
+      onScroll={glowScrollHandler}
+      scrollEventThrottle={16}
       contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
       ListHeaderComponent={
         <View>
-          <ReaderRevealBanner />
           {hasTitle ? (
             <View style={styles.headerContainer}>
               <Text
@@ -296,6 +322,15 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
         </View>
       }
       renderItem={renderItem}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={theme.colors.accentBlue}
+          colors={[theme.colors.accentBlue]}
+          progressBackgroundColor={theme.colors.backgroundPrimary}
+        />
+      }
       {...listProps}
       style={[styles.container, { backgroundColor: theme.colors.readerBackground }]}
     />

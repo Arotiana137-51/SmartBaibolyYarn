@@ -162,21 +162,20 @@ const source = (): ContentSource => getContentSource();
 
 export const devotionalManager = {
   /**
-   * Returns the cached devotional if one exists and was fetched for today;
-   * null otherwise. Pure read, no network. Cheap enough to call on every
-   * render or focus event.
+   * Returns whatever devotional is currently cached, regardless of when it
+   * was fetched. Devotionals don't publish on a fixed cadence (could be
+   * daily, weekly, or longer), so the last successfully fetched entry
+   * stays on display until a newer one is published. Pure read, no network.
    */
   async getCachedForToday(): Promise<Devotional | null> {
     const cache = await readCache();
-    if (!cache) return null;
-    if (cache.fetchedForDate !== localDateKey()) return null;
-    return cache.devotional;
+    return cache?.devotional ?? null;
   },
 
   /**
-   * Returns whatever's in the cache, even if it was fetched on a previous
-   * day. Used as a graceful fallback when the network call hasn't returned
-   * yet — better than a flash of empty state.
+   * Alias for getCachedForToday. Kept for call sites that want to make
+   * "any cached entry, even stale" explicit at the read site. With the
+   * persistent-cache policy these two read the same thing.
    */
   async getCachedAny(): Promise<Devotional | null> {
     const cache = await readCache();
@@ -184,29 +183,42 @@ export const devotionalManager = {
   },
 
   /**
-   * Idempotent per-day refresh. Safe to call on every app foreground —
-   * the throttle ensures we only hit the CDN once per local date.
-   * Returns the validated devotional if one was fetched, null otherwise
-   * (offline, throttled, no entry published, validation failed).
+   * Idempotent per-day check. Safe to call on every app foreground — the
+   * throttle ensures we only hit the CDN once per local date. Returns a
+   * devotional only if the network produced something *newer* than what's
+   * cached; returns null when nothing newer exists (offline, throttled,
+   * no entry published, validation failed, or the published entry is the
+   * same one we already have).
+   *
+   * Publication cadence is irregular (daily, weekly, or longer), so the
+   * cache is never expired by date — the most recent successfully fetched
+   * entry persists indefinitely until a newer `date` lands.
    *
    * Never throws.
    */
   async checkAndUpdate(): Promise<Devotional | null> {
     try {
       if (await alreadyCheckedToday()) {
-        // Still return what's cached — caller may have just mounted and
-        // want the value back.
-        return await this.getCachedForToday();
+        return null;
       }
       if (!(await isOnline())) {
-        return await this.getCachedForToday();
+        return null;
       }
 
       const today = localDateKey();
       const fetched = await fetchAndValidate(source(), today);
       if (!fetched) {
         // Don't mark "checked" on failure — we want to retry on next launch.
-        return await this.getCachedForToday();
+        return null;
+      }
+
+      const cached = await readCache();
+      if (cached && cached.devotional.date >= fetched.date) {
+        // Nothing newer published. Mark the day as checked so we don't
+        // re-hit the network on every foreground, but don't overwrite or
+        // signal a change.
+        await markCheckedToday();
+        return null;
       }
 
       await writeCache({fetchedForDate: today, devotional: fetched});
@@ -220,17 +232,22 @@ export const devotionalManager = {
 
   /**
    * Force a fetch, bypassing the daily throttle. Use for pull-to-refresh.
-   * Still respects offline state and validation. Never throws.
+   * Same newer-only update policy as checkAndUpdate. Never throws.
    */
   async refresh(): Promise<Devotional | null> {
     try {
       if (!(await isOnline())) {
-        return await this.getCachedForToday();
+        return null;
       }
       const today = localDateKey();
       const fetched = await fetchAndValidate(source(), today);
       if (!fetched) {
-        return await this.getCachedForToday();
+        return null;
+      }
+      const cached = await readCache();
+      if (cached && cached.devotional.date >= fetched.date) {
+        await markCheckedToday();
+        return null;
       }
       await writeCache({fetchedForDate: today, devotional: fetched});
       await markCheckedToday();

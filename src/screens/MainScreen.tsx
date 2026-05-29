@@ -12,10 +12,13 @@ import {
   PanResponder,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useSharedValue} from 'react-native-reanimated';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
-import NotificationGlow from '../components/NotificationGlow';
+import DevotionalGlow from '../components/DevotionalGlow';
+import DevotionalOverlay from '../components/devotional/DevotionalOverlay';
+import {useDevotionalGlow} from '../hooks/useDevotionalGlow';
 import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
@@ -86,6 +89,28 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const route = useRoute<RouteProp<RootStackParamList, 'Home'>>();
   const {theme, isDarkMode, setDarkMode} = useTheme();
   const insets = useSafeAreaInsets();
+  // Bridge daily devotional → in-app notification. Without this, unreadCount
+  // stays 0, the DevotionalGlow pulse never lights, and the pull-to-open
+  // gesture has no visual cue. Side-effect only — no return value used.
+  useDevotionalGlow();
+  // Shared scroll offset for the reader views. Written by Bible/Hymn readers
+  // via useAnimatedScrollHandler; read by DevotionalGlow to drive the
+  // ellipse radius. UI-thread only — no React re-renders here.
+  const devotionalScrollY = useSharedValue(0);
+  // Inline devotional overlay state. Rendered between the Glow and the
+  // reader; opened by tapping the Glow or pulling down at the top of the
+  // reader; dismissed by scrolling past the end of the devotional content.
+  const [devotionalOpen, setDevotionalOpen] = useState(false);
+  const openDevotional = useCallback(() => {
+    // Opening the devotional supersedes any selection flow in progress.
+    // Without this, the SelectionTopBar can stay live underneath and
+    // re-appear with stale state when the overlay dismisses.
+    setBibleSelectionVisible(false);
+    setRequestedBibleSelectionStep(null);
+    setHymnSelectionVisible(false);
+    setDevotionalOpen(true);
+  }, []);
+  const closeDevotional = useCallback(() => setDevotionalOpen(false), []);
   const { scale: rScale, isAndroid: rIsAndroid } = useResponsive();
   const TOP_BAR_TOOLBAR_HEIGHT = Math.max(TOP_BAR_TOOLBAR_BASE, rScale(rIsAndroid ? 52 : 44));
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
@@ -754,7 +779,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       edges={['left', 'right']}
       style={[styles.container, {backgroundColor: theme.colors.readerBackground}]}
     >
-      {mode === 'bible' && bibleSelectionVisible ? (
+      {mode === 'bible' && bibleSelectionVisible && !devotionalOpen ? (
         <SelectionTopBar
           tabs={[
             {key: 'book' as const, label: 'Boky'},
@@ -779,16 +804,27 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       ) : (
         <TopBar
           appMode={mode}
-          title={title}
+          // When the devotional overlay is open the center pill stops
+          // pointing at the current chapter/hymn and becomes the devotional's
+          // label. Tapping it then dismisses the overlay (handled below).
+          title={devotionalOpen ? 'Vatsim-panahy' : title}
           isMenuOpen={isMenuOpen}
           onMenuPress={() => setIsMenuOpen(open => !open)}
-          onTitlePress={handleTitlePress}
+          onTitlePress={devotionalOpen ? closeDevotional : handleTitlePress}
           onPreviousPress={handlePreviousChapter}
           onNextPress={handleNextChapter}
         />
       )}
-      <NotificationGlow />
+      <DevotionalGlow onOpen={openDevotional} scrollY={devotionalScrollY} />
       <View style={styles.readerContainer} {...swipeResponder.panHandlers}>
+        <DevotionalOverlay
+          open={devotionalOpen}
+          // Rendered inside readerContainer with absolute fill — sits above
+          // the BibleReader/HymnReader siblings via zIndex so the slide-in
+          // animation visually drops down into the reader's space.
+          topOffset={0}
+          onDismiss={closeDevotional}
+        />
         {mode === 'bible' && bibleSelectionVisible ? (
           <BibleSelectionModal
             onClose={() => {
@@ -862,6 +898,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               chapterMarks={chapterMarks}
               currentBookName={currentBook?.name ?? null}
               onClearRange={() => setSelectedVerseRange(null)}
+              onPullToOpenDevotional={openDevotional}
+              glowScrollY={devotionalScrollY}
             />
           ) : (
             <HymnReaderView
@@ -870,16 +908,20 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               hymnTitle={getCurrentHymn()?.title ?? null}
               fontScale={fontScale}
               onHymnLongPress={handleHymnStanzaLongPress}
+              onPullToOpenDevotional={openDevotional}
+              glowScrollY={devotionalScrollY}
             />
           )
         )}
 
       </View>
-      <CustomBottomNav
-        activeMode={mode}
-        onTabPress={setMode}
-        compact={cultMode.isActive}
-      />
+      {devotionalOpen ? null : (
+        <CustomBottomNav
+          activeMode={mode}
+          onTabPress={setMode}
+          compact={cultMode.isActive}
+        />
+      )}
       {cultMode.isActive ? (
         <View
           pointerEvents="box-none"

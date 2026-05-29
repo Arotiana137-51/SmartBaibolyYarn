@@ -59,8 +59,11 @@ export const useDailyDevotional = (): Hook => {
     let cancelled = false;
 
     (async () => {
-      // Cache-first: show today's cached entry immediately if there is one.
-      const cached = await devotionalManager.getCachedForToday();
+      // Cache-first: show the last-known devotional immediately if there is
+      // one. The cache is persistent across days — publication cadence is
+      // irregular, so the most recent entry stays on display until the
+      // network produces something newer.
+      const cached = await devotionalManager.getCachedAny();
       if (cancelled) return;
       if (cached) {
         setState({data: cached, status: 'success'});
@@ -70,14 +73,16 @@ export const useDailyDevotional = (): Hook => {
 
       const fresh = await devotionalManager.checkAndUpdate();
       if (cancelled) return;
-      // Only overwrite if we actually got something new. A null result from
-      // checkAndUpdate when we already had a cache hit means "nothing newer
-      // published" — keep showing the cached entry.
       if (fresh) {
+        // Newer entry landed — adopt it.
         apply(fresh);
       } else if (!cached) {
+        // No cache and the network produced nothing — surface the error
+        // state so the screen can show "no devotional yet".
         apply(null);
       }
+      // Otherwise: cache hit and nothing newer published — keep showing
+      // the cached entry, no state change needed.
     })();
 
     return () => {
@@ -90,10 +95,13 @@ export const useDailyDevotional = (): Hook => {
     const fresh = await devotionalManager.refresh();
     if (fresh) {
       apply(fresh);
-    } else if (!state.data) {
-      apply(null);
+      return;
     }
-  }, [apply, state.data]);
+    // No newer entry. If we already had something, keep showing it —
+    // a refresh that finds nothing new should not flip the screen to an
+    // error state.
+    setState(s => ({...s, status: s.data ? 'success' : 'error'}));
+  }, [apply]);
 
   return {...state, refresh};
 };

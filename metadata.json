@@ -1,0 +1,8 @@
+{
+  "name": "Glowing Component Mobile UI",
+  "description": "A refined, interactive mobile-responsive interface showcasing elegant glowing React components, customizable core pulse effects, and interactive ambient light states below a clean top navigation bar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

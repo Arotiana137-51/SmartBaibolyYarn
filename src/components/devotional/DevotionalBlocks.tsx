@@ -1,6 +1,7 @@
 import React, {useMemo} from 'react';
 import {
   Image,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -24,39 +25,49 @@ import type {DevotionalTone} from '../../devotional/topics';
 import {useTheme} from '../../contexts/ThemeContext';
 import {hexToRgba} from '../../utils/colorUtils';
 
-// Block renderers for the daily devotional. Each block is a "card" — bordered,
-// rounded, padded — matching the visual vocabulary established by
-// ReaderRevealBanner (borderRadius 14, borderWidth 1, padding 14). Blocks that
-// carry the topic's voice (verse, callout, prayer, quote) get a tinted fill +
-// accent border; structural blocks (paragraph, heading, list, image) sit on a
-// neutral surface so the topic's color doesn't drown the reading itself.
-//
-// All blocks accept the resolved `DevotionalTone`. They never look up the topic
-// themselves — that's the composer's job (see DevotionalView).
+// Material 3 block renderers. Each block is a card following M3's
+// surface/elevation pattern:
+//   - Structural blocks (paragraph, list, image) sit on
+//     surfaceContainerLow with elevation 1.
+//   - Topic-voiced blocks (verse, callout, prayer, quote) use a tonal
+//     container — accent tint at low alpha — with elevation 2.
+//   - Borders are dropped in favor of elevation + container color.
+// All blocks accept the resolved `DevotionalTone`. They never look up the
+// topic themselves — that's the composer's job (see DevotionalView).
 
 type WithTone<T> = {block: T; tone: DevotionalTone};
 
-const TINTED_CARD_BG_ALPHA = 0.07;
-const TINTED_CARD_BORDER_ALPHA = 0.35;
-const EYEBROW_TINT_ALPHA = 0.18;
+const TONAL_BG_ALPHA = 0.10;
+const TONAL_BG_ALPHA_DARK = 0.18;
+
+// M3 elevation tokens approximated for RN (Android elevation + iOS shadow).
+const elev = (level: 1 | 2): ViewStyle =>
+  Platform.select<ViewStyle>({
+    android: {elevation: level === 1 ? 1 : 2},
+    ios: {
+      shadowColor: '#000000',
+      shadowOffset: {width: 0, height: level === 1 ? 1 : 2},
+      shadowOpacity: level === 1 ? 0.08 : 0.14,
+      shadowRadius: level === 1 ? 3 : 6,
+    },
+    default: {},
+  }) as ViewStyle;
 
 // --- paragraph ---------------------------------------------------------------
 
 export const ParagraphBlockView: React.FC<WithTone<ParagraphBlock>> = ({
   block,
-  tone,
 }) => {
   const {theme} = useTheme();
   return (
     <View
       style={[
-        styles.neutralCard,
-        {
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderColor: theme.colors.divider,
-        },
+        styles.card,
+        elev(1),
+        {backgroundColor: theme.colors.backgroundSecondary},
       ]}>
-      <Text style={[styles.bodyText, {color: tone.onSurface}]}>
+      <Text
+        style={[styles.bodyText, {color: theme.colors.textPrimary}]}>
         {block.text}
       </Text>
     </View>
@@ -69,9 +80,7 @@ export const HeadingBlockView: React.FC<WithTone<HeadingBlock>> = ({
   block,
   tone,
 }) => {
-  // Headings sit transparent — they're section breaks, not cards. The accent
-  // underline ties them to the topic without competing with the cards above
-  // and below.
+  // Headings are M3 section labels — no card, larger letter-spacing.
   const size: TextStyle =
     block.level === 2 ? {fontSize: 20} : {fontSize: 17};
   return (
@@ -84,12 +93,6 @@ export const HeadingBlockView: React.FC<WithTone<HeadingBlock>> = ({
         ]}>
         {block.text}
       </Text>
-      <View
-        style={[
-          styles.headingRule,
-          {backgroundColor: hexToRgba(tone.accent, 0.4)},
-        ]}
-      />
     </View>
   );
 };
@@ -99,21 +102,26 @@ export const HeadingBlockView: React.FC<WithTone<HeadingBlock>> = ({
 export const VerseBlockView: React.FC<WithTone<VerseBlock>> = ({
   block,
   tone,
-}) => (
-  <View
-    style={[
-      styles.tintedCard,
-      {
-        backgroundColor: tone.surface,
-        borderColor: hexToRgba(tone.accent, TINTED_CARD_BORDER_ALPHA),
-      },
-    ]}>
-    <Text style={[styles.eyebrow, {color: tone.accent}]}>{block.ref}</Text>
-    <Text style={[styles.verseText, {color: tone.onSurface}]}>
-      {block.text}
-    </Text>
-  </View>
-);
+}) => {
+  const {theme} = useTheme();
+  const tonalBg = hexToRgba(
+    tone.accent,
+    theme.isDark ? TONAL_BG_ALPHA_DARK : TONAL_BG_ALPHA,
+  );
+  return (
+    <View
+      style={[
+        styles.card,
+        elev(2),
+        {backgroundColor: tonalBg},
+      ]}>
+      <Text style={[styles.eyebrow, {color: tone.accent}]}>{block.ref}</Text>
+      <Text style={[styles.verseText, {color: theme.colors.textPrimary}]}>
+        {block.text}
+      </Text>
+    </View>
+  );
+};
 
 // --- callout -----------------------------------------------------------------
 
@@ -122,26 +130,25 @@ export const CalloutBlockView: React.FC<WithTone<CalloutBlock>> = ({
   tone,
 }) => {
   const {theme} = useTheme();
-  // 'muted' callouts use the theme's neutral surface; 'topic' (default)
-  // borrows the topic tint. Both keep an accent left-bar so the eye groups
-  // them as "the author speaking aside".
   const isMuted = block.variant === 'muted';
   const bg = isMuted
     ? theme.colors.backgroundSecondary
-    : hexToRgba(tone.accent, TINTED_CARD_BG_ALPHA);
-  const border = isMuted
-    ? theme.colors.divider
-    : hexToRgba(tone.accent, TINTED_CARD_BORDER_ALPHA);
+    : hexToRgba(
+        tone.accent,
+        theme.isDark ? TONAL_BG_ALPHA_DARK : TONAL_BG_ALPHA,
+      );
   return (
     <View
       style={[
         styles.calloutCard,
-        {backgroundColor: bg, borderColor: border},
+        elev(isMuted ? 1 : 2),
+        {backgroundColor: bg},
       ]}>
       <View
         style={[styles.calloutBar, {backgroundColor: tone.accent}]}
       />
-      <Text style={[styles.calloutText, {color: tone.onSurface}]}>
+      <Text
+        style={[styles.calloutText, {color: theme.colors.textPrimary}]}>
         {block.text}
       </Text>
     </View>
@@ -153,58 +160,70 @@ export const CalloutBlockView: React.FC<WithTone<CalloutBlock>> = ({
 export const QuoteBlockView: React.FC<WithTone<QuoteBlock>> = ({
   block,
   tone,
-}) => (
-  <View
-    style={[
-      styles.tintedCard,
-      {
-        backgroundColor: hexToRgba(tone.accent, TINTED_CARD_BG_ALPHA),
-        borderColor: hexToRgba(tone.accent, TINTED_CARD_BORDER_ALPHA),
-      },
-    ]}>
-    <Text style={[styles.quoteOpenMark, {color: tone.accent}]}>“</Text>
-    <Text style={[styles.quoteText, {color: tone.onSurface}]}>
-      {block.text}
-    </Text>
-    {block.attribution ? (
-      <Text style={[styles.quoteAttribution, {color: tone.onSurface}]}>
-        — {block.attribution}
+}) => {
+  const {theme} = useTheme();
+  const tonalBg = hexToRgba(
+    tone.accent,
+    theme.isDark ? TONAL_BG_ALPHA_DARK : TONAL_BG_ALPHA,
+  );
+  return (
+    <View
+      style={[
+        styles.card,
+        elev(2),
+        {backgroundColor: tonalBg},
+      ]}>
+      <Text style={[styles.quoteOpenMark, {color: tone.accent}]}>“</Text>
+      <Text style={[styles.quoteText, {color: theme.colors.textPrimary}]}>
+        {block.text}
       </Text>
-    ) : null}
-  </View>
-);
+      {block.attribution ? (
+        <Text
+          style={[
+            styles.quoteAttribution,
+            {color: theme.colors.textSecondary},
+          ]}>
+          — {block.attribution}
+        </Text>
+      ) : null}
+    </View>
+  );
+};
 
 // --- prayer ------------------------------------------------------------------
 
 export const PrayerBlockView: React.FC<WithTone<PrayerBlock>> = ({
   block,
   tone,
-}) => (
-  <View
-    style={[
-      styles.tintedCard,
-      {
-        backgroundColor: tone.surface,
-        borderColor: hexToRgba(tone.accent, TINTED_CARD_BORDER_ALPHA),
-      },
-    ]}>
+}) => {
+  const {theme} = useTheme();
+  const tonalBg = hexToRgba(
+    tone.accent,
+    theme.isDark ? TONAL_BG_ALPHA_DARK : TONAL_BG_ALPHA,
+  );
+  return (
     <View
       style={[
-        styles.eyebrowChip,
-        {
-          backgroundColor: hexToRgba(tone.accent, EYEBROW_TINT_ALPHA),
-          borderColor: hexToRgba(tone.accent, TINTED_CARD_BORDER_ALPHA),
-        },
+        styles.card,
+        elev(2),
+        {backgroundColor: tonalBg},
       ]}>
-      <Text style={[styles.eyebrowChipText, {color: tone.accent}]}>
-        VAVAKA
+      <View
+        style={[
+          styles.eyebrowChip,
+          {backgroundColor: hexToRgba(tone.accent, 0.22)},
+        ]}>
+        <Text style={[styles.eyebrowChipText, {color: tone.accent}]}>
+          VAVAKA
+        </Text>
+      </View>
+      <Text
+        style={[styles.prayerText, {color: theme.colors.textPrimary}]}>
+        {block.text}
       </Text>
     </View>
-    <Text style={[styles.prayerText, {color: tone.onSurface}]}>
-      {block.text}
-    </Text>
-  </View>
-);
+  );
+};
 
 // --- list --------------------------------------------------------------------
 
@@ -217,18 +236,20 @@ export const ListBlockView: React.FC<WithTone<ListBlock>> = ({
   return (
     <View
       style={[
-        styles.neutralCard,
-        {
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderColor: theme.colors.divider,
-        },
+        styles.card,
+        elev(1),
+        {backgroundColor: theme.colors.backgroundSecondary},
       ]}>
       {block.items.map((item, idx) => (
         <View key={`${idx}-${item.length}`} style={styles.listRow}>
           <Text style={[styles.listMarker, {color: tone.accent}]}>
             {ordered ? `${idx + 1}.` : '•'}
           </Text>
-          <Text style={[styles.listItemText, {color: tone.onSurface}]}>
+          <Text
+            style={[
+              styles.listItemText,
+              {color: theme.colors.textPrimary},
+            ]}>
             {item}
           </Text>
         </View>
@@ -241,7 +262,6 @@ export const ListBlockView: React.FC<WithTone<ListBlock>> = ({
 
 export const ImageBlockView: React.FC<WithTone<ImageBlock>> = ({
   block,
-  tone,
 }) => {
   const {theme} = useTheme();
   const aspectRatio = block.aspectRatio ?? 16 / 9;
@@ -253,10 +273,8 @@ export const ImageBlockView: React.FC<WithTone<ImageBlock>> = ({
     <View
       style={[
         styles.imageCard,
-        {
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderColor: theme.colors.divider,
-        },
+        elev(1),
+        {backgroundColor: theme.colors.backgroundSecondary},
       ]}>
       <Image
         source={{uri: block.url}}
@@ -265,7 +283,11 @@ export const ImageBlockView: React.FC<WithTone<ImageBlock>> = ({
         resizeMode="cover"
       />
       {block.caption ? (
-        <Text style={[styles.imageCaption, {color: tone.onSurface}]}>
+        <Text
+          style={[
+            styles.imageCaption,
+            {color: theme.colors.textSecondary},
+          ]}>
           {block.caption}
         </Text>
       ) : null}
@@ -276,16 +298,12 @@ export const ImageBlockView: React.FC<WithTone<ImageBlock>> = ({
 // --- styles ------------------------------------------------------------------
 
 const cardBase: ViewStyle = {
-  borderWidth: 1,
-  borderRadius: 14,
-  padding: 14,
+  borderRadius: 16,
+  padding: 16,
 };
 
 const styles = StyleSheet.create({
-  neutralCard: {
-    ...cardBase,
-  },
-  tintedCard: {
+  card: {
     ...cardBase,
   },
   bodyText: {
@@ -293,25 +311,20 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   headingWrap: {
-    paddingTop: 6,
-    paddingBottom: 4,
-    gap: 6,
+    paddingTop: 8,
+    paddingBottom: 2,
+    paddingHorizontal: 4,
   },
   headingText: {
     fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  headingRule: {
-    height: 2,
-    width: 36,
-    borderRadius: 1,
+    letterSpacing: 0.15,
   },
   eyebrow: {
     fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   verseText: {
     fontSize: 16,
@@ -327,9 +340,7 @@ const styles = StyleSheet.create({
   },
   calloutBar: {
     width: 4,
-    borderTopLeftRadius: 13,
-    borderBottomLeftRadius: 13,
-    marginRight: 12,
+    marginRight: 14,
   },
   calloutText: {
     flex: 1,
@@ -338,10 +349,10 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   quoteOpenMark: {
-    fontSize: 28,
-    lineHeight: 28,
+    fontSize: 32,
+    lineHeight: 32,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   quoteText: {
     fontSize: 15,
@@ -350,21 +361,21 @@ const styles = StyleSheet.create({
   },
   quoteAttribution: {
     fontSize: 13,
-    marginTop: 6,
-    opacity: 0.7,
+    marginTop: 8,
+    fontWeight: '500',
   },
   eyebrowChip: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginBottom: 8,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 24,
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   eyebrowChipText: {
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   prayerText: {
     fontSize: 15,
@@ -372,7 +383,7 @@ const styles = StyleSheet.create({
   },
   listRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
     paddingVertical: 4,
   },
   listMarker: {
@@ -386,15 +397,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   imageCard: {
-    borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
   },
   imageCaption: {
     fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    opacity: 0.75,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontStyle: 'italic',
   },
 });

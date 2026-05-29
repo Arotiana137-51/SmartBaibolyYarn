@@ -1,6 +1,8 @@
-import React, {useCallback, useState} from 'react';
+import React from 'react';
 import {
-  RefreshControl,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,17 +28,22 @@ import {
   VerseBlockView,
 } from './DevotionalBlocks';
 
-// Composes the daily devotional: a topic-tinted header card with title +
-// topic chip + verse ref + author, followed by a card stack of block
-// renderers. Owns pull-to-refresh — the screen above stays a thin shell
-// that just passes the data + refresh callback in.
+// Composes the daily devotional in a Material 3 vocabulary:
+//   - Hero card uses M3 "filled" surface with elevation (no border).
+//   - Topic chip is M3 Assist Chip shape (height 32, radius 8).
+//   - Title uses M3 display-small type role; supporting copy uses
+//     body-medium with onSurfaceVariant tone.
+// The published date is intentionally NOT shown — publication cadence is
+// irregular (could be daily, weekly, or longer); we just show the latest
+// entry as "current" until a newer one lands.
 
 type Props = {
   devotional: Devotional;
-  // Callback to trigger a re-fetch (typically hook.refresh). When omitted
-  // the ScrollView is rendered without RefreshControl — useful for embedded
-  // previews where pull-to-refresh would be confusing.
-  onRefresh?: () => Promise<void>;
+  // Forwarded to the inner ScrollView. The overlay variant uses these to
+  // detect "scrolled past the end of content" for its dismiss gesture.
+  onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollEndDrag?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
 };
 
 const renderBlock = (
@@ -64,188 +71,171 @@ const renderBlock = (
   }
 };
 
-// Render the published date as a short Malagasy human-readable string.
-// We only need this on the header card so a tiny inline helper beats a
-// general-purpose i18n util.
-const MG_MONTHS = [
-  'Janoary',
-  'Febroary',
-  'Martsa',
-  'Aprily',
-  'Mey',
-  'Jona',
-  'Jolay',
-  'Aogositra',
-  'Septambra',
-  'Oktobra',
-  'Novambra',
-  'Desambra',
-];
-
-const formatPublishedDate = (iso: string): string => {
-  // The schema uses YYYY-MM-DD for `date`. Parse manually to avoid the
-  // UTC-shift trap (`new Date('2026-05-25')` is midnight UTC, which is the
-  // 24th in negative timezones).
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!m) return iso;
-  const day = Number.parseInt(m[3], 10);
-  const month = Number.parseInt(m[2], 10);
-  const year = m[1];
-  if (
-    !Number.isFinite(day) ||
-    !Number.isFinite(month) ||
-    month < 1 ||
-    month > 12
-  ) {
-    return iso;
-  }
-  return `${day} ${MG_MONTHS[month - 1]} ${year}`;
-};
-
-export const DevotionalView: React.FC<Props> = ({devotional, onRefresh}) => {
+export const DevotionalView: React.FC<Props> = ({
+  devotional,
+  onScroll,
+  onScrollEndDrag,
+  scrollEventThrottle,
+}) => {
   const {theme} = useTheme();
   const tone = useDevotionalTone(devotional.topic);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = useCallback(async () => {
-    if (!onRefresh) return;
-    setRefreshing(true);
-    try {
-      await onRefresh();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [onRefresh]);
 
   return (
-    <ScrollView
+    <View
       style={[
-        styles.scroll,
+        styles.container,
         {backgroundColor: theme.colors.backgroundPrimary},
-      ]}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={tone.accent}
-            colors={[tone.accent]}
-          />
-        ) : undefined
-      }>
-      {/* Header card — topic-tinted to ground the rest of the stack. */}
+      ]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        onScroll={onScroll}
+        onScrollEndDrag={onScrollEndDrag}
+        scrollEventThrottle={scrollEventThrottle}>
+      {/* Hero card — M3 filled surface, elevation rather than border. The
+          topic tint is carried only by the chip + accent rail; the surface
+          itself stays neutral so the title leads. */}
       <View
         style={[
-          styles.headerCard,
+          styles.hero,
           {
-            backgroundColor: tone.surface,
-            borderColor: hexToRgba(tone.accent, 0.35),
+            backgroundColor: theme.colors.backgroundSecondary,
+            shadowColor: theme.isDark ? '#000000' : tone.accent,
           },
         ]}>
-        <View style={styles.headerEyebrowRow}>
-          <Text style={[styles.headerEyebrow, {color: tone.accent}]}>
-            {formatPublishedDate(devotional.date)}
-          </Text>
+        <View
+          style={[
+            styles.heroAccentRail,
+            {backgroundColor: tone.accent},
+          ]}
+        />
+        <View style={styles.heroBody}>
+          {/* M3 assist-chip-style topic indicator. */}
           <View
             style={[
               styles.topicChip,
               {
-                backgroundColor: hexToRgba(tone.accent, 0.18),
-                borderColor: hexToRgba(tone.accent, 0.35),
+                backgroundColor: hexToRgba(tone.accent, 0.14),
               },
             ]}>
+            <View
+              style={[
+                styles.topicDot,
+                {backgroundColor: tone.accent},
+              ]}
+            />
             <Text style={[styles.topicChipText, {color: tone.accent}]}>
               {TOPIC_LABEL_MG[devotional.topic]}
             </Text>
           </View>
+
+          <Text style={[styles.title, {color: theme.colors.textPrimary}]}>
+            {devotional.title}
+          </Text>
+
+          {devotional.verseRef ? (
+            <Text
+              style={[
+                styles.verseRef,
+                {color: tone.accent},
+              ]}>
+              {devotional.verseRef}
+            </Text>
+          ) : null}
+
+          {devotional.author ? (
+            <Text
+              style={[
+                styles.author,
+                {color: theme.colors.textSecondary},
+              ]}>
+              {devotional.author}
+            </Text>
+          ) : null}
         </View>
-        <Text style={[styles.title, {color: tone.onSurface}]}>
-          {devotional.title}
-        </Text>
-        {devotional.verseRef ? (
-          <Text
-            style={[
-              styles.verseRef,
-              {color: tone.onSurface, opacity: 0.75},
-            ]}>
-            {devotional.verseRef}
-          </Text>
-        ) : null}
-        {devotional.author ? (
-          <Text
-            style={[
-              styles.author,
-              {color: tone.onSurface, opacity: 0.6},
-            ]}>
-            — {devotional.author}
-          </Text>
-        ) : null}
       </View>
 
       {/* Block stack. */}
       {devotional.blocks.map((block, idx) =>
         renderBlock(block, tone, `${devotional.date}-${idx}-${block.type}`),
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    padding: 14,
-    gap: 10,
-    paddingBottom: 32,
-  },
-  headerCard: {
-    borderWidth: 1,
-    borderRadius: 14,
     padding: 16,
-    marginBottom: 4,
+    gap: 12,
+    paddingBottom: 40,
   },
-  headerEyebrowRow: {
+  // M3 elevated card: no border, soft shadow, 16dp radius.
+  hero: {
+    borderRadius: 16,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 8,
+    overflow: 'hidden',
+    ...Platform.select({
+      android: {elevation: 3},
+      ios: {
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+      },
+    }),
   },
-  headerEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    flexShrink: 1,
+  heroAccentRail: {
+    width: 4,
+  },
+  heroBody: {
+    flex: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    gap: 10,
   },
   topicChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  topicDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   topicChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
+  // M3 headline-small: 24sp, weight 400. Bumped to 600 for hierarchy.
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
-    lineHeight: 28,
-    marginBottom: 6,
+    lineHeight: 32,
+    letterSpacing: 0,
   },
+  // M3 title-medium role.
   verseRef: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 4,
+    letterSpacing: 0.1,
   },
+  // M3 body-small / supporting text.
   author: {
     fontSize: 13,
-    fontStyle: 'italic',
-    marginTop: 2,
+    fontWeight: '500',
+    letterSpacing: 0.25,
   },
 });
 

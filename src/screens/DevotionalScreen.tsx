@@ -1,10 +1,11 @@
-import React from 'react';
-import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
+import React, {useCallback, useLayoutEffect} from 'react';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import {useTheme} from '../contexts/ThemeContext';
 import {useDailyDevotional} from '../hooks/useDailyDevotional';
 import DevotionalView from '../components/devotional/DevotionalView';
+import DevotionalLoadingBar from '../components/devotional/DevotionalLoadingBar';
 import type {RootStackParamList} from '../navigation/RootNavigator';
 
 // Thin screen shell — fetch state lives in the hook, layout lives in
@@ -13,22 +14,46 @@ import type {RootStackParamList} from '../navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Devotional'>;
 
-const DevotionalScreen: React.FC<Props> = () => {
+const DevotionalScreen: React.FC<Props> = ({navigation}) => {
   const {theme} = useTheme();
-  const {data, status, refresh} = useDailyDevotional();
+  const {data, status} = useDailyDevotional();
+
+  const handleClose = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  }, [navigation]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      // No header title — the screen is content-led; the X is the only
+      // chrome we need.
+      title: '',
+      headerBackVisible: false,
+      headerRight: () => (
+        <Pressable
+          onPress={handleClose}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Hidio">
+          <Text style={styles.closeIcon}>×</Text>
+        </Pressable>
+      ),
+    });
+  }, [navigation, handleClose]);
 
   if (data) {
-    return <DevotionalView devotional={data} onRefresh={refresh} />;
+    return <DevotionalView devotional={data} />;
   }
 
   if (status === 'loading' || status === 'idle') {
     return (
       <View
         style={[
-          styles.center,
+          styles.loadingContainer,
           {backgroundColor: theme.colors.backgroundPrimary},
         ]}>
-        <ActivityIndicator color={theme.colors.accentBlue} />
+        <DevotionalLoadingBar />
       </View>
     );
   }
@@ -44,7 +69,7 @@ const DevotionalScreen: React.FC<Props> = () => {
       ]}>
       <Text
         style={[styles.emptyTitle, {color: theme.colors.textPrimary}]}>
-        Tsy misy fampahatsiarovana androany
+        Mbola tsy misy vatsim-panahy
       </Text>
       <Text
         style={[styles.emptyBody, {color: theme.colors.textSecondary}]}>
@@ -62,6 +87,10 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -71,6 +100,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  closeIcon: {
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '400',
+    lineHeight: 26,
+    paddingHorizontal: 4,
   },
 });
 

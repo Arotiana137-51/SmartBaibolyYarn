@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Custom glowing and ambient backing animations */
+@keyframes ambient-glow {
+  0%, 100% {
+    transform: scale(1) translate(0px, 0px);
+    filter: blur(40px) brightness(1);
+    opacity: 0.6;
+  }
+  33% {
+    transform: scale(1.1) translate(10px, -15px);
+    filter: blur(50px) brightness(1.15);
+    opacity: 0.8;
+  }
+  66% {
+    transform: scale(0.9) translate(-15px, 10px);
+    filter: blur(35px) brightness(0.9);
+    opacity: 0.5;
+  }
+}
+
+.animate-ambient {
+  animation: ambient-glow 10s ease-in-out infinite;
+}
+
+.grid-bg {
+  background-image: radial-gradient(rgba(30, 41, 59, 0.7) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+/* Custom hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

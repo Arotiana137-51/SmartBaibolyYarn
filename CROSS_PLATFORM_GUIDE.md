@@ -51,10 +51,8 @@ The project has been updated to work seamlessly across Windows, macOS, and Linux
    cd SmartBaibolyYarn
    ```
 
-2. **Install dependencies**:
+2. **Install dependencies** (yarn only — this project does not support npm):
    ```bash
-   npm install
-   # or
    yarn install
    ```
 

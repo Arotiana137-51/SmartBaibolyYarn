@@ -127,7 +127,15 @@ const RootNavigator = ({
       <Stack.Screen
         name="Devotional"
         component={DevotionalScreen}
-        options={{title: t('devotional.title'), ...headerOptions}}
+        options={{
+          // Header chrome only — the screen sets its own (empty) title and
+          // close-button affordance via setOptions. Devotional content is
+          // its own visual identity; a "Fampahatsiarovana" header label
+          // would compete with the M3 hero card.
+          title: '',
+          ...headerOptions,
+          animation: 'slide_from_bottom',
+        }}
       />
       <Stack.Screen
         name="PrivacyPolicy"
