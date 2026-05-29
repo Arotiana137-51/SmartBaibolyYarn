@@ -22,7 +22,6 @@ import {
 } from '../utils/chapterMarks';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {dimHighlightForDarkMode, dimHighlightForLightMode} from '../utils/colorUtils';
-import ReaderRevealBanner from './ReaderRevealBanner';
 
 const BIBLE_VERSE_LINE_HEIGHT_MULTIPLIER = 1.3;
 const BIBLE_VERSE_BLOCK_MARGIN = 7;
@@ -484,7 +483,6 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       ]}
       ListHeaderComponent={
         <View>
-          <ReaderRevealBanner />
           {headerText ? (
             <View style={styles.headerContainer}>
               <Text style={[styles.headerText, {color: theme.colors.textPrimary}]}>

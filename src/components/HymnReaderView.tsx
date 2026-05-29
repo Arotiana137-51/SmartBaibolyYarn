@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, FlatList, Platform, Pressable, ActivityIndicato
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
-import ReaderRevealBanner from './ReaderRevealBanner';
 
 // Hymn-specific spacing configuration
 const HYMN_LINE_HEIGHT_MULTIPLIER = 1.7; // More relaxed spacing for hymns
@@ -276,7 +275,6 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
       contentContainerStyle={{paddingBottom: HYMN_BASE_BOTTOM_PADDING + bottomScrollSpacerAdjusted}}
       ListHeaderComponent={
         <View>
-          <ReaderRevealBanner />
           {hasTitle ? (
             <View style={styles.headerContainer}>
               <Text

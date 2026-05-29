@@ -13,7 +13,6 @@ import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import PersonalizationScreen from '../screens/PersonalizationScreen';
 import CultModeScreen from '../screens/CultModeScreen';
-import DevotionalScreen from '../screens/DevotionalScreen';
 
 export type RootStackParamList = {
   Home:
@@ -35,7 +34,6 @@ export type RootStackParamList = {
   PrivacyPolicy: {mandatory?: boolean} | undefined;
   Personalization: {firstRun?: boolean} | undefined;
   CultMode: undefined;
-  Devotional: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -123,11 +121,6 @@ const RootNavigator = ({
         name="CultMode"
         component={CultModeScreen}
         options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Devotional"
-        component={DevotionalScreen}
-        options={{title: t('devotional.title'), ...headerOptions}}
       />
       <Stack.Screen
         name="PrivacyPolicy"

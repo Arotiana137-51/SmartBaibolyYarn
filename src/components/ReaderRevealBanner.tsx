@@ -1,7 +1,5 @@
 import React, {useCallback, useEffect, useMemo} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {
   useInAppNotifications,
@@ -10,7 +8,6 @@ import {
 import {useDailyDevotional, type Devotional} from '../hooks/useDailyDevotional';
 import {useDevotionalTone, TOPIC_LABEL_MG} from '../devotional/topics';
 import {hexToRgba} from '../utils/colorUtils';
-import type {RootStackParamList} from '../navigation/RootNavigator';
 
 const DEVOTIONAL_EXCERPT_CHARS = 220;
 
@@ -30,6 +27,11 @@ const firstParagraphText = (devotional: Devotional): string => {
 type Props = {
   onOpenDevotional?: (devotional: Devotional) => void;
   onNotificationPress?: (notification: InAppNotification) => void;
+  // Per-session visibility. When false, the banner renders nothing. The
+  // parent owns the state so dismissal survives mode switches (Bible↔Hymn)
+  // and only resets on app launch.
+  visible?: boolean;
+  onDismiss?: () => void;
 };
 
 const formatRelativeShort = (iso: string): string => {
@@ -48,24 +50,21 @@ const formatRelativeShort = (iso: string): string => {
 export const ReaderRevealBanner: React.FC<Props> = ({
   onOpenDevotional,
   onNotificationPress,
+  visible = true,
+  onDismiss,
 }) => {
   const {theme} = useTheme();
   const {data: devotional, status} = useDailyDevotional();
   const {notifications, unreadCount, markAllSeen, markAsRead} =
     useInAppNotifications();
-  // Default navigation target: dedicated DevotionalScreen. Callers can still
-  // override via onOpenDevotional (e.g. to show an in-context preview).
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // DevotionalScreen was parked — there is no default tap target anymore.
+  // Callers may still opt in to handling taps via `onOpenDevotional`
+  // (e.g. an in-context preview); otherwise the card is display-only.
   const handleOpenDevotional = useCallback(
     (d: Devotional) => {
-      if (onOpenDevotional) {
-        onOpenDevotional(d);
-        return;
-      }
-      navigation.navigate('Devotional');
+      onOpenDevotional?.(d);
     },
-    [navigation, onOpenDevotional],
+    [onOpenDevotional],
   );
 
   const hasDevotional = status === 'success' && devotional != null;
@@ -87,6 +86,10 @@ export const ReaderRevealBanner: React.FC<Props> = ({
     return source.slice(0, DEVOTIONAL_EXCERPT_CHARS).trimEnd() + '…';
   }, [devotional]);
 
+  if (!visible) {
+    return null;
+  }
+
   if (!hasDevotional && !hasNotifications) {
     return null;
   }
@@ -103,6 +106,23 @@ export const ReaderRevealBanner: React.FC<Props> = ({
               borderColor: hexToRgba(tone.accent, 0.35),
             },
           ]}>
+          {onDismiss ? (
+            <Pressable
+              onPress={onDismiss}
+              hitSlop={10}
+              accessibilityLabel="Hidio"
+              accessibilityRole="button"
+              style={[
+                styles.dismissButton,
+                {backgroundColor: hexToRgba(tone.accent, 0.12)},
+              ]}>
+              <Text
+                style={[styles.dismissButtonText, {color: tone.accent}]}
+                allowFontScaling={false}>
+                ×
+              </Text>
+            </Pressable>
+          ) : null}
           <View style={styles.devotionalEyebrowRow}>
             {devotional.verseRef ? (
               <Text style={[styles.devotionalEyebrow, {color: tone.accent}]}>
@@ -207,6 +227,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
+    // Reserve space on the right so the eyebrow row's chip never collides
+    // with the absolutely-positioned dismiss button.
+    paddingRight: 40,
+  },
+  dismissButton: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dismissButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    lineHeight: 20,
   },
   devotionalEyebrowRow: {
     flexDirection: 'row',

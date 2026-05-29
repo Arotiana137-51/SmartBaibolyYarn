@@ -16,6 +16,7 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import TopBar from '../components/TopBar';
 import NotificationGlow from '../components/NotificationGlow';
+import ReaderRevealBanner from '../components/ReaderRevealBanner';
 import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
@@ -111,6 +112,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [mode, setMode] = useState<AppMode>(route.params?.mode || 'bible');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
+  // Reader banner visibility — per-session: defaults to true on mount,
+  // user-dismissable via the × button or by tapping outside the card. The
+  // state lives here (not inside the banner) so dismissal survives
+  // Bible↔Hymn mode switches.
+  const [bannerVisible, setBannerVisible] = useState(true);
+  const dismissBanner = useCallback(() => setBannerVisible(false), []);
   
   const [currentBook, setCurrentBook] = useState<{ id: number; name: string } | null>(
     route.params?.selectedBook || null
@@ -788,7 +795,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         />
       )}
       <NotificationGlow />
-      <View style={styles.readerContainer} {...swipeResponder.panHandlers}>
+      <ReaderRevealBanner
+        visible={bannerVisible}
+        onDismiss={dismissBanner}
+      />
+      {/*
+        Reader area is a Pressable so a tap on empty space (or even on a
+        verse) dismisses the banner when it's open. With no banner the
+        Pressable has no onPress and behaves like a plain View — verse
+        double-tap / long-press / swipe-to-switch-mode all keep working.
+      */}
+      <Pressable
+        onPress={bannerVisible ? dismissBanner : undefined}
+        android_ripple={null}
+        style={styles.readerContainer}
+        {...swipeResponder.panHandlers}>
         {mode === 'bible' && bibleSelectionVisible ? (
           <BibleSelectionModal
             onClose={() => {
@@ -874,7 +895,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           )
         )}
 
-      </View>
+      </Pressable>
       <CustomBottomNav
         activeMode={mode}
         onTabPress={setMode}
