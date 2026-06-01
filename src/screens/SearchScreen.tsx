@@ -47,7 +47,7 @@ const SearchScreen = () => {
   const [searchDisplayMode, setSearchDisplayMode] = useState<SearchDisplayMode>('grouped');
   const [matchWholeWord, setMatchWholeWord] = useState(false);
   const [selectedBibleTestament, setSelectedBibleTestament] = useState<'old' | 'new'>('old');
-  const [selectedHymnCategory, setSelectedHymnCategory] = useState<'ffpm' | 'ff' | 'antema'>('ffpm');
+  const [selectedHymnCategory, setSelectedHymnCategory] = useState<'ffpm' | 'fifo' | 'ff' | 'antema'>('ffpm');
 
   const closeSettings = () => setIsSettingsOpen(false);
 
@@ -486,8 +486,8 @@ const HymnSearchScreenContent = ({
   navigation: SearchScreenNavigationProp;
   displayMode: SearchDisplayMode;
   matchWholeWord: boolean;
-  selectedHymnCategory: 'ffpm' | 'ff' | 'antema';
-  onCategoryChange: (category: 'ffpm' | 'ff' | 'antema' | ((prev: 'ffpm' | 'ff' | 'antema') => 'ffpm' | 'ff' | 'antema')) => void;
+  selectedHymnCategory: 'ffpm' | 'fifo' | 'ff' | 'antema';
+  onCategoryChange: (category: 'ffpm' | 'fifo' | 'ff' | 'antema' | ((prev: 'ffpm' | 'fifo' | 'ff' | 'antema') => 'ffpm' | 'fifo' | 'ff' | 'antema')) => void;
 }) => {
   const { theme } = useTheme();
   const { searchHymns, isLoading, error } = useHymnSearch();
@@ -523,6 +523,10 @@ const HymnSearchScreenContent = ({
       const cat = (r.category || '').trim().toLowerCase();
       return cat === 'ffpm' || cat === 'ffpm hymns';
     });
+    const hasFifo = searchResults.some(r => {
+      const cat = (r.category || '').trim().toLowerCase();
+      return cat === 'fifo';
+    });
     const hasFF = searchResults.some(r => {
       const cat = (r.category || '').trim().toLowerCase();
       return cat === 'ff';
@@ -532,12 +536,18 @@ const HymnSearchScreenContent = ({
       return cat === 'antema';
     });
 
+    // Auto-select fallback order matches the visible tab order
+    // (Fihirana → F. Fifohazana → F. Fanampiny → Antema), so if the
+    // current selection has no matches, we drop to the next category
+    // that does in left-to-right reading order.
     const nextCategory = (() => {
       const current = selectedHymnCategory;
       if (current === 'ffpm' && hasFFPM) return current;
+      if (current === 'fifo' && hasFifo) return current;
       if (current === 'ff' && hasFF) return current;
       if (current === 'antema' && hasAntema) return current;
       if (hasFFPM) return 'ffpm';
+      if (hasFifo) return 'fifo';
       if (hasFF) return 'ff';
       if (hasAntema) return 'antema';
       return current;
@@ -558,6 +568,7 @@ const HymnSearchScreenContent = ({
   const getHymnCategoryGroupTitle = (categoryRaw: string) => {
     const category = (categoryRaw || '').trim().toLowerCase();
     if (category === 'ffpm' || category === 'ffpm hymns') return 'FFPM hymns';
+    if (category === 'fifo') return 'F. Fifohazana';
     if (category === 'ff') return 'FF';
     if (category === 'antema') return 'Antema';
     return categoryRaw ? categoryRaw : 'Hymnes';
@@ -573,6 +584,7 @@ const HymnSearchScreenContent = ({
     const filtered = searchResults.filter(r => {
       const cat = (r.category || '').trim().toLowerCase();
       if (selectedHymnCategory === 'ffpm') return cat === 'ffpm' || cat === 'ffpm hymns';
+      if (selectedHymnCategory === 'fifo') return cat === 'fifo';
       if (selectedHymnCategory === 'ff') return cat === 'ff';
       if (selectedHymnCategory === 'antema') return cat === 'antema';
       return true;
@@ -587,7 +599,7 @@ const HymnSearchScreenContent = ({
       return acc;
     }, {});
 
-    const order = ['FFPM hymns', 'FF', 'Antema'];
+    const order = ['FFPM hymns', 'F. Fifohazana', 'FF', 'Antema'];
     const orderedSections = order
       .filter(title => grouped[title]?.length)
       .map(title => ({ title, data: grouped[title] }));
@@ -690,78 +702,48 @@ const HymnSearchScreenContent = ({
           styles.toggleContainer,
           { backgroundColor: theme.colors.backgroundSecondary, borderColor: theme.colors.divider }
         ]}>
-          <Pressable
-            onPress={() => onCategoryChange('ffpm')}
-            style={({pressed}) => [
-              styles.toggleButton,
-              selectedHymnCategory === 'ffpm' ? {
-                backgroundColor: theme.colors.accentBlue,
-                elevation: 3,
-                shadowColor: '#000',
-                shadowOffset: {width: 0, height: 2},
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-              } : null,
-            ]}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                { color: selectedHymnCategory === 'ffpm' ? '#FFFFFF' : theme.colors.textSecondary },
-                selectedHymnCategory === 'ffpm' ? { fontWeight: '600' } : null,
-              ]}
-            >
-              FFPM
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => onCategoryChange('ff')}
-            style={({pressed}) => [
-              styles.toggleButton,
-              selectedHymnCategory === 'ff' ? {
-                backgroundColor: theme.colors.accentBlue,
-                elevation: 3,
-                shadowColor: '#000',
-                shadowOffset: {width: 0, height: 2},
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-              } : null,
-            ]}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                { color: selectedHymnCategory === 'ff' ? '#FFFFFF' : theme.colors.textSecondary },
-                selectedHymnCategory === 'ff' ? { fontWeight: '600' } : null,
-              ]}
-            >
-              FF
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => onCategoryChange('antema')}
-            style={({pressed}) => [
-              styles.toggleButton,
-              selectedHymnCategory === 'antema' ? {
-                backgroundColor: theme.colors.accentBlue,
-                elevation: 3,
-                shadowColor: '#000',
-                shadowOffset: {width: 0, height: 2},
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-              } : null,
-            ]}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                { color: selectedHymnCategory === 'antema' ? '#FFFFFF' : theme.colors.textSecondary },
-                selectedHymnCategory === 'antema' ? { fontWeight: '600' } : null,
-              ]}
-            >
-              Antema
-            </Text>
-          </Pressable>
+          {(
+            [
+              { key: 'ffpm', label: 'FFPM' },
+              { key: 'fifo', label: 'F. Fifohazana' },
+              { key: 'ff', label: 'FF' },
+              { key: 'antema', label: 'Antema' },
+            ] as Array<{ key: 'ffpm' | 'fifo' | 'ff' | 'antema'; label: string }>
+          ).map(({ key, label }) => {
+            const isSelected = selectedHymnCategory === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => onCategoryChange(key)}
+                style={[
+                  styles.toggleButton,
+                  isSelected
+                    ? {
+                        backgroundColor: theme.colors.accentBlue,
+                        elevation: 3,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 4,
+                      }
+                    : null,
+                ]}
+              >
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  style={[
+                    styles.toggleText,
+                    { color: isSelected ? '#FFFFFF' : theme.colors.textSecondary },
+                    isSelected ? { fontWeight: '600' } : null,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       )}
 

@@ -720,17 +720,17 @@
             },
             {
                 "andininy": 0,
-                "tononkira": "Tsy ho takatry ny saiko\nIzay rehetra alahatrao\nNy angatahako ry Raiko\nAoka aho hatoky Anao.",
+                "tononkira": "Tsy ho takatry ny saiko\nIzay rehetra lahatrao\nNy angatahako ry Raiko\nAoka aho hatoky Anao.",
                 "fiverenany": true
             },
             {
                 "andininy": 2,
-                "tononkira": "Aza avela hanontany\nNy hafaliana atolotrao\nNa ny anton'ny tomany\nEfa haiko hatrizao.",
+                "tononkira": "Aza avela hanontany\nNy hafaliana atolotrao\nNa ny anton'ny tomany\nEfa hitako hatrizao.",
                 "fiverenany": false
             },
             {
                 "andininy": 3,
-                "tononkira": "Aza avelanao hamefy\nNy ampitso izay Anao\nAza avelanao handrefy\nIzay ho fifalianao.\n(ANDRIAMANANTENA\nGeorges)",
+                "tononkira": "Aza avelanao hanefy\nNy ampitso izay Anao\nAza avelanao handrefy\nIzay ho fitantananao.\n(ANDRIAMANANTENA\nGeorges)",
                 "fiverenany": false
             }
         ]
@@ -1330,5 +1330,45 @@
                 "fiverenany": false
             }
         ]
-    }
+    },
+    "ff_55": {
+        "laharana": "55",
+        "sokajy": "ff",
+        "lohateny": "Ezaho ny antsoano (Salamo 58: 1a)",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Ry Fiangonana ô! mihainoa fa ny Tompo no miteny,\nManendry izay mandre anio izao hanafaka ny fineny.",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_56": {
+        "laharana": "56",
+        "sokajy": "ff",
+        "lohateny": "Aminao, Jehovah ô (Salamo 25: 1-4)",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Aminao Jehovah ô no anandratako ny fanahiko;\nAndriamanitro ô, Hianao no itokiako,\nAoka tsy ho menatra aho,\nNdrao hifalian'ny fahavaloko aho.",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ff_57": {
+    "laharana": "57",
+    "sokajy": "ff",
+    "lohateny": "Hisaotra an’i Jehovah (Salamo 34: 1-3)",
+    "mpanoratra": [],
+    "hira": [
+        {
+            "andininy": 1,
+            "tononkira": "Hisaotra an'i Jehovah lalandava aho;\nNy fiderana Azy ho eo am-bavako mandrakariva.\nAo amin'i Jehovah no hideran'ny fanahiko;\nHandre izany ny mpandefitra ka ho faly.",
+            "fiverenany": false
+        }
+    ]
+}
+
 }

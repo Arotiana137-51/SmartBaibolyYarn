@@ -8,10 +8,13 @@ import {useResponsive} from '../theme/responsive';
 
 const EXTRA_TOP_PADDING = 6;
 
+// Same order as HymnSelectionModal: Fihirana → F. Fifohazana →
+// F. Fanampiny → Antema. Keep these two lists in sync.
 const HYMNAL_CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },
-  { key: 'antema', label: 'Antema' },
+  { key: 'fifo', label: 'F. Fifohazana' },
   { key: 'ff', label: 'F.Fanampiny' },
+  { key: 'antema', label: 'Antema' },
 ];
 
 interface TopBarProps {

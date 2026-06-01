@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,10 +24,14 @@ interface HymnSelectionModalProps {
   onHymnSelect: (hymnId: string, category: string, number: number) => void;
 }
 
+// Order is the order shown in the horizontally-scrollable tab strip.
+// Fihirana stays first (most-used). F. Fifohazana joined as the second
+// category; F. Fanampiny and Antema follow.
 const CATEGORIES = [
   { key: 'ffpm', label: 'Fihirana' },
-  { key: 'antema', label: 'Antema' },
+  { key: 'fifo', label: 'F. Fifohazana' },
   { key: 'ff', label: 'F. Fanampiny' },
+  { key: 'antema', label: 'Antema' },
 ];
 
 // Lighten a hex color by mixing it with white
@@ -48,6 +53,7 @@ const CATEGORY_MAX: Record<string, number> = {
   ffpm: 827,
   ff: 54,
   antema: 24,
+  fifo: 370,
 };
 
 const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
@@ -216,13 +222,29 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
       <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.15)' }]} onPress={handleClose}>
         <View style={styles.modalContent} pointerEvents="box-none">
           <View style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset, backgroundColor: theme.colors.navBackground }]}>
-            <View style={[styles.categoryTabsRow, { height: tabRowHeight }]}>
+            {/*
+              4 categories no longer fit comfortably as flex:1 on narrow
+              phones (each tab would shrink to ~90px and clip the longer
+              labels). Wrap in a horizontal ScrollView and give each tab a
+              fixed min-width so ~3 fit per page and the 4th peeks in,
+              signaling that the strip scrolls.
+            */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{height: tabRowHeight}}
+              contentContainerStyle={styles.categoryTabsRow}
+            >
               {CATEGORIES.map((category) => (
                 <Pressable
                   key={category.key}
                   style={({pressed}) => [
                     styles.categoryTab,
-                    { borderRightColor: 'rgba(255,255,255,0.4)' },
+                    {
+                      borderRightColor: 'rgba(255,255,255,0.4)',
+                      minWidth: Math.max(110, Math.floor(windowWidth / 3.5)),
+                      height: tabRowHeight,
+                    },
                     selectedCategory === category.key && { backgroundColor: lightenColor(theme.colors.accentBlue, 25) },
                     pressed && { opacity: 0.9 },
                   ]}
@@ -245,7 +267,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
                   </Text>
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={[styles.keypadPanel, { top: tabsTopInset + tabRowHeight }]} pointerEvents="box-none">
@@ -309,9 +331,12 @@ const styles = StyleSheet.create({
     height: TAB_ROW_BASE_HEIGHT,
   },
   categoryTab: {
-    flex: 1,
+    // No flex: 1 — sized by minWidth at render time so the horizontal
+    // ScrollView can scroll. justifyContent/alignItems still center the
+    // label text inside whatever width the tab ends up at.
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 8,
     borderRightWidth: StyleSheet.hairlineWidth,
     // borderRightColor and backgroundColor set dynamically
   },

@@ -33,6 +33,13 @@ const {
 
 const { HYMNS_DB_VERSION } = require('./utils/dbVersions');
 
+const {
+  createJsonHymnLoader,
+} = require('./source-data/hymns/loaders/jsonHymnLoader');
+const {
+  createYamlHymnLoader,
+} = require('./source-data/hymns/loaders/yamlHymnLoader');
+
 async function buildHymns(dbPath) {
   console.log('🎵 Building Hymns...');
   if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
@@ -79,9 +86,20 @@ async function buildHymns(dbPath) {
   )`);
 
   // ---- Import hymns ----
+  //
+  // Source loaders implement a tiny shared interface ({ sourcePath, load() }
+  // yielding HymnRecord values; see scripts/source-data/hymns/loaders/types.js).
+  // The builder doesn't know or care about format — adding a new category in
+  // a new format means: write a loader, append it here. The insert / FTS /
+  // VACUUM logic below stays identical regardless of source.
   const sourcePaths = getSourceDataPaths();
   const hymnsDir = sourcePaths.hymns;
-  const files = ['01_fihirana_ffpm.json', '02_fihirana_fanampiny.json', '03_antema.json'];
+  const loaders = [
+    createJsonHymnLoader(path.join(hymnsDir, '01_fihirana_ffpm.json'), 'ffpm'),
+    createJsonHymnLoader(path.join(hymnsDir, '02_fihirana_fanampiny.json'), 'ff'),
+    createJsonHymnLoader(path.join(hymnsDir, '03_antema.json'), 'antema'),
+    createYamlHymnLoader(path.join(hymnsDir, 'song_song_fifohazana.yaml'), 'fifo'),
+  ];
 
   const insHymn = db.prepare(
     `INSERT OR REPLACE INTO Hymns (id, number, category, title, authors) VALUES (?, ?, ?, ?, ?)`
@@ -94,28 +112,23 @@ async function buildHymns(dbPath) {
   const insVerseAsync = (p) =>
     new Promise((res, rej) => insVerse.run(p, (e) => (e ? rej(e) : res())));
 
-  for (const file of files) {
-    const filePath = path.join(hymnsDir, file);
-    if (!fs.existsSync(filePath)) continue;
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    for (const [hymnId, hymn] of Object.entries(data)) {
-      const authors =
-        Array.isArray(hymn.mpanoratra) && hymn.mpanoratra.length > 0
-          ? JSON.stringify(hymn.mpanoratra)
-          : null;
+  for (const loader of loaders) {
+    if (!fs.existsSync(loader.sourcePath)) continue;
+    for (const hymn of loader.load()) {
+      const authors = hymn.authors.length > 0 ? JSON.stringify(hymn.authors) : null;
       await insHymnAsync([
-        hymnId,
-        parseInt(hymn.laharana, 10) || 0,
-        hymn.sokajy || '',
-        hymn.lohateny || '',
+        hymn.id,
+        hymn.number,
+        hymn.category || '',
+        hymn.title,
         authors,
       ]);
-      for (const verse of hymn.hira || []) {
+      for (const verse of hymn.verses) {
         await insVerseAsync([
-          hymnId,
-          verse.andininy,
-          verse.tononkira,
-          verse.fiverenany ? 1 : 0,
+          hymn.id,
+          verse.number,
+          verse.text,
+          verse.isChorus ? 1 : 0,
         ]);
       }
     }

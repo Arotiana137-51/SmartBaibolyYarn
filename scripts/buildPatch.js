@@ -43,6 +43,12 @@ const yaml = require('js-yaml');
 
 const {getSourceDataPaths} = require('./utils/paths');
 const {normalizeForFtsContent, normalizeHymnAuthors} = require('./utils/buildDb');
+const {
+  createJsonHymnLoader,
+} = require('./source-data/hymns/loaders/jsonHymnLoader');
+const {
+  createYamlHymnLoader,
+} = require('./source-data/hymns/loaders/yamlHymnLoader');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const DOCS_PATCHES_DIR = path.join(REPO_ROOT, 'docs', 'patches');
@@ -164,41 +170,41 @@ function buildBiblePatch(sinceRef, version) {
 // Hymns diff
 // ---------------------------------------------------------------------------
 
-const HYMN_SOURCE_FILES = [
-  '01_fihirana_ffpm.json',
-  '02_fihirana_fanampiny.json',
-  '03_antema.json',
-  '04_fifohazana.json',
-];
+// Same loader registry as buildHymnsDatabase.js — keep the two lists in
+// sync so the patch builder sees every source file. Each loader knows how
+// to parse its format from either disk (`load()`) or a string from
+// `git show` (`parse(text)`).
+function getHymnLoaders() {
+  const sourcePaths = getSourceDataPaths();
+  const hymnsDir = sourcePaths.hymns;
+  return [
+    createJsonHymnLoader(path.join(hymnsDir, '01_fihirana_ffpm.json'), 'ffpm'),
+    createJsonHymnLoader(path.join(hymnsDir, '02_fihirana_fanampiny.json'), 'ff'),
+    createJsonHymnLoader(path.join(hymnsDir, '03_antema.json'), 'antema'),
+    createYamlHymnLoader(path.join(hymnsDir, 'song_song_fifohazana.yaml'), 'fifo'),
+  ];
+}
 
-function loadHymnsJson(jsonText) {
-  if (!jsonText) return {hymns: new Map(), verses: new Map()};
-  let data;
-  try {
-    data = JSON.parse(jsonText);
-  } catch {
-    return {hymns: new Map(), verses: new Map()};
-  }
+// Flatten an iterable of HymnRecord into the two row-shaped maps the
+// patch diff downstream expects.
+function indexHymnRecords(records) {
   const hymns = new Map();
   const verses = new Map();
-  for (const [hymnId, hymn] of Object.entries(data)) {
-    const authors =
-      Array.isArray(hymn.mpanoratra) && hymn.mpanoratra.length > 0
-        ? JSON.stringify(hymn.mpanoratra)
-        : null;
-    hymns.set(hymnId, {
-      id: hymnId,
-      number: parseInt(hymn.laharana, 10) || 0,
-      category: String(hymn.sokajy || ''),
-      title: String(hymn.lohateny || ''),
+  for (const r of records) {
+    const authors = r.authors.length > 0 ? JSON.stringify(r.authors) : null;
+    hymns.set(r.id, {
+      id: r.id,
+      number: r.number,
+      category: r.category,
+      title: r.title,
       authors,
     });
-    for (const v of hymn.hira || []) {
-      verses.set(`${hymnId}|${v.andininy}`, {
-        hymn_id: hymnId,
-        verse_number: Number(v.andininy),
-        text: String(v.tononkira || ''),
-        is_chorus: v.fiverenany ? 1 : 0,
+    for (const v of r.verses) {
+      verses.set(`${r.id}|${v.number}`, {
+        hymn_id: r.id,
+        verse_number: v.number,
+        text: v.text,
+        is_chorus: v.isChorus ? 1 : 0,
       });
     }
   }
@@ -206,20 +212,19 @@ function loadHymnsJson(jsonText) {
 }
 
 function diffHymns(sinceRef) {
-  const sourcePaths = getSourceDataPaths();
   const changedHymns = [];
   const changedVerses = [];
 
-  for (const fileName of HYMN_SOURCE_FILES) {
-    const abs = path.join(sourcePaths.hymns, fileName);
+  for (const loader of getHymnLoaders()) {
+    const abs = loader.sourcePath;
     const repoRel = path.relative(REPO_ROOT, abs);
     if (!fs.existsSync(abs)) continue;
 
     const currentText = fs.readFileSync(abs, 'utf8');
     const previousText = gitShow(sinceRef, repoRel);
 
-    const current = loadHymnsJson(currentText);
-    const previous = loadHymnsJson(previousText);
+    const current = indexHymnRecords(loader.parse(currentText));
+    const previous = indexHymnRecords(loader.parse(previousText || ''));
 
     for (const [id, hymn] of current.hymns) {
       const prev = previous.hymns.get(id);
