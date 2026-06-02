@@ -96,7 +96,7 @@
             },
             {
                 "andininy": 2,
-                "tononkira": "Ry Fanahy ô, monena\nAza mba mandao anay Ianao\nKolokoloy 'zahay mba hitombo fahendrena\nKa tsy hahafoy hiaraka Aminao\nOta sy rendrarendra\nSamy te-handavo anay\nSoa ihany, soa fa eo Ianao Fanahy\nVonona hitahy ny fiainanay",
+                "tononkira": "Ry Fanahy ô, monena\nAza mba mandao anay Ianao\nKolokoloy 'zahay mba hitombo fahendrena\nKa tsy hahafoy hiaraka Aminao\nOta sy rendrarendra\nSamy te-handavo anay\nSoa ihany, soa fa eo Ianao Fanahy\nVonona Hitahy ny fiainanay",
                 "fiverenany": false
             },
             {
@@ -1198,6 +1198,11 @@
                 "andininy": 6,
                 "tononkira": "Maniry fahafahana\nIzao 'ty fo madio\nEkeo ny fibebahana\nAtolotray anio.\n(RAKOTOMALALA J.)",
                 "fiverenany": false
+            },
+            {
+                "andininy": 7,
+                "tononkira": "Tompo o! Vonjeo izahay",
+                "fiverenany": true
             }
         ]
     },
