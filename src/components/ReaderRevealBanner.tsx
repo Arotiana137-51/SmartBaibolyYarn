@@ -1,12 +1,8 @@
-import React, {useCallback, useEffect, useMemo} from 'react';
+import React, {useMemo} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {type Devotional} from '../hooks/useDailyDevotional';
+import {TOPIC_LABEL_MG} from '../devotional/topics';
 import {useTheme} from '../contexts/ThemeContext';
-import {
-  useInAppNotifications,
-  type InAppNotification,
-} from '../contexts/InAppNotificationContext';
-import {useDailyDevotional, type Devotional} from '../hooks/useDailyDevotional';
-import {useDevotionalTone, TOPIC_LABEL_MG} from '../devotional/topics';
 import {hexToRgba} from '../utils/colorUtils';
 
 const DEVOTIONAL_EXCERPT_CHARS = 220;
@@ -25,59 +21,35 @@ const firstParagraphText = (devotional: Devotional): string => {
 };
 
 type Props = {
-  onOpenDevotional?: (devotional: Devotional) => void;
-  onNotificationPress?: (notification: InAppNotification) => void;
+  // Devotional to render. Pass null/undefined to render nothing (e.g. while
+  // the daily fetch is still in flight, or when there's no entry for today).
+  devotional: Devotional | null | undefined;
   // Per-session visibility. When false, the banner renders nothing. The
-  // parent owns the state so dismissal survives mode switches (Bible↔Hymn)
+  // parent owns this state so dismissal survives mode switches (Bible↔Hymn)
   // and only resets on app launch.
   visible?: boolean;
+  // Called when the user explicitly dismisses (× or tap outside, depending
+  // on how the parent wires it). Optional — without it the × button is
+  // hidden, useful for stories or read-only previews. The parent is also
+  // responsible for marking the devotional "seen" inside this handler so
+  // the top glow stops pulsing — we don't fire a separate onSeen on mount,
+  // because that would mean every app launch marks today's devotional read
+  // before the user has actually seen anything new.
   onDismiss?: () => void;
 };
 
-const formatRelativeShort = (iso: string): string => {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const diffMs = Date.now() - then;
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return 'now';
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
-};
-
 export const ReaderRevealBanner: React.FC<Props> = ({
-  onOpenDevotional,
-  onNotificationPress,
+  devotional,
   visible = true,
   onDismiss,
 }) => {
+  // Banner used to recolor itself per devotional topic (love/hope/joy…). We
+  // now follow the app's overall theme instead: the per-topic palette was
+  // pulling the eye away from the reader background and clashing with the
+  // user's custom primary color. The topic chip text still names the topic,
+  // just in the neutral accent color.
   const {theme} = useTheme();
-  const {data: devotional, status} = useDailyDevotional();
-  const {notifications, unreadCount, markAllSeen, markAsRead} =
-    useInAppNotifications();
-  // DevotionalScreen was parked — there is no default tap target anymore.
-  // Callers may still opt in to handling taps via `onOpenDevotional`
-  // (e.g. an in-context preview); otherwise the card is display-only.
-  const handleOpenDevotional = useCallback(
-    (d: Devotional) => {
-      onOpenDevotional?.(d);
-    },
-    [onOpenDevotional],
-  );
-
-  const hasDevotional = status === 'success' && devotional != null;
-  const hasNotifications = notifications.length > 0;
-
-  const tone = useDevotionalTone(devotional?.topic ?? null);
-
-  // Glow resets when the banner is visible (user has seen it).
-  useEffect(() => {
-    if ((hasDevotional || hasNotifications) && unreadCount > 0) {
-      markAllSeen();
-    }
-  }, [hasDevotional, hasNotifications, unreadCount, markAllSeen]);
+  const accent = theme.colors.accentBlue;
 
   const devotionalExcerpt = useMemo(() => {
     if (!devotional) return '';
@@ -86,133 +58,73 @@ export const ReaderRevealBanner: React.FC<Props> = ({
     return source.slice(0, DEVOTIONAL_EXCERPT_CHARS).trimEnd() + '…';
   }, [devotional]);
 
-  if (!visible) {
-    return null;
-  }
-
-  if (!hasDevotional && !hasNotifications) {
-    return null;
-  }
+  if (!visible) return null;
+  if (!devotional) return null;
 
   return (
     <View style={styles.container}>
-      {hasDevotional && devotional ? (
-        <Pressable
-          onPress={() => handleOpenDevotional(devotional)}
-          style={[
-            styles.devotionalCard,
-            {
-              backgroundColor: tone.surface,
-              borderColor: hexToRgba(tone.accent, 0.35),
-            },
-          ]}>
-          {onDismiss ? (
-            <Pressable
-              onPress={onDismiss}
-              hitSlop={10}
-              accessibilityLabel="Hidio"
-              accessibilityRole="button"
-              style={[
-                styles.dismissButton,
-                {backgroundColor: hexToRgba(tone.accent, 0.12)},
-              ]}>
-              <Text
-                style={[styles.dismissButtonText, {color: tone.accent}]}
-                allowFontScaling={false}>
-                ×
-              </Text>
-            </Pressable>
-          ) : null}
-          <View style={styles.devotionalEyebrowRow}>
-            {devotional.verseRef ? (
-              <Text style={[styles.devotionalEyebrow, {color: tone.accent}]}>
-                {devotional.verseRef}
-              </Text>
-            ) : null}
-            <View
-              style={[
-                styles.topicChip,
-                {
-                  backgroundColor: hexToRgba(tone.accent, 0.18),
-                  borderColor: hexToRgba(tone.accent, 0.35),
-                },
-              ]}>
-              <Text style={[styles.topicChipText, {color: tone.accent}]}>
-                {TOPIC_LABEL_MG[devotional.topic]}
-              </Text>
-            </View>
-          </View>
-          <Text
-            style={[styles.devotionalTitle, {color: tone.onSurface}]}
-            numberOfLines={2}>
-            {devotional.title}
-          </Text>
-          <Text style={[styles.devotionalBody, {color: tone.onSurface}]}>
-            {devotionalExcerpt}
-          </Text>
-          {devotional.author ? (
+      <View
+        style={[
+          styles.devotionalCard,
+          {
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderColor: hexToRgba(accent, 0.35),
+          },
+        ]}>
+        {onDismiss ? (
+          <Pressable
+            onPress={onDismiss}
+            hitSlop={10}
+            accessibilityLabel="Hidio"
+            accessibilityRole="button"
+            style={[
+              styles.dismissButton,
+              {backgroundColor: hexToRgba(accent, 0.12)},
+            ]}>
             <Text
-              style={[
-                styles.devotionalAuthor,
-                {color: tone.onSurface, opacity: 0.6},
-              ]}>
-              — {devotional.author}
+              style={[styles.dismissButtonText, {color: accent}]}
+              allowFontScaling={false}>
+              ×
+            </Text>
+          </Pressable>
+        ) : null}
+        <View style={styles.devotionalEyebrowRow}>
+          {devotional.verseRef ? (
+            <Text style={[styles.devotionalEyebrow, {color: accent}]}>
+              {devotional.verseRef}
             </Text>
           ) : null}
-        </Pressable>
-      ) : null}
-
-      {hasNotifications ? (
-        <View style={styles.notificationsList}>
-          {notifications.map(n => {
-            const unread = n.readAt == null;
-            return (
-              <Pressable
-                key={n.id}
-                onPress={() => {
-                  markAsRead(n.id);
-                  onNotificationPress?.(n);
-                }}
-                style={[
-                  styles.notificationCard,
-                  {
-                    backgroundColor: unread
-                      ? hexToRgba(theme.colors.accentBlue, 0.06)
-                      : 'transparent',
-                    borderColor: unread
-                      ? hexToRgba(theme.colors.accentBlue, 0.22)
-                      : hexToRgba(theme.colors.textPrimary, 0.12),
-                  },
-                ]}>
-                <View style={styles.notificationHeader}>
-                  <Text
-                    style={[
-                      styles.notificationTitle,
-                      {color: theme.colors.textPrimary},
-                    ]}
-                    numberOfLines={1}>
-                    {n.title}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.notificationTime,
-                      {color: theme.colors.textPrimary, opacity: 0.5},
-                    ]}>
-                    {formatRelativeShort(n.createdAt)}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.notificationBody,
-                    {color: theme.colors.textPrimary, opacity: 0.85},
-                  ]}>
-                  {n.body}
-                </Text>
-              </Pressable>
-            );
-          })}
+          <View
+            style={[
+              styles.topicChip,
+              {
+                backgroundColor: hexToRgba(accent, 0.18),
+                borderColor: hexToRgba(accent, 0.35),
+              },
+            ]}>
+            <Text style={[styles.topicChipText, {color: accent}]}>
+              {TOPIC_LABEL_MG[devotional.topic]}
+            </Text>
+          </View>
         </View>
-      ) : null}
+        <Text
+          style={[styles.devotionalTitle, {color: theme.colors.textPrimary}]}
+          numberOfLines={2}>
+          {devotional.title}
+        </Text>
+        <Text style={[styles.devotionalBody, {color: theme.colors.textPrimary}]}>
+          {devotionalExcerpt}
+        </Text>
+        {devotional.author ? (
+          <Text
+            style={[
+              styles.devotionalAuthor,
+              {color: theme.colors.textPrimary, opacity: 0.6},
+            ]}>
+            — {devotional.author}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 };
@@ -221,7 +133,6 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: 4,
     paddingBottom: 12,
-    gap: 10,
   },
   devotionalCard: {
     borderWidth: 1,
@@ -284,35 +195,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 6,
     fontStyle: 'italic',
-  },
-  notificationsList: {
-    gap: 8,
-  },
-  notificationCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  notificationTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    flex: 1,
-    marginRight: 8,
-  },
-  notificationTime: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  notificationBody: {
-    fontSize: 13,
-    lineHeight: 18,
   },
 });
 

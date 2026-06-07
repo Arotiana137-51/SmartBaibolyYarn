@@ -75,6 +75,9 @@ const buildHtml = (
   .vt { white-space: pre-wrap; }
   .verse-title { font-style: italic; opacity: 0.7; margin: 6px 0 4px; user-select: none; -webkit-user-select: none; }
   mark.hl { background: ${highlightColor}; color: inherit; padding: 0; }
+  /* Note marks are rendered as a dotted underline (not a background) so an
+     overlapping highlight's background still shows through underneath. */
+  span.note { border-bottom: 1px dotted currentColor; }
   ::selection { background: rgba(10, 132, 255, 0.35); }
 </style>
 </head>
@@ -321,6 +324,32 @@ const buildHtml = (
     }
   }
 
+  // Render-only: wrap [start,end] in <span class="note"> for the dotted
+  // underline. Notes are persisted RN-side by the composer, NOT by a MARK
+  // post, so this never calls execCommand (there is no 'note' command — the
+  // old code's execCommand('note') was a silent no-op). Mirrors applyHighlight's
+  // manual-wrap fallback. extractContents over a range that already contains a
+  // <mark.hl> preserves that mark inside the new span, so highlight + note coexist.
+  function applyNote(start, end) {
+    try {
+      editor.contentEditable = 'true';
+      selectRange(start, end);
+      var sel = window.getSelection();
+      if (!sel || !sel.rangeCount) { editor.contentEditable = 'false'; return; }
+      var range = sel.getRangeAt(0);
+      var contents = range.extractContents();
+      var span = document.createElement('span');
+      span.className = 'note';
+      span.appendChild(contents);
+      range.insertNode(span);
+      editor.contentEditable = 'false';
+      sel.removeAllRanges();
+    } catch (e) {
+      try { editor.contentEditable = 'false'; } catch (e0) {}
+      rn({ type: 'NOTE_VISUAL_ERROR', message: String(e && e.message || e) });
+    }
+  }
+
   // Merge overlapping same-style ranges so toggle-based execCommand calls don't
   // accidentally undo themselves on the second application over the same span.
   function mergeMarks(marks) {
@@ -357,6 +386,7 @@ const buildHtml = (
         try {
           selectRange(m.start, m.end);
           if (m.style === 'highlight') applyHighlight(m.color);
+          else if (m.style === 'note') applyNote(m.start, m.end);
           else {
             editor.contentEditable = 'true';
             document.execCommand(m.style, false, null);
@@ -399,6 +429,8 @@ const buildHtml = (
               selectRange(m.start, m.end);
               if (m.style === 'highlight') {
                 applyHighlight(m.color);
+              } else if (m.style === 'note') {
+                applyNote(m.start, m.end);
               } else {
                 editor.contentEditable = 'true';
                 document.execCommand(m.style, false, null);
@@ -472,6 +504,19 @@ const buildHtml = (
   editor.addEventListener('click', function(ev) {
     var t = ev.target;
     while (t && t !== editor) {
+      // Tap on a note span -> ask RN to open the composer for this range.
+      // Checked before the highlight branch so a note layered over a highlight
+      // opens the note editor rather than the highlight-delete bar.
+      if (t.nodeType === 1 && t.classList && t.classList.contains('note')) {
+        var nsel = window.getSelection();
+        if (nsel && !nsel.isCollapsed) return;
+        var nStart = endpointToOffset(t, 0);
+        var nEnd = endpointToOffset(t, t.childNodes.length);
+        if (nEnd > nStart) {
+          rn({ type: 'NOTE_TAP', start: nStart, end: nEnd });
+        }
+        return;
+      }
       if (t.nodeType === 1 && t.tagName === 'MARK' && t.classList && t.classList.contains('hl')) {
         var sel = window.getSelection();
         if (sel && !sel.isCollapsed) return;
@@ -690,6 +735,23 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
             color: typeof msg.color === 'string' ? msg.color : '',
           });
         }
+      } else if (msg.type === 'NOTE_TAP') {
+        const nStart = Number(msg.start);
+        const nEnd = Number(msg.end);
+        if (Number.isFinite(nStart) && Number.isFinite(nEnd) && nEnd > nStart) {
+          // Open the composer pre-filled with any existing note covering exactly
+          // this range — same lookup as openNoteComposer, keyed off the tapped
+          // span instead of the live selection.
+          const existing = pendingMarks.find(
+            m => m.style === 'note' && m.start === nStart && m.end === nEnd,
+          );
+          setNoteComposer({
+            start: nStart,
+            end: nEnd,
+            text: existing?.note ?? '',
+            editingId: existing?.id ?? null,
+          });
+        }
       }
     } catch {
       // ignore
@@ -726,28 +788,41 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
     if (!noteComposer) return;
     const trimmed = noteComposer.text.trim();
     setPendingMarks(prev => {
+      let next: ChapterMark[];
       if (noteComposer.editingId) {
         if (!trimmed) {
           // Clearing the text removes the note entirely.
-          return prev.filter(m => m.id !== noteComposer.editingId);
+          next = prev.filter(m => m.id !== noteComposer.editingId);
+        } else {
+          next = prev.map(m =>
+            m.id === noteComposer.editingId ? {...m, note: trimmed} : m,
+          );
         }
-        return prev.map(m =>
-          m.id === noteComposer.editingId ? {...m, note: trimmed} : m,
-        );
+      } else if (!trimmed) {
+        next = prev;
+      } else {
+        const newMark: ChapterMark = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          start: noteComposer.start,
+          end: noteComposer.end,
+          style: 'note',
+          note: trimmed,
+          createdAt: new Date().toISOString(),
+        };
+        next = [...prev, newMark];
       }
-      if (!trimmed) return prev;
-      const newMark: ChapterMark = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        start: noteComposer.start,
-        end: noteComposer.end,
-        style: 'note',
-        note: trimmed,
-        createdAt: new Date().toISOString(),
-      };
-      return [...prev, newMark];
+      // Redraw the WebView so the dotted underline appears/updates/disappears
+      // immediately — without this the note span only shows on next reopen.
+      // rerenderMarks resets each .vt to its original text then reapplies all
+      // marks, so a deleted note's span is correctly removed too.
+      const payload = JSON.stringify(next);
+      inject(
+        `window.RNEditor && window.RNEditor.rerenderMarks && window.RNEditor.rerenderMarks(${payload}); true;`,
+      );
+      return next;
     });
     setNoteComposer(null);
-  }, [noteComposer]);
+  }, [noteComposer, inject]);
 
   const handleEraseSelection = () => {
     // Delegate to the WebView. It reads the live DOM selection (or the cached

@@ -68,6 +68,7 @@ const VerseItem = React.memo(
     onVerseDoubleTap,
     onVerseLongPress,
     onInlineRefPress,
+    onNotePress,
   }: {
     item: BibleVerse;
     theme: any;
@@ -81,6 +82,7 @@ const VerseItem = React.memo(
     onVerseDoubleTap?: (verse: BibleVerse) => void;
     onVerseLongPress?: (verse: BibleVerse) => void;
     onInlineRefPress?: (ref: InlineBibleRef) => void;
+    onNotePress?: (verse: BibleVerse) => void;
   }) => {
     const isPsalmsOrProverbs = item.book_id === PSALMS_BOOK_ID || item.book_id === PROVERBS_BOOK_ID;
     const hasTitle = typeof item.title === 'string' && item.title.trim().length > 0;
@@ -192,6 +194,11 @@ const VerseItem = React.memo(
             {item.verse_number}
             {hasNote ? (
               <Text
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  onNotePress?.(item);
+                }}
+                suppressHighlighting
                 style={{
                   fontSize: scaleFontSize(TEXT_STYLES.verseNumber.fontSize * 0.85, fontScale),
                   color: theme.colors.verseNumber,
@@ -300,6 +307,7 @@ const VerseItem = React.memo(
     prev.selectedVerseRange?.start === next.selectedVerseRange?.start &&
     prev.selectedVerseRange?.end === next.selectedVerseRange?.end &&
     prev.onInlineRefPress === next.onInlineRefPress &&
+    prev.onNotePress === next.onNotePress &&
     prev.verseMarks === next.verseMarks &&
     prev.theme.colors.textPrimary === next.theme.colors.textPrimary &&
     prev.theme.colors.verseNumber === next.theme.colors.verseNumber &&
@@ -315,6 +323,7 @@ interface BibleReaderViewProps {
   selectedVerseNumber?: number | null;
   selectedVerseRange?: SelectedVerseRange;
   onInlineRefPress?: (ref: InlineBibleRef) => void;
+  onNotePress?: (verse: BibleVerse) => void;
   flatListRef?: React.RefObject<FlatList<any> | null>;
   headerText?: string | null;
   chapterMarks?: ChapterMark[];
@@ -331,6 +340,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   selectedVerseNumber,
   selectedVerseRange,
   onInlineRefPress,
+  onNotePress,
   flatListRef,
   headerText,
   chapterMarks,
@@ -422,6 +432,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
           onVerseDoubleTap={onVerseDoubleTap}
           onVerseLongPress={onVerseLongPress}
           onInlineRefPress={onInlineRefPress}
+          onNotePress={onNotePress}
         />
       );
     },
@@ -436,6 +447,7 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
       onVerseDoubleTap,
       onVerseLongPress,
       onInlineRefPress,
+      onNotePress,
     ],
   );
 

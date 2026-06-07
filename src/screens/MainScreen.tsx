@@ -28,6 +28,8 @@ import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
 import {useChapterMarks} from '../hooks/useChapterMarks';
+import {useDailyDevotional} from '../hooks/useDailyDevotional';
+import {useDevotionalUnread} from '../hooks/useDevotionalUnread';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {buildChapterDisplay, type ChapterMark} from '../utils/chapterMarks';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
@@ -92,6 +94,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height);
   const flatListRef = useRef<FlatList>(null);
   const [shouldScrollToVerse, setShouldScrollToVerse] = useState<number | null>(null);
+  // Set to true by the topnav chevrons after they advance the chapter, so
+  // the Bible reader scrolls back to verse 1 once the new chapter's verses
+  // render. Intentionally narrow: inline-ref taps and cult-mode entries
+  // use `shouldScrollToVerse` for their own scroll target and never set
+  // this flag, so the two paths cannot collide.
+  const [shouldScrollToTop, setShouldScrollToTop] = useState(false);
 
   const appState = useRef(AppState.currentState);
 
@@ -114,10 +122,33 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [fontScale, setFontScale] = useState(1);
   // Reader banner visibility — per-session: defaults to true on mount,
   // user-dismissable via the × button or by tapping outside the card. The
-  // state lives here (not inside the banner) so dismissal survives
-  // Bible↔Hymn mode switches.
-  const [bannerVisible, setBannerVisible] = useState(true);
-  const dismissBanner = useCallback(() => setBannerVisible(false), []);
+  // Banner starts CLOSED. The horizontal glow above is the unread cue;
+  // the banner itself only renders once the user explicitly taps the glow
+  // (or scrolls down into it). This keeps reading uninterrupted — a tap
+  // on the bar is opt-in. State lives here (not inside the banner) so
+  // dismissal and reveal both survive Bible↔Hymn mode switches.
+  const [bannerVisible, setBannerVisible] = useState(false);
+
+  // Devotional + unread signal in one place. The devotional IS the
+  // notification: a date we haven't shown yet drives the top glow; the
+  // user dismissing the banner marks it seen and the glow stops. No
+  // separate notification list, no producer bridge — one piece of content,
+  // one signal.
+  const {data: devotional} = useDailyDevotional();
+  const {hasUnread: devotionalUnread, markSeen: markDevotionalSeen} =
+    useDevotionalUnread(devotional?.date ?? null);
+
+  const revealBanner = useCallback(() => {
+    // Tap on the glow opens the banner. We do NOT mark seen here — only
+    // on explicit dismissal — so users who accidentally tap and immediately
+    // dismiss still get the unread cue on the next launch.
+    setBannerVisible(true);
+  }, []);
+
+  const dismissBanner = useCallback(() => {
+    setBannerVisible(false);
+    markDevotionalSeen();
+  }, [markDevotionalSeen]);
   
   const [currentBook, setCurrentBook] = useState<{ id: number; name: string } | null>(
     route.params?.selectedBook || null
@@ -388,6 +419,29 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     return () => clearTimeout(timer);
   }, [verses, shouldScrollToVerse, selectedVerseRange]);
 
+  // Chevron-driven scroll-to-top: wait until the new chapter's verses have
+  // loaded before scrolling, otherwise the call lands on the previous
+  // chapter's FlatList contents. Mirrors the shouldScrollToVerse effect
+  // above but without an index — we use scrollToOffset(0) so it's safe even
+  // if the list is empty mid-transition.
+  useEffect(() => {
+    if (!shouldScrollToTop) return;
+    if (mode !== 'bible') {
+      setShouldScrollToTop(false);
+      return;
+    }
+    if (verses.length === 0) return;
+    if (!flatListRef.current) {
+      setShouldScrollToTop(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      flatListRef.current?.scrollToOffset({offset: 0, animated: true});
+      setShouldScrollToTop(false);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [verses, shouldScrollToTop, mode]);
+
   useEffect(() => {
     if (mode === 'bible' && currentBook && verses.length > 0) {
       logBibleAccess(
@@ -436,7 +490,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           currentHymnCategory
             ? currentHymnCategory === 'ff'
               ? 'F.Fanampiny '
-              : `${currentHymnCategory.toUpperCase()} `
+              : currentHymnCategory === 'fifo'
+                ? 'F. Fifohazana '
+                : `${currentHymnCategory.toUpperCase()} `
             : 'Fihirana '
         }${currentHymnNumber ?? ''}`.trim();
 
@@ -496,12 +552,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setSelectedVerseNumber(null);
       if (currentChapter > 1) {
         setCurrentChapter(currentChapter - 1);
+        setShouldScrollToTop(true);
       } else {
         // At chapter 1 → jump to last chapter of previous book
         const prevBook = books.find(b => b.id === currentBook.id - 1);
         if (prevBook) {
           setCurrentBook({ id: prevBook.id, name: prevBook.name });
           setCurrentChapter(prevBook.chapters);
+          setShouldScrollToTop(true);
         }
       }
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory && currentHymnNumber > 1) {
@@ -523,12 +581,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       const lastChapter = currentBookMeta?.chapters ?? currentChapter;
       if (currentChapter < lastChapter) {
         setCurrentChapter(currentChapter + 1);
+        setShouldScrollToTop(true);
       } else {
         // At last chapter → jump to chapter 1 of next book
         const nextBook = books.find(b => b.id === currentBook.id + 1);
         if (nextBook) {
           setCurrentBook({ id: nextBook.id, name: nextBook.name });
           setCurrentChapter(1);
+          setShouldScrollToTop(true);
         }
       }
     } else if (mode === 'hymnal' && currentHymnNumber && currentHymnCategory) {
@@ -558,8 +618,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'misc':
         navigation.navigate('Misc');
         return;
-      case 'about':
-        navigation.navigate('About');
+      case 'notes':
+        navigation.navigate('Notes');
         return;
       case 'personalization':
         navigation.navigate('Personalization');
@@ -794,8 +854,22 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onNextPress={handleNextChapter}
         />
       )}
-      <NotificationGlow />
+      {/*
+        Unread devotional indicator. Lives between the TopBar and the
+        (collapsed) banner. Tapping the glow reveals the banner — the
+        banner itself is hidden by default so reading is uninterrupted.
+        hitSlop enlarges the tap target without changing the visual size
+        of the 16-px component.
+      */}
+      <Pressable
+        onPress={devotionalUnread ? revealBanner : undefined}
+        hitSlop={12}
+        accessibilityLabel="Hidio ny hafatra androany"
+        accessibilityRole="button">
+        <NotificationGlow active={devotionalUnread} />
+      </Pressable>
       <ReaderRevealBanner
+        devotional={devotional}
         visible={bannerVisible}
         onDismiss={dismissBanner}
       />
@@ -872,6 +946,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               fontScale={fontScale}
               onVerseDoubleTap={handleVerseLongPress}
               onVerseLongPress={(verse) => {
+                setChapterEditorScrollVerseNumber(verse.verse_number);
+                setChapterEditorVisible(true);
+              }}
+              onNotePress={(verse) => {
+                // Tapping the ✎ glyph opens the chapter editor scrolled to the
+                // verse, where the note span is visible (dotted underline) and
+                // tappable to read/edit. Same open path as long-press.
                 setChapterEditorScrollVerseNumber(verse.verse_number);
                 setChapterEditorVisible(true);
               }}
@@ -1013,6 +1094,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         visible={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onSelect={handleMenuSelect}
+        onAbout={() => {
+          setIsMenuOpen(false);
+          navigation.navigate('About');
+        }}
         isDarkMode={isDarkMode}
         onToggleDarkMode={setDarkMode}
         fontScale={fontScale}

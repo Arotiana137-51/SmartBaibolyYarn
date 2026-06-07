@@ -8,6 +8,11 @@ type TranslationKey =
   | 'menu.about'
   | 'menu.personalization'
   | 'menu.cultMode'
+  | 'menu.notes'
+  | 'notes.title'
+  | 'notes.empty'
+  | 'notes.removeTitle'
+  | 'notes.removeMessage'
   | 'cultMode.title'
   | 'cultMode.activate'
   | 'cultMode.deactivate'
@@ -123,6 +128,11 @@ const translations: Translations = {
     'menu.about': 'Mombamomba',
     'menu.personalization': 'Loko manokana',
     'menu.cultMode': 'Fotoam-pivavahana',
+    'menu.notes': 'Ireo Naoty',
+    'notes.title': 'Ireo Naoty',
+    'notes.empty': 'Mbola tsy misy naoty',
+    'notes.removeTitle': 'Esorina ny naoty',
+    'notes.removeMessage': 'Tena esorina ve ity naoty ity?',
     'cultMode.title': 'Fotoam-pivavahana',
     'cultMode.activate': 'Velomy ny fotoana',
     'cultMode.deactivate': 'Ajanony',

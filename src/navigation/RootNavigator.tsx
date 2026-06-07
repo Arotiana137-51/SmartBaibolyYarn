@@ -13,6 +13,7 @@ import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import PersonalizationScreen from '../screens/PersonalizationScreen';
 import CultModeScreen from '../screens/CultModeScreen';
+import NotesScreen from '../screens/NotesScreen';
 
 export type RootStackParamList = {
   Home:
@@ -26,6 +27,7 @@ export type RootStackParamList = {
     | undefined;
   Favorites: { mode: 'bible' | 'hymnal' };
   History: { mode: 'bible' | 'hymnal' };
+  Notes: undefined;
   Search: { mode: 'bible' | 'hymnal' };
   VerseList: { bookId: number; bookName: string; query: string; matchWholeWord?: boolean };
   Misc: undefined;
@@ -80,6 +82,11 @@ const RootNavigator = ({
         name="History"
         component={HistoryScreen}
         options={{title: t('menu.history'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="Notes"
+        component={NotesScreen}
+        options={{title: t('notes.title'), ...headerOptions}}
       />
       <Stack.Screen
         name="Search"

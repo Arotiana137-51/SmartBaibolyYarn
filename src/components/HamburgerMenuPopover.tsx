@@ -18,7 +18,7 @@ export type HamburgerMenuItemKey =
   | 'history'
   | 'search'
   | 'misc'
-  | 'about'
+  | 'notes'
   | 'personalization'
   | 'cultMode';
 
@@ -26,6 +26,7 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSelect: (key: HamburgerMenuItemKey) => void;
+  onAbout: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: (enabled: boolean) => void;
   fontScale?: number;
@@ -43,6 +44,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   visible,
   onClose,
   onSelect,
+  onAbout,
   isDarkMode,
   onToggleDarkMode,
   fontScale = 1,
@@ -135,7 +137,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'misc' as const, label: t('menu.misc')},
         {key: 'cultMode' as const, label: t('menu.cultMode')},
         {key: 'personalization' as const, label: t('menu.personalization')},
-        {key: 'about' as const, label: t('menu.about')},
+        {key: 'notes' as const, label: t('menu.notes')},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,
     []
   );
@@ -292,6 +294,16 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                 isDarkMode={isDarkMode}
                 onToggle={onToggleDarkMode}
               />
+              <Pressable
+                accessibilityLabel={t('menu.about')}
+                onPress={onAbout}
+                style={({pressed}) => [
+                  styles.aboutButton,
+                  {borderColor: menuAccent},
+                  pressed ? styles.aboutButtonPressed : null,
+                ]}>
+                <Text style={[styles.aboutButtonText, {color: menuAccent}]}>?</Text>
+              </Pressable>
             </View>
           </View>
         </Animated.View>
@@ -386,7 +398,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  aboutButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aboutButtonPressed: {
+    opacity: 0.6,
+  },
+  aboutButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
   },
   variantSection: {
     paddingVertical: 10,
