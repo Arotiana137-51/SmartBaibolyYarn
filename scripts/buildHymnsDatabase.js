@@ -31,7 +31,7 @@ const {
   sqlite3,
 } = require('./utils/buildDb');
 
-const { HYMNS_DB_VERSION } = require('./utils/dbVersions');
+const { planVersion, commitVersion } = require('./utils/autoVersion');
 
 const {
   createJsonHymnLoader,
@@ -40,7 +40,20 @@ const {
   createYamlHymnLoader,
 } = require('./source-data/hymns/loaders/yamlHymnLoader');
 
-async function buildHymns(dbPath) {
+// The hymn source files, used for both loading and content hashing. Order here
+// is irrelevant to the hash (hashSources sorts), but kept aligned with the
+// loaders inside buildHymns for readability.
+function getHymnSourceFiles() {
+  const hymnsDir = getSourceDataPaths().hymns;
+  return [
+    path.join(hymnsDir, '01_fihirana_ffpm.json'),
+    path.join(hymnsDir, '02_fihirana_fanampiny.json'),
+    path.join(hymnsDir, '03_antema.json'),
+    path.join(hymnsDir, 'song_song_fifohazana.yaml'),
+  ];
+}
+
+async function buildHymns(dbPath, version) {
   console.log('🎵 Building Hymns...');
   if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
 
@@ -92,13 +105,12 @@ async function buildHymns(dbPath) {
   // The builder doesn't know or care about format — adding a new category in
   // a new format means: write a loader, append it here. The insert / FTS /
   // VACUUM logic below stays identical regardless of source.
-  const sourcePaths = getSourceDataPaths();
-  const hymnsDir = sourcePaths.hymns;
+  const [ffpmPath, ffPath, antemaPath, fifoPath] = getHymnSourceFiles();
   const loaders = [
-    createJsonHymnLoader(path.join(hymnsDir, '01_fihirana_ffpm.json'), 'ffpm'),
-    createJsonHymnLoader(path.join(hymnsDir, '02_fihirana_fanampiny.json'), 'ff'),
-    createJsonHymnLoader(path.join(hymnsDir, '03_antema.json'), 'antema'),
-    createYamlHymnLoader(path.join(hymnsDir, 'song_song_fifohazana.yaml'), 'fifo'),
+    createJsonHymnLoader(ffpmPath, 'ffpm'),
+    createJsonHymnLoader(ffPath, 'ff'),
+    createJsonHymnLoader(antemaPath, 'antema'),
+    createYamlHymnLoader(fifoPath, 'fifo'),
   ];
 
   const insHymn = db.prepare(
@@ -182,7 +194,8 @@ async function buildHymns(dbPath) {
   await runAsync(db, `VACUUM`);
 
   // Stamp content version AFTER VACUUM so the value lands in the final header.
-  await stampUserVersion(db, HYMNS_DB_VERSION);
+  // The value is resolved by planVersion() in main() — content-hash based.
+  await stampUserVersion(db, version);
 
   await closeAsync(db);
   console.log(`✅ Hymns built: ${normalizePathForDisplay(dbPath)}`);
@@ -204,6 +217,17 @@ async function main() {
   const hymnsDev = databasePaths.hymns.dev;
   const hymnsProd = databasePaths.hymns.prod;
 
+  // Resolve the content version BEFORE building (pure decision, no writes).
+  const { version, changed, newHash } = planVersion({
+    target: 'hymns',
+    sourceFiles: getHymnSourceFiles(),
+  });
+  console.log(
+    changed
+      ? `🔖 Hymns content changed → new version ${version}`
+      : `🔖 Hymns content unchanged → reusing version ${version}`,
+  );
+
   // Wipe ONLY Hymns artifacts.
   for (const p of [
     hymnsDev,
@@ -216,7 +240,7 @@ async function main() {
     if (fs.existsSync(p)) fs.unlinkSync(p);
   }
 
-  await buildHymns(hymnsDev);
+  await buildHymns(hymnsDev, version);
 
   console.log('\n📦 Copying dev DB to platform asset folders...');
   copyFileSafe(hymnsDev, databasePaths.hymns.androidDev);
@@ -236,6 +260,13 @@ async function main() {
   reportSize('Hymns.zip (root)', hymnsProd);
   reportSize('Hymns.zip (android)', databasePaths.hymns.androidProd);
   reportSize('Hymns.zip (ios)', databasePaths.hymns.iosProd);
+
+  // Persist the bump ONLY after a fully successful build + copy, so the version
+  // files never get ahead of the shipped artifacts.
+  if (changed) {
+    commitVersion({ target: 'hymns', version, newHash });
+    console.log(`\n🔖 dbVersions + manifest updated → HYMNS_DB_VERSION = ${version}`);
+  }
 
   console.log(`\n⏱️  Hymns build done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 }

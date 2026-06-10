@@ -31,9 +31,36 @@ const {
   sqlite3,
 } = require('./utils/buildDb');
 
-const { BIBLE_DB_VERSION } = require('./utils/dbVersions');
+const { planVersion, commitVersion } = require('./utils/autoVersion');
 
-async function buildBible(dbPath) {
+// Resolve the Bible source files used for both building and content hashing.
+// Prefers the YAML set (bible_book/version + 66 verse files); falls back to the
+// legacy MG65 JSON. Mirrors the usingYamlSource detection inside buildBible so
+// the hash covers exactly the inputs that produced the DB.
+function getBibleSourceFiles() {
+  const sourcePaths = getSourceDataPaths();
+  const databasePaths = getDatabasePaths();
+  const yamlSourceDir = path.join(sourcePaths.bible, 'Yaml_Zo_Source');
+  const yamlBooksFile = path.join(yamlSourceDir, 'bible_book.yaml');
+  const yamlVersionFile = path.join(yamlSourceDir, 'bible_version.yaml');
+
+  const usingYamlSource =
+    fs.existsSync(yamlSourceDir) &&
+    fs.existsSync(yamlBooksFile) &&
+    fs.existsSync(yamlVersionFile);
+
+  if (!usingYamlSource) {
+    return [databasePaths.bible.source];
+  }
+
+  const files = [yamlBooksFile, yamlVersionFile];
+  for (let bookId = 1; bookId <= 66; bookId += 1) {
+    files.push(path.join(yamlSourceDir, `bible_verse_mg1865_mg_${bookId}.yaml`));
+  }
+  return files;
+}
+
+async function buildBible(dbPath, version) {
   console.log('📖 Building Bible...');
   if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
 
@@ -223,7 +250,8 @@ async function buildBible(dbPath) {
   await runAsync(db, `VACUUM`);
 
   // Stamp content version AFTER VACUUM so the value lands in the final header.
-  await stampUserVersion(db, BIBLE_DB_VERSION);
+  // The value is resolved by planVersion() in main() — content-hash based.
+  await stampUserVersion(db, version);
 
   await closeAsync(db);
   console.log(`✅ Bible built: ${normalizePathForDisplay(dbPath)}`);
@@ -245,6 +273,17 @@ async function main() {
   const bibleDev = databasePaths.bible.dev;
   const bibleProd = databasePaths.bible.prod;
 
+  // Resolve the content version BEFORE building (pure decision, no writes).
+  const { version, changed, newHash } = planVersion({
+    target: 'bible',
+    sourceFiles: getBibleSourceFiles(),
+  });
+  console.log(
+    changed
+      ? `🔖 Bible content changed → new version ${version}`
+      : `🔖 Bible content unchanged → reusing version ${version}`,
+  );
+
   // Wipe ONLY Bible artifacts.
   for (const p of [
     bibleDev,
@@ -257,7 +296,7 @@ async function main() {
     if (fs.existsSync(p)) fs.unlinkSync(p);
   }
 
-  await buildBible(bibleDev);
+  await buildBible(bibleDev, version);
 
   console.log('\n📦 Copying dev DB to platform asset folders...');
   copyFileSafe(bibleDev, databasePaths.bible.androidDev);
@@ -277,6 +316,13 @@ async function main() {
   reportSize('Bible.zip (root)', bibleProd);
   reportSize('Bible.zip (android)', databasePaths.bible.androidProd);
   reportSize('Bible.zip (ios)', databasePaths.bible.iosProd);
+
+  // Persist the bump ONLY after a fully successful build + copy, so the version
+  // files never get ahead of the shipped artifacts.
+  if (changed) {
+    commitVersion({ target: 'bible', version, newHash });
+    console.log(`\n🔖 dbVersions + manifest updated → BIBLE_DB_VERSION = ${version}`);
+  }
 
   console.log(`\n⏱️  Bible build done in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 }

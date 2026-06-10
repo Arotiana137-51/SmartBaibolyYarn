@@ -109,4 +109,11 @@ function main() {
   );
 }
 
-main();
+// Run the CLI only when invoked directly. When required (e.g. by
+// scripts/utils/autoVersion.js) we just expose the reusable helpers so the
+// two-file atomic rewrite logic stays single-source.
+if (require.main === module) {
+  main();
+}
+
+module.exports = { todayYyyymmdd, bumpKey, rewrite, TS_PATH, JS_PATH };
