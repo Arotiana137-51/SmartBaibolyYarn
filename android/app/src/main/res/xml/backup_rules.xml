@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup rules for Android 11 and below (API <= 30), referenced by
+  android:fullBackupContent in the manifest.
+
+  Goal: preserve the user's favorites, notes, highlights and theme color
+  (all stored in AsyncStorage, i.e. the "database" domain file RKStorage)
+  across uninstall/reinstall and device migration, via their Google Drive.
+
+  We back up everything by default EXCEPT the bundled Bible/Hymns SQLite
+  databases, which live under files/default/ ("file" domain, "default/" path).
+  Those are large (~14.5 MB combined) and re-extract from the APK on launch,
+  so backing them up is pointless and would waste the 25 MB backup quota.
+-->
+<full-backup-content>
+    <exclude domain="file" path="default/" />
+</full-backup-content>
