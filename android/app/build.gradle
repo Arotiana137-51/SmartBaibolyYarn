@@ -109,17 +109,19 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 13
-        versionName "1.2.1"
+        versionCode 15       
+        versionName "1.2.2"
         resConfigs "fr"
 
         // 16KB page size support - ensures native libs are aligned to 16KB boundaries.
-        // Must match reactNativeArchitectures in android/gradle.properties — listing
-        // x86 / x86_64 here while RN only builds arm causes SoLoader to crash on
-        // x86 devices (Chromebooks, Intel tablets) when loading native modules
-        // like react-native-gesture-handler.
+        // Must stay in sync with reactNativeArchitectures in android/gradle.properties.
+        // Every ABI listed here MUST also be compiled there — listing an ABI that RN
+        // does not build ships an empty lib/<abi>/ folder and crashes SoLoader on that
+        // architecture (e.g. react-native-gesture-handler). x86 / x86_64 are included
+        // for Chromebooks, Intel tablets and Android Automotive; AAB per-ABI splits
+        // mean ARM users never download these extra libs.
         ndk {
-            abiFilters "armeabi-v7a", "arm64-v8a"
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
 
         // NDK r28+ automatically aligns to 16KB page size
