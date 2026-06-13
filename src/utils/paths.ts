@@ -48,12 +48,46 @@ export const basePaths = {
 };
 
 /**
- * Gets the platform-specific database directory path
+ * Gets the platform-specific database directory path.
+ *
+ * Both platforms resolve to <DocumentDirectory>/default: react-native-quick-sqlite
+ * opens with location:'default', which the native layer expands to
+ * <DocumentDirectory>/default, so the copied asset must land in that same subdir.
+ * On iOS this dedicated subdir is also the unit we exclude from iCloud backup
+ * (see excludeDatabaseDirFromBackup) — keeping the DBs out of Documents' root means
+ * the exclusion never touches anything else the user expects to be backed up.
  */
 export const getDatabaseDirectory = (): string => {
-  return isAndroid 
-    ? `${FileSystem.DocumentDirectoryPath}/default`
-    : FileSystem.DocumentDirectoryPath;
+  return `${FileSystem.DocumentDirectoryPath}/default`;
+};
+
+/**
+ * iOS only: flag the database directory with NSURLIsExcludedFromBackupKey so the
+ * bundled Bible/Hymns SQLite files (and their WAL/SHM sidecars) are NOT copied into
+ * iCloud / Finder backups. They re-extract from the app bundle on launch, so backing
+ * them up just wastes the user's iCloud quota — and Apple's storage guidelines reject
+ * apps that back up re-downloadable content.
+ *
+ * AsyncStorage (favorites, notes, highlights) lives under Application Support, a
+ * separate tree, so it is unaffected and still gets backed up. This mirrors the
+ * Android <exclude domain="file" path="default/"/> backup rules. No-op on Android,
+ * where exclusion is declared in XML.
+ *
+ * Idempotent and best-effort: mkdir on an existing directory just (re)applies the
+ * attribute, and a failure is non-fatal — the DBs still work, they'd only be backed
+ * up needlessly.
+ */
+export const excludeDatabaseDirFromBackup = async (): Promise<void> => {
+  if (!isIOS) {
+    return;
+  }
+  try {
+    await FileSystem.mkdir(getDatabaseDirectory(), {
+      NSURLIsExcludedFromBackupKey: true,
+    });
+  } catch (error) {
+    console.warn('Failed to exclude database directory from iCloud backup:', error);
+  }
 };
 
 /**

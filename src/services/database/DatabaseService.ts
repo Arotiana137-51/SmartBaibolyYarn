@@ -1,17 +1,14 @@
 ﻿// src/services/database/DatabaseService.ts
 import { open } from 'react-native-quick-sqlite';
 import {
-  getDatabaseDirectory,
   getDatabasePath,
   copyDatabaseFromAssets,
   fileExistsSafe,
-  getDatabaseAssetPath
+  getDatabaseAssetPath,
+  excludeDatabaseDirFromBackup
 } from '../../utils/paths';
 import * as FileSystem from 'react-native-fs';
-import { Platform } from 'react-native';
 import { BIBLE_DB_VERSION, HYMNS_DB_VERSION } from './dbVersions';
-
-const isAndroid = Platform.OS === 'android';
 
 type QueryResult<T = any> = {
   rows?: { _array: T[]; length: number };
@@ -142,8 +139,12 @@ class DatabaseService {
       try {
         // Check if we need to copy pre-built database from assets
         // IMPORTANT: The copied DB must be placed in the same directory used by react-native-quick-sqlite.
-        const dbDirectory = getDatabaseDirectory();
         const dbPath = getDatabasePath(this.dbName);
+
+        // iOS: keep the bundled DBs out of iCloud backups. Creates the dir if
+        // missing and (re)applies the flag every launch; no-op on Android.
+        await excludeDatabaseDirFromBackup();
+
         let exists = await fileExistsSafe(dbPath);
 
         // If a writable copy already exists, check whether the bundled asset
