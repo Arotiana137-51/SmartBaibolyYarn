@@ -95,6 +95,55 @@ const projectConfig = {
 - Handles various Linux distributions
 - Compatible with common desktop environments
 
+## Data persistence & backup behavior
+
+The app stores two distinct kinds of data, and they are treated differently by
+the OS backup systems. Understanding the split matters when reasoning about what
+survives an uninstall/reinstall or a device migration.
+
+| Data | Where it lives | Backed up? |
+| --- | --- | --- |
+| User data — favorites, notes, highlights, theme | AsyncStorage | **Yes** — this is the data users expect to keep |
+| Bundled content — Bible & Hymns SQLite DBs | `<DocumentDirectory>/default/` | **No** — re-extracted from the app bundle on launch |
+
+The bundled DBs are deliberately excluded from backups: they are ~14.5 MB
+combined, ship inside the APK/IPA, and re-extract on first launch (and whenever
+the bundled content version is newer — see `DatabaseService`). Backing them up
+would waste the user's cloud-backup quota, and Apple's storage guidelines reject
+apps that back up re-downloadable content.
+
+#### Database directory
+
+Both platforms resolve the writable DB directory to `<DocumentDirectory>/default`
+(`getDatabaseDirectory()` in `src/utils/paths.ts`). This matches the path
+`react-native-quick-sqlite` opens for `location: 'default'`, and gives the iOS
+backup exclusion a single dedicated directory to flag — so user data elsewhere is
+never affected.
+
+#### Android
+
+Backup exclusion is declarative, in XML referenced from the manifest:
+
+- `android/app/src/main/res/xml/backup_rules.xml` — Auto Backup, API ≤ 30.
+- `android/app/src/main/res/xml/data_extraction_rules.xml` — API ≥ 31
+  (cloud backup + device-to-device transfer).
+
+Both exclude `domain="file" path="default/"` (the bundled DBs) while backing up
+everything else, including AsyncStorage. Auto Backup is enabled via
+`android:allowBackup="true"`.
+
+#### iOS
+
+iOS backs up the app's `Documents/` directory to iCloud/Finder by default, and
+AsyncStorage lives under `Application Support/<bundleID>/` (a separate tree that
+is backed up) — so user data is already covered with no extra work.
+
+To keep the bundled DBs *out* of iCloud, `excludeDatabaseDirFromBackup()` in
+`src/utils/paths.ts` sets `NSURLIsExcludedFromBackupKey` on the database
+directory. `DatabaseService.initDatabase()` calls it on every launch (idempotent,
+best-effort, and a no-op on Android), so the flag is re-applied even when a
+writable copy already exists.
+
 ## File Structure
 
 ```
@@ -150,6 +199,11 @@ The project has been migrated from hardcoded paths like:
 - `/Users/arotiana/projects/SmartBaibolyYarn`
 
 To dynamic paths that work on any platform where the project is cloned.
+
+The writable DB directory was also unified to `<DocumentDirectory>/default` on
+both platforms. It previously resolved to the `Documents/` root on iOS, which did
+not match the `location: 'default'` path `react-native-quick-sqlite` actually
+opens — see "Data persistence & backup behavior" above.
 
 ## Contributing
 
