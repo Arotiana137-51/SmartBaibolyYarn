@@ -81,6 +81,9 @@ iOS:
 yarn ios
 ```
 
+For the iOS build pipeline and the manual iCloud backup-exclusion check, see
+`docs/ios-ci.md`.
+
 ## Useful scripts
 
 - `yarn test`

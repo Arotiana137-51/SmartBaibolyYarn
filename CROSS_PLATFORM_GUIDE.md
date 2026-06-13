@@ -144,6 +144,9 @@ directory. `DatabaseService.initDatabase()` calls it on every launch (idempotent
 best-effort, and a no-op on Android), so the flag is re-applied even when a
 writable copy already exists.
 
+This runtime behavior can only be verified on a Mac (not from Windows) — see
+`docs/ios-ci.md` for the manual verification steps.
+
 ## File Structure
 
 ```
