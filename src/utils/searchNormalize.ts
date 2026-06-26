@@ -25,6 +25,13 @@ export const normalizeForFtsQuery = (value: unknown): string => {
     .trim();
 };
 
+// A token expander lets callers add dataset-specific synonyms WITHOUT this
+// generic module knowing about them. Given one normalized token, it returns the
+// alternative base words to also try (the builder appends `*` and substitutes
+// the token IN PLACE), or null when the token has no synonyms. See
+// src/utils/searchSynonyms.ts for the Malagasy Jesus-name expander.
+export type TokenExpander = (token: string) => string[] | null;
+
 // Build the FTS5 MATCH expression for a normalized query. Each token becomes
 // a prefix (`tok*`) joined with AND, so:
 //   - word order doesn't matter
@@ -34,7 +41,15 @@ export const normalizeForFtsQuery = (value: unknown): string => {
 // Extra OR branch: when a multi-token query contains a very short token
 // (≤2 chars), also try the collapsed variant (handles a stray space that
 // the user inserted mid-word).
-export const makeFtsPrefixQuery = (normalized: string): string => {
+//
+// Optional `expandToken`: when a token has synonyms, we add ONE extra branch
+// per synonym with that token swapped in place (keeping the other tokens'
+// AND constraints). We never emit a synonym as a standalone whole-corpus
+// branch — `(jesosy*)` alone matches hundreds of rows and buries the real hit.
+export const makeFtsPrefixQuery = (
+  normalized: string,
+  expandToken?: TokenExpander,
+): string => {
   const rawTokens = normalized.split(/\s+/).filter(Boolean);
   const meaningful = rawTokens
     // Single-character tokens (e.g. "o") are extremely common and make FTS
@@ -54,6 +69,22 @@ export const makeFtsPrefixQuery = (normalized: string): string => {
   const collapsed = tokens.join('');
   if (tokens.length > 1 && tokens.some(t => t.length <= 2)) {
     branches.add(`${collapsed}*`);
+  }
+
+  // Synonym branches: for each token that has synonyms, emit a variant of the
+  // FULL query with just that token replaced. Tokens keep their AND join, so a
+  // 3-word query stays a 3-word query — only the synonym token changes.
+  if (expandToken) {
+    tokens.forEach((tok, idx) => {
+      const synonyms = expandToken(tok);
+      if (!synonyms || synonyms.length === 0) return;
+      for (const synonym of synonyms) {
+        const replaced = tokens
+          .map((t, i) => (i === idx ? `${synonym}*` : `${t}*`))
+          .join(' AND ');
+        branches.add(replaced);
+      }
+    });
   }
 
   const list = Array.from(branches).filter(Boolean);

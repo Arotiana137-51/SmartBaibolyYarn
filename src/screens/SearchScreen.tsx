@@ -495,6 +495,20 @@ const HymnSearchScreenContent = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<HymnSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  // Hymns whose accordion is expanded to show all matched verses.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const performSearch = async () => {
@@ -507,6 +521,8 @@ const HymnSearchScreenContent = ({
       try {
         const results = await searchHymns(searchQuery, { matchWholeWord });
         setSearchResults(results);
+        // New result set: collapse any previously expanded accordions.
+        setExpandedIds(new Set());
       } catch (err) {
         console.error('Search error:', err);
       } finally {
@@ -519,41 +535,33 @@ const HymnSearchScreenContent = ({
   }, [searchQuery, searchHymns, matchWholeWord]);
 
   useEffect(() => {
-    const hasFFPM = searchResults.some(r => {
-      const cat = (r.category || '').trim().toLowerCase();
-      return cat === 'ffpm' || cat === 'ffpm hymns';
-    });
-    const hasFifo = searchResults.some(r => {
-      const cat = (r.category || '').trim().toLowerCase();
-      return cat === 'fifo';
-    });
-    const hasFF = searchResults.some(r => {
-      const cat = (r.category || '').trim().toLowerCase();
-      return cat === 'ff';
-    });
-    const hasAntema = searchResults.some(r => {
-      const cat = (r.category || '').trim().toLowerCase();
-      return cat === 'antema';
-    });
+    if (searchResults.length === 0) return;
 
-    // Auto-select fallback order matches the visible tab order
-    // (Fihirana → F. Fifohazana → F. Fanampiny → Antema), so if the
-    // current selection has no matches, we drop to the next category
-    // that does in left-to-right reading order.
-    const nextCategory = (() => {
-      const current = selectedHymnCategory;
-      if (current === 'ffpm' && hasFFPM) return current;
-      if (current === 'fifo' && hasFifo) return current;
-      if (current === 'ff' && hasFF) return current;
-      if (current === 'antema' && hasAntema) return current;
-      if (hasFFPM) return 'ffpm';
-      if (hasFifo) return 'fifo';
-      if (hasFF) return 'ff';
-      if (hasAntema) return 'antema';
-      return current;
-    })();
+    // Map a raw category string to one of the four tab keys, or null if it
+    // doesn't belong to a known tab.
+    const toTabKey = (categoryRaw: string): 'ffpm' | 'fifo' | 'ff' | 'antema' | null => {
+      const cat = (categoryRaw || '').trim().toLowerCase();
+      if (cat === 'ffpm' || cat === 'ffpm hymns') return 'ffpm';
+      if (cat === 'fifo') return 'fifo';
+      if (cat === 'ff') return 'ff';
+      if (cat === 'antema') return 'antema';
+      return null;
+    };
 
-    if (nextCategory !== selectedHymnCategory) {
+    // Keep the current tab if it still has any match — switching it out from
+    // under the user when their tab is relevant would be jarring.
+    const currentHasMatch = searchResults.some(
+      r => toTabKey(r.category) === selectedHymnCategory,
+    );
+    if (currentHasMatch) return;
+
+    // Otherwise land on the category of the best-ranked result. searchResults
+    // is already sorted best-score-first, so the first result with a known tab
+    // is the most relevant hit.
+    const best = searchResults.find(r => toTabKey(r.category) !== null);
+    const nextCategory = best ? toTabKey(best.category) : null;
+
+    if (nextCategory && nextCategory !== selectedHymnCategory) {
       onCategoryChange(nextCategory);
     }
   }, [searchResults]);
@@ -649,6 +657,11 @@ const HymnSearchScreenContent = ({
         ? highlightText(item.matchedVerse, theme.colors.textSecondary)
         : null;
 
+      const isExpanded = expandedIds.has(item.id);
+      // Only offer the accordion when there's more than one matched verse —
+      // a single match is already fully shown by the collapsed snippet.
+      const canExpand = item.matchCount > 1;
+
       return (
         <Pressable
           style={({ pressed }) => [
@@ -688,11 +701,43 @@ const HymnSearchScreenContent = ({
                 </Text>
               </View>
             )}
+
+            {canExpand && (
+              <Pressable
+                style={styles.hymnMatchesChip}
+                android_ripple={{ color: theme.colors.accentBlue + '20', borderless: false }}
+                onPress={() => toggleExpanded(item.id)}
+                hitSlop={8}
+              >
+                <Text style={[styles.hymnMatchesChipText, { color: theme.colors.accentBlue }]}>
+                  {t('search.nMatches', { count: item.matchCount })}
+                  {isExpanded ? ' ▴' : ' ▾'}
+                </Text>
+              </Pressable>
+            )}
+
+            {canExpand && isExpanded && (
+              <View style={[styles.hymnVersesContainer, { borderTopColor: theme.colors.divider }]}>
+                {item.matchedVerses.map(verse => (
+                  <View key={verse.verseNumber} style={styles.hymnVerseRow}>
+                    <Text style={[styles.hymnVerseNumber, { color: theme.colors.accentBlue }]}>
+                      {verse.verseNumber}
+                    </Text>
+                    <Text
+                      style={[styles.hymnVerseText, { color: theme.colors.textSecondary }]}
+                      numberOfLines={3}
+                    >
+                      {highlightText(verse.text, theme.colors.textSecondary)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </Pressable>
       );
     },
-    [highlightText, theme.colors, handleHymnPress]
+    [highlightText, theme.colors, handleHymnPress, expandedIds, toggleExpanded]
   );
 
   return (
@@ -788,9 +833,7 @@ const HymnSearchScreenContent = ({
       ) : searchResults.length > 0 ? (
         <SectionList
           sections={hymnSections as any}
-          keyExtractor={(item, index) =>
-            `${(item as HymnSearchResult).id}:${(item as HymnSearchResult).verseNumber ?? 'na'}:${index}`
-          }
+          keyExtractor={item => (item as HymnSearchResult).id}
           renderItem={renderHymnResult as any}
           renderSectionHeader={({ section }) =>
             displayMode === 'grouped' && section.title ? (
@@ -1106,6 +1149,39 @@ const styles = StyleSheet.create({
   hymnPreviewText: {
     fontSize: 13,
     fontStyle: 'italic',
+    lineHeight: 18,
+    letterSpacing: 0.25,
+  },
+  hymnMatchesChip: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  hymnMatchesChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.25,
+  },
+  hymnVersesContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  hymnVerseRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  hymnVerseNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    width: 24,
+    lineHeight: 18,
+  },
+  hymnVerseText: {
+    flex: 1,
+    fontSize: 13,
     lineHeight: 18,
     letterSpacing: 0.25,
   },

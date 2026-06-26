@@ -1,79 +1,29 @@
 import { useCallback, useState } from 'react';
 import { hymnsDatabaseService } from '../services/database/DatabaseService';
 import {t} from '../i18n/strings';
+import { normalizeForFtsQuery, makeFtsPrefixQuery } from '../utils/searchNormalize';
+import {
+  JESUS_VARIANTS,
+  expandJesusToken,
+  containsJesusNameVariant,
+  looksLikeJesusPrefix,
+  makeJesusNameLikeParams,
+} from '../utils/searchSynonyms';
 
 export type HymnSearchOptions = {
   matchWholeWord?: boolean;
 };
 
-const JESUS_VARIANTS = ['jesosy', 'jesoa'];
-
-const looksLikeJesusPrefix = (token: string) => {
-  if (!token) return false;
-  const t = token.toLowerCase();
-  if (JESUS_VARIANTS.some(v => v.startsWith(t) || t.startsWith(v))) return true;
-  return t.startsWith('jeso') || t === 'jes' || t === 'je';
-};
-
-const containsJesusNameVariant = (query: string) => {
-  const q = query.toLowerCase();
-  if (JESUS_VARIANTS.some(v => q.includes(v))) return true;
-  return q.split(/\s+/).filter(Boolean).some(looksLikeJesusPrefix);
-};
-
-const normalizeForFtsQuery = (value: string) => {
-  const raw = (value ?? '').toString();
-  if (!raw) return '';
-
-  // Lowercase + NFD strip diacritics + drop punctuation/quotes (so MATCH parser is safe)
-  return raw
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-const makeFtsPrefixQuery = (normalized: string) => {
-  const tokens = normalized.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return '';
-
-  const baseTokens = tokens.map(tok => `${tok}*`).join(' AND ');
-  const branches = new Set<string>([baseTokens]);
-
-  // Robustness: if there are multiple tokens and any are short (≤2 chars),
-  // the user may have inserted a stray space mid-word. Try a collapsed variant.
-  const collapsed = tokens.join('');
-  if (tokens.length > 1 && tokens.some(t => t.length <= 2)) {
-    branches.add(`${collapsed}*`);
-  }
-
-  // Jesus-name expansion: cover Jesoa/Jesosy variants whenever the query
-  // contains a "jeso"-like prefix, even partial ("jeso o", "jes").
-  if (containsJesusNameVariant(normalized)) {
-    for (const variant of JESUS_VARIANTS) {
-      const replaced = tokens
-        .map(tok => (looksLikeJesusPrefix(tok) ? `${variant}*` : `${tok}*`))
-        .join(' AND ');
-      branches.add(replaced);
-      branches.add(`${variant}*`);
-    }
-  }
-
-  const list = Array.from(branches).filter(Boolean);
-  return list.length === 1 ? list[0] : list.map(s => `(${s})`).join(' OR ');
-};
-
+// Whole-word search builds a quoted phrase rather than per-token prefixes.
+// Mirrors the prefix builder's Jesus-name expansion (in place, no standalone
+// branch): the dataset stores "Jesoa"/"Jesosy", never bare "Jeso", so a quoted
+// phrase starting with "jeso ..." would otherwise miss those titles.
 const makeFtsWholeWordQuery = (normalized: string) => {
   const tokens = normalized.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return '';
 
   const phrases = new Set<string>([`"${tokens.join(' ')}"`]);
 
-  // Mirror makeFtsPrefixQuery's Jesus-name expansion: the dataset stores
-  // "Jesoa"/"Jesosy", never bare "Jeso", so a quoted phrase starting with
-  // "jeso ..." would otherwise miss those titles.
   if (containsJesusNameVariant(normalized)) {
     for (const variant of JESUS_VARIANTS) {
       const replaced = tokens
@@ -87,14 +37,24 @@ const makeFtsWholeWordQuery = (normalized: string) => {
   return list.length === 1 ? list[0] : list.join(' OR ');
 };
 
+export interface HymnMatchedVerse {
+  verseNumber: number;
+  text: string;
+}
+
 export interface HymnSearchResult {
   id: string;
   number: number;
   category: string;
   title: string;
   authors: string;
+  // Best (highest-ranked) matched verse — drives the collapsed card snippet.
   matchedVerse?: string;
   verseNumber?: number;
+  // Every matched verse for this hymn, ordered by verse number — feeds the
+  // accordion expansion. Empty when only the title/authors matched.
+  matchedVerses: HymnMatchedVerse[];
+  matchCount: number;
 }
 
 export const useHymnSearch = () => {
@@ -120,45 +80,82 @@ export const useHymnSearch = () => {
       }
 
       // Substring: prefix query per token; Whole word: quoted phrase (with Jesus-name expansion).
+      // expandJesusToken tames the Jesus-name aliasing: it swaps the matching token
+      // in place (jeso→jesosy/jesoa) instead of adding standalone whole-corpus
+      // branches, which used to balloon "jeso vato fehizoro" from 6 to 604 rows.
       const ftsParam = matchWholeWord
         ? makeFtsWholeWordQuery(normalizedQuery)
-        : makeFtsPrefixQuery(normalizedQuery);
-      
+        : makeFtsPrefixQuery(normalizedQuery, expandJesusToken);
+
+      // Title matches are far more relevant than verse matches, so push them to
+      // the top by subtracting a large constant from their bm25 score (bm25 is
+      // negative; lower = better, so a big subtraction guarantees titles sort
+      // first). Verse rows keep their raw bm25(HymnVersesFts) score.
+      const TITLE_SCORE_BOOST = 1000;
+
       // HymnVersesFts is contentless: hymn_id/verse_number live on HymnVerses
       // and must be read through the rowid join, not selected from f.*.
       const ftsSearchQuery = `
-        SELECT DISTINCT
-          h.id,
-          h.number,
-          h.category,
-          h.title,
-          h.authors,
-          v.text as matched_verse,
-          v.verse_number
-        FROM HymnVersesFts f
-        JOIN HymnVerses v ON v.rowid = f.rowid
-        JOIN Hymns h ON h.id = v.hymn_id
-        WHERE HymnVersesFts MATCH ?
+        SELECT
+          id,
+          number,
+          category,
+          title,
+          authors,
+          matched_verse,
+          verse_number,
+          MIN(score) as score
+        FROM (
+          SELECT
+            h.id,
+            h.number,
+            h.category,
+            h.title,
+            h.authors,
+            v.text as matched_verse,
+            v.verse_number,
+            bm25(HymnVersesFts) as score
+          FROM HymnVersesFts f
+          JOIN HymnVerses v ON v.rowid = f.rowid
+          JOIN Hymns h ON h.id = v.hymn_id
+          WHERE HymnVersesFts MATCH ?
 
-        UNION ALL
+          UNION ALL
 
-        SELECT DISTINCT
-          h.id,
-          h.number,
-          h.category,
-          h.title,
-          h.authors,
-          NULL as matched_verse,
-          NULL as verse_number
-        FROM HymnsFts hf
-        JOIN Hymns h ON h.id = hf.hymn_id
-        WHERE HymnsFts MATCH ?
-
-        ORDER BY number, verse_number
+          SELECT
+            h.id,
+            h.number,
+            h.category,
+            h.title,
+            h.authors,
+            NULL as matched_verse,
+            NULL as verse_number,
+            bm25(HymnsFts) - ${TITLE_SCORE_BOOST} as score
+          FROM HymnsFts hf
+          JOIN Hymns h ON h.id = hf.hymn_id
+          WHERE HymnsFts MATCH ?
+        )
+        GROUP BY id, verse_number
+        ORDER BY score ASC
         LIMIT 200
       `;
 
-      const likeSearchQuery = `
+      let results: { rows: any[] };
+      try {
+        results = await hymnsDatabaseService.executeQuerySilent(ftsSearchQuery, [ftsParam, ftsParam]);
+      } catch (e: any) {
+        const message = typeof e?.message === 'string' ? e.message : '';
+        if (message.toLowerCase().includes('no such module: fts5')) {
+          // No fts5: fall back to LIKE. Mirror the Jesus-name expansion by trying
+          // each variant param; each one is matched against text/title/authors.
+          const likeParams = makeJesusNameLikeParams(query);
+          const whereClause = likeParams
+            .map(
+              () =>
+                '(lower(v.text) LIKE lower(?) OR lower(h.title) LIKE lower(?) OR lower(h.authors) LIKE lower(?))',
+            )
+            .join(' OR ');
+          const likeSearchQuery = `
         SELECT DISTINCT
           h.id,
           h.number,
@@ -169,37 +166,68 @@ export const useHymnSearch = () => {
           v.verse_number
         FROM Hymns h
         JOIN HymnVerses v ON h.id = v.hymn_id
-        WHERE lower(v.text) LIKE lower(?)
-           OR lower(h.title) LIKE lower(?)
-           OR lower(h.authors) LIKE lower(?)
+        WHERE ${whereClause}
         ORDER BY h.number, v.verse_number
         LIMIT 200
       `;
-
-      let results: { rows: any[] };
-      try {
-        results = await hymnsDatabaseService.executeQuerySilent(ftsSearchQuery, [ftsParam, ftsParam]);
-      } catch (e: any) {
-        const message = typeof e?.message === 'string' ? e.message : '';
-        if (message.toLowerCase().includes('no such module: fts5')) {
-          const likeParam = `%${query}%`;
-          results = await hymnsDatabaseService.executeQuery(likeSearchQuery, [likeParam, likeParam, likeParam]);
+          // Each variant fills three placeholders (text, title, authors).
+          const boundParams = likeParams.flatMap(p => [p, p, p]);
+          results = await hymnsDatabaseService.executeQuery(likeSearchQuery, boundParams);
         } else {
           throw e;
         }
       }
-      const searchResults: HymnSearchResult[] = [];
+      // Collapse the per-verse rows (already ordered best-score-first) into one
+      // result per hymn. The first row seen for a hymn is its best match, so it
+      // drives the card snippet; subsequent verse rows accumulate into
+      // matchedVerses for the accordion. Insertion order preserves the score
+      // ranking across hymns.
+      const byHymn = new Map<string, HymnSearchResult>();
 
       for (const row of results.rows as any[]) {
-        searchResults.push({
-          id: row.id,
-          number: row.number,
-          category: row.category || '',
-          title: row.title,
-          authors: row.authors || '',
-          matchedVerse: row.matched_verse,
-          verseNumber: row.verse_number,
-        });
+        const existing = byHymn.get(row.id);
+        const hasVerse =
+          row.matched_verse !== null && row.matched_verse !== undefined;
+
+        if (!existing) {
+          byHymn.set(row.id, {
+            id: row.id,
+            number: row.number,
+            category: row.category || '',
+            title: row.title,
+            authors: row.authors || '',
+            matchedVerse: hasVerse ? row.matched_verse : undefined,
+            verseNumber: hasVerse ? row.verse_number : undefined,
+            matchedVerses: hasVerse
+              ? [{ verseNumber: row.verse_number, text: row.matched_verse }]
+              : [],
+            matchCount: hasVerse ? 1 : 0,
+          });
+          continue;
+        }
+
+        // A title-only arm (no verse) for an already-seen hymn adds nothing to
+        // the verse list; only verse rows accumulate.
+        if (hasVerse) {
+          existing.matchedVerses.push({
+            verseNumber: row.verse_number,
+            text: row.matched_verse,
+          });
+          existing.matchCount = existing.matchedVerses.length;
+          // If the hymn was first seen via a title-only row, adopt this verse
+          // as the collapsed snippet so the card isn't left blank.
+          if (existing.matchedVerse === undefined) {
+            existing.matchedVerse = row.matched_verse;
+            existing.verseNumber = row.verse_number;
+          }
+        }
+      }
+
+      // Sort each hymn's verses by verse number for stable accordion display
+      // (collection order followed score, not verse order).
+      const searchResults = Array.from(byHymn.values());
+      for (const result of searchResults) {
+        result.matchedVerses.sort((a, b) => a.verseNumber - b.verseNumber);
       }
 
       return searchResults;
