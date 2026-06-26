@@ -64,6 +64,9 @@ type TranslationKey =
   | 'errors.bibleSearch'
   | 'errors.verseSearch'
   | 'errors.hymnSearch'
+  | 'errors.fatalTitle'
+  | 'errors.fatalMessage'
+  | 'errors.fatalRetry'
   | 'actions.addToFavorites'
   | 'actions.report'
   | 'actions.viewConcordance'
@@ -185,6 +188,9 @@ const translations: Translations = {
     'errors.bibleSearch': "Nisy olana teo am-pikarohana ao amin'ny Baiboly",
     'errors.verseSearch': "Nisy olana teo am-pikarohana andininy",
     'errors.hymnSearch': "Nisy olana teo am-pikarohana fihirana",
+    'errors.fatalTitle': 'Nisy olana',
+    'errors.fatalMessage': "Nisy zavatra tsy nety. Andramo averina.",
+    'errors.fatalRetry': 'Avereno',
     'actions.addToFavorites': "Ampidiro ao amin'ny ankafizina",
     'actions.report': 'Tatero',
     'actions.viewConcordance': 'Jereo ny concordance',

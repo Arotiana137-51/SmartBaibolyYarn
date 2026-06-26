@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View, StatusBar, Platform} from 'react-native';
+import {Pressable, StyleSheet, Text, View, Platform} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../contexts/ThemeContext';
 
@@ -50,7 +50,6 @@ function SelectionTopBarInner<T extends string>({
         },
       ]}
     >
-      <StatusBar barStyle="light-content" translucent />
       <View style={styles.tabsRow}>
         {tabs.map((tab, index) => {
           const active = tab.key === activeKey;

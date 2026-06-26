@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text, View, StatusBar} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {AppMode} from '../screens/MainScreen';
 import AnimatedHamburger from './AnimatedHamburger';
 import {useTheme} from '../contexts/ThemeContext';
@@ -75,7 +75,6 @@ const TopBar: React.FC<TopBarProps> = ({
         },
       ]}
     >
-      <StatusBar barStyle="light-content" translucent />
       <Pressable
         accessibilityLabel="Previous chapter"
         android_ripple={{

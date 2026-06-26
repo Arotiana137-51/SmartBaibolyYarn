@@ -2,6 +2,7 @@
 import React, {createContext, useContext, useEffect, useState} from 'react';
 import { bibleDatabaseService, hymnsDatabaseService } from '../services/database/DatabaseService';
 import { patchManager } from '../services/database/PatchManager';
+import { recordFatalError } from '../services/reporting/crashReporter';
 
 type DatabaseContextType = {
   isInitialized: boolean;
@@ -37,6 +38,12 @@ export const DatabaseProvider: React.FC<{children: React.ReactNode}> = ({
       patchManager.checkAndApply();
     } catch (error) {
       console.error('Failed to initialize database:', error);
+      // Persist the real failure for diagnostics, then unblock the UI. Leaving
+      // isInitialized false here would trap the app on the splash screen
+      // forever; instead we let the app mount so downstream screens can fail
+      // loudly (and be caught by the top-level ErrorBoundary) rather than hang.
+      recordFatalError(error, 'global', 'DatabaseProvider.initializeDatabase');
+      setIsInitialized(true);
     }
   };
 

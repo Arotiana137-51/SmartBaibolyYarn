@@ -5,7 +5,7 @@ export interface Env {
   APPS_SCRIPT_API_KEY?: string;
 }
 
-type IssueReportType = 'bible' | 'hymn';
+type IssueReportType = 'bible' | 'hymn' | 'crash';
 
 type IssueReport = {
   id: string;
@@ -51,7 +51,7 @@ const validateReport = (r: any): r is IssueReport => {
   if (!r || typeof r !== 'object') return false;
   if (!isNonEmptyString(r.id)) return false;
   if (!isNonEmptyString(r.createdAt)) return false;
-  if (r.type !== 'bible' && r.type !== 'hymn') return false;
+  if (r.type !== 'bible' && r.type !== 'hymn' && r.type !== 'crash') return false;
   if (!isNonEmptyString(r.reference)) return false;
   if (!isNonEmptyString(r.text)) return false;
   if (!isNonEmptyString(r.comment)) return false;
@@ -152,7 +152,11 @@ export default {
       if (!validateReport(r)) {
         return badRequest('invalid_report');
       }
-      if (r.comment.length > 2000 || r.text.length > 4000 || r.reference.length > 200) {
+      // Crash reports carry a JS stack + React component stack in `comment`,
+      // which is legitimately larger than a user-typed correction. Give them a
+      // higher ceiling; keep the tight cap for bible/hymn reports.
+      const maxComment = r.type === 'crash' ? 8000 : 2000;
+      if (r.comment.length > maxComment || r.text.length > 4000 || r.reference.length > 200) {
         return badRequest('report_too_large');
       }
     }
