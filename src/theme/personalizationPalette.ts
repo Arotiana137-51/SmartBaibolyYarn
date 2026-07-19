@@ -52,6 +52,35 @@ export const PRIMARY_COLOR_OPTIONS: PrimaryColorOption[] = [
   // Neutrals
   {id: 'ebony', name: 'Ebony', hex: '#545E56'},
   {id: 'liturgicalBlack', name: 'Liturgical Black', hex: '#000000'},
+
+  // Curated palettes — single accent hex (the theme engine drives accent only;
+  // full background/text theming would need a bigger engine change).
+  {id: 'sage_green', name: 'Vert Sauge', hex: '#7A9A82'},
+  {id: 'manga_alina', name: 'Manga Alina', hex: '#66FCF1'},
+  {id: 'mofon_tany', name: 'Mofon-tany Maitso', hex: '#8FBC8F'},
+  {id: 'tany_mafana', name: 'Tany Mafana', hex: '#C86432'},
+  {id: 'fasika', name: 'Fasika', hex: '#C4A484'},
+  {id: 'rahona', name: 'Rahona', hex: '#607D8B'},
+  {id: 'divay', name: 'Divay', hex: '#9E2A2B'},
+
+  // Popular, well-designed accents (modern UI palettes — the ones people reach for).
+  {id: 'iosBlue', name: 'iOS Blue', hex: '#0A84FF'},
+  {id: 'royalBlue', name: 'Royal Blue', hex: '#2563EB'},
+  {id: 'sky', name: 'Sky', hex: '#0EA5E9'},
+  {id: 'cyan', name: 'Cyan', hex: '#06B6D4'},
+  {id: 'teal', name: 'Teal', hex: '#14B8A6'},
+  {id: 'indigo', name: 'Indigo', hex: '#6366F1'},
+  {id: 'violet', name: 'Violet', hex: '#8B5CF6'},
+  {id: 'purple', name: 'Purple', hex: '#A855F7'},
+  {id: 'fuchsia', name: 'Fuchsia', hex: '#D946EF'},
+  {id: 'pink', name: 'Pink', hex: '#EC4899'},
+  {id: 'coral', name: 'Coral', hex: '#F43F5E'},
+  {id: 'orange', name: 'Orange', hex: '#F97316'},
+  {id: 'amber', name: 'Amber', hex: '#F59E0B'},
+  {id: 'lime', name: 'Lime', hex: '#84CC16'},
+  {id: 'green', name: 'Green', hex: '#22C55E'},
+  {id: 'emeraldBright', name: 'Emerald', hex: '#10B981'},
+  {id: 'slate', name: 'Slate', hex: '#64748B'},
 ];
 
 export const findPrimaryColorOption = (hex: string | null | undefined): PrimaryColorOption | undefined => {

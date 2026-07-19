@@ -454,14 +454,19 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
   const onScrollToIndexFailed = useCallback(
     (info: {index: number}) => {
       setTimeout(() => {
+        // The list may have shrunk (range filter / chapter change) between the
+        // failed scroll and this retry — clamp to the current length so the
+        // retry can't throw "scrollToIndex out of range". Skip if now empty.
+        const last = visibleVerses.length - 1;
+        if (last < 0) return;
         flatListRef?.current?.scrollToIndex({
-          index: info.index,
+          index: Math.min(info.index, last),
           animated: true,
           viewPosition: 0.2,
         });
       }, 220);
     },
-    [flatListRef],
+    [flatListRef, visibleVerses.length],
   );
 
   const onScrollBeginDrag = useCallback(() => {

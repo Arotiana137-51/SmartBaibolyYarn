@@ -11,6 +11,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useBibleData } from '../hooks/useBibleData';
 import {useTheme} from '../contexts/ThemeContext';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import TutorialOverlay from './TutorialOverlay';
 
 type SelectionStep = 'book' | 'chapter' | 'verse';
 
@@ -59,6 +60,9 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [verseCount, setVerseCount] = useState(0);
+  // Range is picked on ONE grid: first tap arms the start (highlighted), second
+  // tap resolves and closes immediately — same verse → single, a different verse
+  // → the n–m range. No confirm step.
   const [pendingStartVerse, setPendingStartVerse] = useState<number | null>(null);
 
   const bottomScrollSpacer =
@@ -155,13 +159,12 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     onClose();
   }, [onClose]);
 
+  // First tap arms the start; second tap resolves immediately — same verse →
+  // single, a different verse → the n–m range. No confirm.
   const handleVersePress = useCallback((verse: number) => {
     if (!selectedBook || selectedChapter === null) return;
 
     if (pendingStartVerse === null) {
-      // First tap: arm the range start, keep the modal open so the user can
-      // pick the end. Tapping the same verse again will resolve to a single
-      // verse.
       setPendingStartVerse(verse);
       return;
     }
@@ -172,12 +175,10 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
         verse,
       });
     } else {
-      const start = Math.min(pendingStartVerse, verse);
-      const end = Math.max(pendingStartVerse, verse);
       onBibleSelect(selectedBook.id, selectedBook.name, selectedChapter, {
         kind: 'range',
-        start,
-        end,
+        start: Math.min(pendingStartVerse, verse),
+        end: Math.max(pendingStartVerse, verse),
       });
     }
     handleClose();
@@ -256,7 +257,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
         const base = `${selectedBookShortName} ${selectedChapter}`;
         if (pendingStartVerse !== null) {
           return {
-            title: 'Fisafidianana farany',
+            title: 'Fisafidianana andininy farany',
             subtitle: `${base} (manomboka ${pendingStartVerse})`,
           };
         }
@@ -477,9 +478,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
                 style={[
                   styles.verseButton,
                   {backgroundColor: theme.colors.backgroundTertiary},
-                  isPendingStart && {
-                    backgroundColor: theme.colors.accentBlue,
-                  },
+                  isPendingStart && {backgroundColor: theme.colors.accentBlue},
                 ]}
                 onPress={() => handleVersePress(item)}>
                 <Text
@@ -495,6 +494,7 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           }}
         />
       ) : null}
+      <TutorialOverlay scope="modal" />
     </View>
   );
 };

@@ -4,6 +4,7 @@ import { AppMode } from '../screens/MainScreen';
 import {useTheme} from '../contexts/ThemeContext';
 import { useAdaptiveInsets } from '../hooks/useAdaptiveInsets';
 import { SPACING, useResponsive } from '../theme/responsive';
+import { useTutorialTarget } from '../contexts/TutorialContext';
 
 interface CustomBottomNavProps {
   activeMode: AppMode;
@@ -31,6 +32,7 @@ const hexToRgba = (hex: string, alpha: number) => {
 const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPress, compact = false }) => {
   const insets = useAdaptiveInsets();
   const {theme} = useTheme();
+  const navTargetRef = useTutorialTarget('bottomNav');
   const { verticalScale, fontFor, isSmall } = useResponsive();
   const segmentHeight = compact
     ? Math.max(30, verticalScale(34))
@@ -66,6 +68,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
       ]}
     >
       <View
+        ref={navTargetRef}
+        collapsable={false}
         style={[
           styles.segmentedTrack,
           {

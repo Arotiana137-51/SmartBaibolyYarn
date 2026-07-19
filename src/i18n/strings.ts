@@ -26,6 +26,11 @@ type TranslationKey =
   | 'personalization.title'
   | 'personalization.subtitle'
   | 'personalization.reset'
+  | 'personalization.brandBadge'
+  | 'personalization.chooseColor'
+  | 'personalization.firstRunWelcome'
+  | 'personalization.firstRunDesc'
+  | 'personalization.hint'
   | 'common.cancel'
   | 'common.close'
   | 'common.remove'
@@ -151,6 +156,13 @@ const translations: Translations = {
     'personalization.title': 'Loko manokana',
     'personalization.subtitle': "Safidio ny lokon'ny rindrina sy ny bokotra",
     'personalization.reset': 'Avereno tany am-boalohany',
+    'personalization.brandBadge': 'Fisafidianana loko',
+    'personalization.chooseColor': 'Fisafidianana loko',
+    'personalization.firstRunWelcome':
+      "Tongasoa eto amin'ny e-Baiboly! Faly miarahaba anao izahay.",
+    'personalization.firstRunDesc':
+      "Safidio ny loko tianao ampiasaina ato anatin'ny e-Baiboly",
+    'personalization.hint': 'Kitiho ny loko handrosoana',
     'common.cancel': 'Ajanony',
     'common.close': 'Hidio',
     'common.remove': 'Esory',

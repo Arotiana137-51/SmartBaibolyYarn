@@ -6,7 +6,6 @@ import {
   Pressable,
   Alert,
   Modal,
-  Switch,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -30,6 +29,8 @@ import BibleSelectionModal, {
 } from '../components/BibleSelectionModal';
 import HymnSelectionModal from '../components/HymnSelectionModal';
 import {useHymnsData} from '../hooks/useHymnsData';
+import {useTutorial, useTutorialTarget} from '../contexts/TutorialContext';
+import TutorialOverlay from '../components/TutorialOverlay';
 
 type CultModeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -48,6 +49,10 @@ const CultModeScreen = () => {
     toggleActive,
   } = useCultMode();
   const {hymns} = useHymnsData();
+  const tutorial = useTutorial();
+  const addButtonsRef = useTutorialTarget('cultAddButtons');
+  const listRef = useTutorialTarget('cultList');
+  const activateRowRef = useTutorialTarget('cultActivateToggle');
 
   const [bibleModalVisible, setBibleModalVisible] = useState(false);
   const [hymnModalVisible, setHymnModalVisible] = useState(false);
@@ -83,8 +88,9 @@ const CultModeScreen = () => {
         label: buildBibleLabel(bookName, chapter, verseStart, verseEnd),
       });
       setBibleModalVisible(false);
+      tutorial.notifyProgress('cultBibleAdded');
     },
-    [addEntry],
+    [addEntry, tutorial],
   );
 
   const handleHymnSelect = useCallback(
@@ -101,8 +107,9 @@ const CultModeScreen = () => {
         label: buildHymnLabel(category, number, title),
       });
       setHymnModalVisible(false);
+      tutorial.notifyProgress('cultHymnAdded');
     },
-    [addEntry, hymns],
+    [addEntry, hymns, tutorial],
   );
 
   const handleRemove = useCallback(
@@ -171,7 +178,7 @@ const CultModeScreen = () => {
   const headerComponent = useMemo(
     () => (
       <View style={styles.addSection}>
-        <View style={styles.addButtonsRow}>
+        <View ref={addButtonsRef} collapsable={false} style={styles.addButtonsRow}>
           <Pressable
             onPress={() => setBibleModalVisible(true)}
             style={[
@@ -195,7 +202,7 @@ const CultModeScreen = () => {
         </View>
       </View>
     ),
-    [theme.colors],
+    [theme.colors, addButtonsRef],
   );
 
   return (
@@ -218,6 +225,8 @@ const CultModeScreen = () => {
       </View>
 
       <View
+        ref={activateRowRef}
+        collapsable={false}
         style={[
           styles.activateRow,
           {backgroundColor: theme.colors.backgroundSecondary},
@@ -237,11 +246,40 @@ const CultModeScreen = () => {
             </Text>
           ) : null}
         </View>
-        <Switch
-          value={isActive}
-          onValueChange={v => toggleActive(v)}
+        <Pressable
+          onPress={() => {
+            // Stopping happens here, in the menu — never in the reader, so the
+            // session can't be killed by a stray reader tap. Play → jump to the
+            // reader; Pause → stay put.
+            if (isActive) {
+              toggleActive(false);
+              return;
+            }
+            toggleActive(true);
+            tutorial.notifyProgress('cultActivated');
+            // Skip the jump during the tutorial: its next step drives Home
+            // itself (showCultReaderNav).
+            if (!tutorial.activeTutorial) navigation.navigate('Home');
+          }}
           disabled={entries.length === 0}
-        />
+          accessibilityRole="button"
+          accessibilityLabel={
+            isActive ? t('cultMode.deactivate') : t('cultMode.activate')
+          }
+          style={[
+            styles.playButton,
+            {backgroundColor: theme.colors.navBackground},
+            entries.length === 0 && styles.playButtonDisabled,
+          ]}>
+          {isActive ? (
+            <View style={styles.pauseIcon}>
+              <View style={styles.pauseBar} />
+              <View style={styles.pauseBar} />
+            </View>
+          ) : (
+            <View style={styles.playTriangle} />
+          )}
+        </Pressable>
       </View>
 
       {/*
@@ -251,34 +289,36 @@ const CultModeScreen = () => {
         ("Unable to find viewState for tag …"). The single component handles
         both states via ListEmptyComponent.
       */}
-      <DraggableFlatList
-        data={entries}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        onDragEnd={({from, to}) => {
-          if (from !== to) reorderEntries(from, to);
-        }}
-        ListHeaderComponent={headerComponent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text
-              style={[
-                styles.introText,
-                {color: theme.colors.textSecondary},
-              ]}>
-              {t('cultMode.intro')}
-            </Text>
-            <Text
-              style={[
-                styles.emptyText,
-                {color: theme.colors.textSecondary},
-              ]}>
-              {t('cultMode.emptyState')}
-            </Text>
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
-      />
+      <View ref={listRef} collapsable={false} style={styles.listWrap}>
+        <DraggableFlatList
+          data={entries}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          onDragEnd={({from, to}) => {
+            if (from !== to) reorderEntries(from, to);
+          }}
+          ListHeaderComponent={headerComponent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text
+                style={[
+                  styles.introText,
+                  {color: theme.colors.textSecondary},
+                ]}>
+                {t('cultMode.intro')}
+              </Text>
+              <Text
+                style={[
+                  styles.emptyText,
+                  {color: theme.colors.textSecondary},
+                ]}>
+                {t('cultMode.emptyState')}
+              </Text>
+            </View>
+          }
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
 
 
       <Modal
@@ -302,6 +342,8 @@ const CultModeScreen = () => {
         onClose={() => setHymnModalVisible(false)}
         onHymnSelect={handleHymnSelect}
       />
+
+      <TutorialOverlay scope="cult" />
     </SafeAreaView>
   );
 };
@@ -328,6 +370,30 @@ const styles = StyleSheet.create({
   },
   activateLabel: {fontSize: 15, fontWeight: '600'},
   activateHint: {fontSize: 12, marginTop: 2, fontStyle: 'italic'},
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playButtonDisabled: {opacity: 0.4},
+  // Play triangle drawn with borders: a right-pointing triangle is a box with
+  // transparent top/bottom borders and a solid left border. Nudge right 2px to
+  // optically center it in the circle.
+  playTriangle: {
+    width: 0,
+    height: 0,
+    marginLeft: 4,
+    borderTopWidth: 9,
+    borderBottomWidth: 9,
+    borderLeftWidth: 15,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: '#FFFFFF',
+  },
+  pauseIcon: {flexDirection: 'row', gap: 5},
+  pauseBar: {width: 5, height: 18, borderRadius: 1, backgroundColor: '#FFFFFF'},
   addSection: {paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8},
   addButtonsRow: {flexDirection: 'row', gap: 8},
   addButton: {
@@ -338,6 +404,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addButtonText: {color: '#FFFFFF', fontSize: 14, fontWeight: '600'},
+  listWrap: {flex: 1},
   listContent: {paddingBottom: 24},
   itemContainer: {
     flexDirection: 'row',

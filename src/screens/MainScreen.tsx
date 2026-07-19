@@ -14,6 +14,7 @@ import {
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
 import NotificationGlow from '../components/NotificationGlow';
 import ReaderRevealBanner from '../components/ReaderRevealBanner';
@@ -43,6 +44,10 @@ import HamburgerMenuPopover, {
 } from '../components/HamburgerMenuPopover';
 import {useTheme} from '../contexts/ThemeContext';
 import {useCultMode} from '../contexts/CultModeContext';
+import {useTutorial, useTutorialTarget, isOnboardingDone} from '../contexts/TutorialContext';
+import {ONBOARDING_ID, CULT_TUTORIAL_ID} from '../tutorials/registry';
+import TutorialOverlay from '../components/TutorialOverlay';
+import type {DriveVerb} from '../tutorials/registry';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
@@ -54,6 +59,10 @@ import {
   flushIssueReports,
   IssueReport,
 } from '../services/reporting/issueReportQueue';
+
+// Persisted last-read Bible position, restored on launch instead of the
+// hardcoded Marka 16 default. {bookId, bookName, chapter}.
+const LAST_READ_BIBLE_KEY = 'last_read_bible';
 
 // Mix a hex color with a given alpha. Used for the cult-mode chevrons so
 // the pill follows the active theme's navBackground with a touch of
@@ -80,6 +89,10 @@ const TOP_BAR_EXTRA_TOP_PADDING = 6;
 const HAMBURGER_CARET_HEIGHT = 12;
 
 export type AppMode = 'bible' | 'hymnal';
+
+// Process-lifetime guard: onboarding auto-starts at most once per app run, so
+// Home remounting (returning from another screen) can't relaunch the tutorial.
+let onboardingAutoStarted = false;
 
 type MainScreenProps = {
   navigation: any;
@@ -222,6 +235,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const { logAccess: logBibleAccess } = useBibleHistory();
   const { logAccess: logHymnAccess } = useHymnHistory();
   const cultMode = useCultMode();
+  const tutorial = useTutorial();
+  const glowTargetRef = useTutorialTarget('notificationGlow');
+  const cultReaderNavRef = useTutorialTarget('cultReaderNav');
+  const cultReaderNavNextRef = useTutorialTarget('cultReaderNavNext');
 
   const [crossRefModalVisible, setCrossRefModalVisible] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
@@ -318,13 +335,36 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     chapterEditorVisible,
   ]);
 
+  // Initial Bible position: restore the user's last-read book+chapter from
+  // storage; fall back to Marka 16 only when there's nothing saved. Skipped
+  // when a book is already set (deep link / route param).
+  const didRestoreBible = useRef(false);
   useEffect(() => {
-    if (currentBook || books.length === 0) {
+    if (didRestoreBible.current || books.length === 0) {
       return;
     }
-
-    const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
-    setCurrentBook({ id: defaultBook.id, name: defaultBook.name });
+    if (currentBook) {
+      didRestoreBible.current = true;
+      return;
+    }
+    didRestoreBible.current = true;
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(LAST_READ_BIBLE_KEY);
+        if (stored) {
+          const {bookId, bookName, chapter} = JSON.parse(stored);
+          if (books.find(b => b.id === bookId)) {
+            setCurrentBook({id: bookId, name: bookName});
+            setCurrentChapter(chapter);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring last-read Bible position:', error);
+      }
+      const defaultBook = books.find(b => b.name === 'Marka') ?? books[0];
+      setCurrentBook({id: defaultBook.id, name: defaultBook.name});
+    })();
   }, [books, currentBook]);
 
   useEffect(() => {
@@ -448,6 +488,11 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         { book_id: currentBook.id, chapter: currentChapter, verse_number: 1, text: '', id: 0 } as BibleVerse,
         currentBook.name
       );
+      // Remember where we are, so the next launch reopens here (not Marka 16).
+      AsyncStorage.setItem(
+        LAST_READ_BIBLE_KEY,
+        JSON.stringify({bookId: currentBook.id, bookName: currentBook.name, chapter: currentChapter}),
+      ).catch(() => {});
     } else if (mode === 'hymnal' && currentHymnId && hymnVerses.length > 0) {
       const currentHymn = hymns.find(h => h.id === currentHymnId);
       if (currentHymn) {
@@ -622,10 +667,17 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         navigation.navigate('Notes');
         return;
       case 'personalization':
-        navigation.navigate('Personalization');
+        // Explicit firstRun:false so the brand logo/welcome (first-launch only)
+        // never leak in via the route's initialParams when the color picker is
+        // reopened from this menu.
+        navigation.navigate('Personalization', {firstRun: false});
         return;
       case 'cultMode':
+        tutorial.notifyProgress('cultMenuSelected');
         navigation.navigate('CultMode');
+        return;
+      case 'help':
+        navigation.navigate('Help');
         return;
       default: {
         const _exhaustiveCheck: never = key;
@@ -790,7 +842,139 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     setCurrentHymnId(hymnId);
     setCurrentHymnNumber(number);
     setCurrentHymnCategory(category);
+    tutorial.notifyProgress('selected');
   };
+
+  // Tutorial: drive the REAL selection UI when a step asks for it, so the
+  // walkthrough teaches the genuine gesture. Registered once; the engine calls
+  // it as steps become active. 'open' progress is emitted when the driven modal
+  // actually mounts (see the visibility effect below).
+  useEffect(() => {
+    const handler = (verb: DriveVerb) => {
+      switch (verb) {
+        case 'switchToBible':
+          setMode('bible');
+          return;
+        case 'switchToHymnal':
+          setMode('hymnal');
+          return;
+        case 'openBookSelector':
+          setMode('bible');
+          setBibleSelectionVisible(true);
+          if (currentBook) {
+            setBibleSelectionProgress({
+              step: 'book',
+              selectedBook: {id: currentBook.id, name: currentBook.name},
+              selectedChapter: currentChapter ?? null,
+            });
+          }
+          return;
+        case 'openHymnSelector':
+          setMode('hymnal');
+          setHymnSelectionVisible(true);
+          return;
+        case 'showCultReaderNav':
+          // Cult mode is genuinely active by this step, so the real ‹ ›
+          // chevrons render on the reader — just return there to show them.
+          navigation.navigate('Home');
+          return;
+        default:
+          return;
+      }
+    };
+    tutorial.setDriveHandler(handler);
+    return () => tutorial.setDriveHandler(null);
+  }, [tutorial, currentBook, currentChapter, navigation]);
+
+  // Auto-start onboarding on first launch (after color selection reset us to
+  // Home). Gate on the persisted flag; 400ms settle lets the reader paint.
+  // The module-level guard makes this fire once per app process — Home remounts
+  // (e.g. returning from the CultMode screen) must NOT relaunch onboarding,
+  // which was the source of the tutorial "looping back".
+  useEffect(() => {
+    if (onboardingAutoStarted) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    isOnboardingDone().then(done => {
+      if (done || cancelled) return;
+      onboardingAutoStarted = true;
+      timer = setTimeout(() => tutorial.start('onboarding'), 400);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tutorial chaining + isolation, keyed on the tutorial id transition so each
+  // edge acts exactly once:
+  //   null → cult       : isolate the playlist onto a throwaway slate so the
+  //                        walkthrough's demo entries never touch the real one.
+  //   onboarding → null : chain into the Fotoam-pivavahana tutorial.
+  //   cult       → null : tutorial finished/skipped — restore the real playlist
+  //                        (the demo entries were never persisted). No relaunch.
+  const prevTutorialId = useRef<string | null>(null);
+  useEffect(() => {
+    const active = tutorial.activeTutorial?.id ?? null;
+    const prev = prevTutorialId.current;
+    prevTutorialId.current = active;
+    if (active === prev) return;
+
+    if (active === CULT_TUTORIAL_ID) {
+      cultMode.beginTutorial();
+      return;
+    }
+    if (active !== null) return;
+
+    if (prev === ONBOARDING_ID) {
+      // Cult tutorial now opens on Home and walks the user through the hamburger
+      // menu itself, so stay put — no jump to CultMode.
+      setTimeout(() => tutorial.start(CULT_TUTORIAL_ID), 350);
+    } else if (prev === CULT_TUTORIAL_ID) {
+      cultMode.endTutorial();
+    }
+  }, [tutorial.activeTutorial, tutorial, navigation, cultMode]);
+
+  // Babysitting drill for the reader ‹ › step: the user must page all the way
+  // to the last entry, THEN all the way back to the first, before the step
+  // advances (n entries ⇒ n-1 › taps then n-1 ‹ taps). Two phases tracked via
+  // ref; reset whenever the step (re)starts.
+  const navDrill = useRef<'toEnd' | 'toStart' | 'done'>('toEnd');
+  const onCultNavStep =
+    tutorial.activeTutorial?.id === CULT_TUTORIAL_ID &&
+    tutorial.step?.id === 'cultReaderNav';
+  useEffect(() => {
+    if (onCultNavStep) navDrill.current = 'toEnd';
+  }, [onCultNavStep]);
+  useEffect(() => {
+    if (!onCultNavStep) return;
+    // Single-entry playlists can't be paged — let the step advance immediately.
+    if (cultMode.entries.length <= 1) {
+      tutorial.notifyProgress('cultNavStepped');
+      return;
+    }
+    if (navDrill.current === 'toEnd' && cultMode.isLast) {
+      navDrill.current = 'toStart';
+    } else if (navDrill.current === 'toStart' && cultMode.isFirst) {
+      navDrill.current = 'done';
+      tutorial.notifyProgress('cultNavStepped');
+    }
+  }, [onCultNavStep, cultMode.currentIndex, cultMode.isFirst, cultMode.isLast, cultMode.entries.length, tutorial]);
+
+  // Tell the tutorial the driven selector actually opened → advances the
+  // 'openBookSelector'/'openHymnSelector' steps (awaitProgress: 'open').
+  useEffect(() => {
+    if (bibleSelectionVisible || hymnSelectionVisible) {
+      tutorial.notifyProgress('open');
+    }
+  }, [bibleSelectionVisible, hymnSelectionVisible, tutorial]);
+
+  // Cult tutorial lead-in: advance the 'tap the hamburger' step once the menu
+  // actually opens (the real gesture, same pattern as the selectors above).
+  useEffect(() => {
+    if (isMenuOpen) tutorial.notifyProgress('menuOpened');
+  }, [isMenuOpen, tutorial]);
 
   const handleTitlePress = () => {
     if (mode === 'hymnal') {
@@ -852,6 +1036,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onTitlePress={handleTitlePress}
           onPreviousPress={handlePreviousChapter}
           onNextPress={handleNextChapter}
+          onSearchPress={() => navigation.navigate('GlobalSearch', { mode })}
         />
       )}
       {/*
@@ -862,6 +1047,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         of the 16-px component.
       */}
       <Pressable
+        ref={glowTargetRef}
+        collapsable={false}
         onPress={devotionalUnread ? revealBanner : undefined}
         hitSlop={12}
         accessibilityLabel="Hidio ny hafatra androany"
@@ -913,6 +1100,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
 
               setBibleSelectionVisible(false);
               setRequestedBibleSelectionStep(null);
+              tutorial.notifyProgress('selected');
             }}
             requestedStep={requestedBibleSelectionStep}
             initialBook={(() => {
@@ -936,6 +1124,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
               setRequestedBibleSelectionStep((prev) =>
                 prev === progress.step ? null : prev,
               );
+              // Advance the Bible drill (pickBook→chapter, pickChapter→verse).
+              tutorial.notifyProgress(progress.step);
             }}
           />
         ) : (
@@ -990,6 +1180,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             {bottom: insets.bottom + 16},
           ]}>
           <Pressable
+            ref={cultReaderNavRef}
+            collapsable={false}
             onPress={cultMode.goPrev}
             disabled={cultMode.isFirst}
             hitSlop={12}
@@ -1002,6 +1194,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           </Pressable>
           <View style={styles.cultChevronSpacer} pointerEvents="none" />
           <Pressable
+            ref={cultReaderNavNextRef}
+            collapsable={false}
             onPress={cultMode.goNext}
             disabled={cultMode.isLast}
             hitSlop={12}
@@ -1164,6 +1358,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         onAddToFavorites={handleAddHymnToFavorites}
         onReportIssue={openHymnReportModal}
       />
+
+      <TutorialOverlay scope="screen" />
     </SafeAreaView>
   );
 };

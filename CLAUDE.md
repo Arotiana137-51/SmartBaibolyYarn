@@ -1,0 +1,64 @@
+# e-Baiboly — Claude Code Project Instructions
+
+## Project Overview
+e-Baiboly is an offline-first React Native app (Android + iOS) for reading the
+Malagasy Bible (MG1865) and hymns (FFPM / Fanampiny / Antema).
+It has no backend today. All data is bundled locally.
+
+## Stack
+- React Native (bare workflow, not Expo managed)
+- TypeScript — strict mode ON
+- Navigation: React Navigation v6 (Stack + Tab navigators)
+- State: identify the actual store before touching shared state (see src/store/)
+- Styling: StyleSheet.create() only — no inline style objects in JSX
+- Tests: Jest + React Native Testing Library
+
+## Commands
+```
+yarn android          # run on Android
+yarn ios              # run on iOS
+yarn test             # Jest
+yarn lint             # ESLint
+yarn typecheck        # tsc --noEmit
+```
+
+This project is yarn-only — never run `npm install` or `npm run …`. There is
+no `package-lock.json`; only `yarn.lock` is tracked.
+
+## Architecture Rules
+- Reuse before creating. Check src/components/ before writing a new component.
+- Bible reader and Hymn reader are the two primary content components.
+  New features drive them; they do not change their own rendering logic
+  unless the task explicitly says to.
+- Navigation params are typed. Always update the RootStackParamList /
+  BottomTabParamList when adding a new screen or param.
+- Never put business logic inside a screen component. Extract to a hook or util.
+
+## Code Style
+- Functional components + hooks only. No class components.
+- Named exports for components. Default export only for screens.
+- File names: PascalCase for components, camelCase for hooks/utils.
+- Hook prefix: `use` (e.g. useCultMode, useVerseRange).
+- No `any`. Use `unknown` and narrow.
+
+## When compacting
+Preserve: list of modified files, current feature being implemented,
+any unresolved TypeScript errors, and the active test status.
+
+## Feature docs
+- Full feature spec: @docs/feature-spec.md
+- Linked list design: @docs/cult-mode-linked-list.md
+- Component map: @docs/component-map.md
+
+## Database content updates
+The Bible and Hymns SQLite databases are versioned via PRAGMA user_version,
+stamped at build time by the constants in src/services/database/dbVersions.ts.
+Two delivery paths:
+- **APK release**: bump the version, rebuild via `yarn build:bible` or
+  `yarn build:hymns`. New APK ships the new bundled DB; the in-app
+  staleness check in DatabaseService re-extracts on launch.
+- **OTA patch (offline-first, cellular-cheap)**: emit a tiny JSON patch via
+  `yarn build:patch -- --target=<bible|hymns> --since=<git-ref> --version=YYYYMMDD`.
+  Files land in docs/patches/ and are served via GitHub Pages. The
+  PatchManager on the app fetches and applies them on launch.
+- Full workflow: @docs/patches/README.md

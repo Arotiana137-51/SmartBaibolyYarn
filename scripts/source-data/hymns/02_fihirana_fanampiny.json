@@ -373,7 +373,7 @@
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Raha tonga ny andro\nIzay hitsarana anao\nAmin'izay fotoana izay\nHadinina ianao\nKa hitarika ilay Mpanjakanao\nEfa vonona ve ianao ? (Ary koa) \nEfa ampy ve izay anananao\nHiatrehanao ny Tomponao.",
+                "tononkira": "Raha tonga ny andro\nIzay hitsarana anao\nAmin'izay fotoana izay\nHadinina ianao\nKa hiatrika ilay Mpanjakanao\nEfa vonona ve ianao ? (Ary koa) \nEfa ampy ve izay anananao\nHiatrehanao ny Tomponao.",
                 "fiverenany": false
             },
             {
@@ -1169,6 +1169,11 @@
         "lohateny": "MIFONA RE RAY !",
         "mpanoratra": [],
         "hira": [
+             {
+                "andininy": 0,
+                "tononkira": "Tompo ô! Vonjeo ‘zahay.",
+                "fiverenany": false
+            },
             {
                 "andininy": 1,
                 "tononkira": "Mifona re ry Ray\nIreto Zanakao\nFa diso izahay\nTsy mety ny natao.",

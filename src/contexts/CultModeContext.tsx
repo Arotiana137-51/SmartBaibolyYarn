@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   ReactNode,
 } from 'react';
@@ -32,6 +33,11 @@ type CultModeContextValue = {
   removeEntry: (id: string) => void;
   reorderEntries: (fromIndex: number, toIndex: number) => void;
   clearAll: () => Promise<void>;
+  // Tutorial isolation: run the walkthrough on an empty in-memory slate so the
+  // playlist step shows only the demo entries the user adds — without ever
+  // persisting them over the real saved playlist. endTutorial restores it.
+  beginTutorial: () => void;
+  endTutorial: () => void;
   // Active session
   isActive: boolean;
   toggleActive: (next?: boolean) => void;
@@ -53,6 +59,13 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+
+  // While the tutorial runs we work on a throwaway in-memory playlist: persists
+  // are suppressed and the real one is stashed here, restored by endTutorial.
+  const tutorialSnapshot = useRef<{entries: CultEntry[]; isActive: boolean} | null>(
+    null,
+  );
+  const inTutorial = () => tutorialSnapshot.current !== null;
 
   // Hydrate both stores in parallel.
   useEffect(() => {
@@ -98,6 +111,7 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
   }, [entries.length, currentIndex]);
 
   const persistPlaylist = (next: CultEntry[]) => {
+    if (inTutorial()) return; // tutorial slate never overwrites the real playlist
     AsyncStorage.setItem(
       CULT_PLAYLIST_KEY,
       JSON.stringify({entries: next} satisfies StoredPlaylist),
@@ -105,6 +119,7 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
   };
 
   const persistActive = (active: boolean) => {
+    if (inTutorial()) return; // tutorial slate never overwrites the real state
     AsyncStorage.setItem(
       CULT_MODE_ACTIVE_KEY,
       JSON.stringify({isActive: active} satisfies StoredActive),
@@ -154,6 +169,22 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
     await AsyncStorage.removeItem(CULT_PLAYLIST_KEY);
   }, []);
 
+  const beginTutorial = useCallback(() => {
+    if (tutorialSnapshot.current) return; // already isolated
+    tutorialSnapshot.current = {entries, isActive};
+    setEntries([]);
+    setIsActive(false);
+    setCurrentIndex(0);
+  }, [entries, isActive]);
+
+  const endTutorial = useCallback(() => {
+    const snap = tutorialSnapshot.current;
+    tutorialSnapshot.current = null; // clear FIRST so restored state persists
+    setEntries(snap?.entries ?? []);
+    setIsActive(snap?.isActive ?? false);
+    setCurrentIndex(0);
+  }, []);
+
   const toggleActive = useCallback(
     (next?: boolean) => {
       const target = typeof next === 'boolean' ? next : !isActive;
@@ -192,6 +223,8 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       removeEntry,
       reorderEntries,
       clearAll,
+      beginTutorial,
+      endTutorial,
       isActive,
       toggleActive,
       currentIndex,
@@ -208,6 +241,8 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
       removeEntry,
       reorderEntries,
       clearAll,
+      beginTutorial,
+      endTutorial,
       isActive,
       toggleActive,
       currentIndex,

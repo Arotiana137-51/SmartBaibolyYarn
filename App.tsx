@@ -9,6 +9,7 @@ import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
 import {CultModeProvider} from './src/contexts/CultModeContext';
 import {InAppNotificationProvider} from './src/contexts/InAppNotificationContext';
+import {TutorialProvider} from './src/contexts/TutorialContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
@@ -20,6 +21,11 @@ import {
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
 // default handler runs, so production crashes carry a real message/stack.
 installGlobalErrorHandler();
+
+// TEMP(testing): force the complete onboarding flow (color selection → basic
+// navigation tutorial → Fotoam-pivavahana tutorial) on every launch. Set back
+// to false before release.
+const FORCE_ONBOARDING_FLOW = true;
 
 // Splash screen component
 const SplashScreen = () => (
@@ -75,6 +81,10 @@ const AppContent = () => {
     return <SplashScreen />;
   }
 
+  if (FORCE_ONBOARDING_FLOW) {
+    return <RootNavigator initialRouteName="Personalization" forceFirstRun />;
+  }
+
   return (
     <RootNavigator
       initialRouteName={privacyPolicyAccepted ? 'Home' : 'PrivacyPolicy'}
@@ -94,9 +104,11 @@ const App = () => {
               <DatabaseProvider>
                 <CultModeProvider>
                   <InAppNotificationProvider>
-                    <NavigationContainer>
-                      <AppContent />
-                    </NavigationContainer>
+                    <TutorialProvider>
+                      <NavigationContainer>
+                        <AppContent />
+                      </NavigationContainer>
+                    </TutorialProvider>
                   </InAppNotificationProvider>
                 </CultModeProvider>
               </DatabaseProvider>

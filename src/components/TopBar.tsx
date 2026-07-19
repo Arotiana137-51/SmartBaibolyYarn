@@ -5,6 +5,7 @@ import AnimatedHamburger from './AnimatedHamburger';
 import {useTheme} from '../contexts/ThemeContext';
 import {useAdaptiveInsets} from '../hooks/useAdaptiveInsets';
 import {useResponsive} from '../theme/responsive';
+import {useTutorialTarget} from '../contexts/TutorialContext';
 
 const EXTRA_TOP_PADDING = 6;
 
@@ -25,6 +26,7 @@ interface TopBarProps {
   isMenuOpen?: boolean;
   onPreviousPress?: () => void;
   onNextPress?: () => void;
+  onSearchPress?: () => void;
   currentHymnalCategory?: string;
   onHymnalCategoryChange?: (category: string) => void;
 }
@@ -37,17 +39,24 @@ const TopBar: React.FC<TopBarProps> = ({
   isMenuOpen,
   onPreviousPress,
   onNextPress,
+  onSearchPress,
   currentHymnalCategory,
   onHymnalCategoryChange,
 }) => {
   const {theme} = useTheme();
   const insets = useAdaptiveInsets();
+  const titleTargetRef = useTutorialTarget('topbarTitle');
+  const prevTargetRef = useTutorialTarget('topbarPrev');
+  const nextTargetRef = useTutorialTarget('topbarNext');
+  const menuTargetRef = useTutorialTarget('topbarMenu');
   const {isAndroid, isSmall, isXSmall, scale, fontFor} = useResponsive();
   const toolbarHeight = Math.max(isAndroid ? 56 : 44, scale(isAndroid ? 52 : 44));
   const iconButtonWidth = Math.max(40, scale(44));
   const arrowFontSize = fontFor(isXSmall ? 28 : 32);
   const titleFontSize = fontFor(isSmall ? 16 : 18);
   const tabFontSize = fontFor(isXSmall ? 12 : isSmall ? 13 : 14);
+  const searchIconSize = fontFor(isXSmall ? 17 : 19);
+
   const handleTitlePress = () => {
     if (appMode === 'hymnal' && onHymnalCategoryChange && currentHymnalCategory) {
       // Cycle through hymnal categories
@@ -76,6 +85,8 @@ const TopBar: React.FC<TopBarProps> = ({
       ]}
     >
       <Pressable
+        ref={prevTargetRef}
+        collapsable={false}
         accessibilityLabel="Previous chapter"
         android_ripple={{
           color: theme.colors.accentBlue + '40',
@@ -95,6 +106,8 @@ const TopBar: React.FC<TopBarProps> = ({
       {appMode === 'hymnal' && onHymnalCategoryChange ? (
         // Hymnal category tabs - replace title when in hymnal mode
         <View
+          ref={titleTargetRef}
+          collapsable={false}
           style={[
             styles.categoryTabsContainer,
             {
@@ -143,6 +156,8 @@ const TopBar: React.FC<TopBarProps> = ({
       ) : (
         // Normal title for other modes
         <Pressable
+          ref={titleTargetRef}
+          collapsable={false}
           android_ripple={{
             color: theme.colors.accentBlue + '40',
             borderless: true,
@@ -162,6 +177,8 @@ const TopBar: React.FC<TopBarProps> = ({
       )}
       
       <Pressable
+        ref={nextTargetRef}
+        collapsable={false}
         accessibilityLabel="Next chapter"
         android_ripple={{
           color: theme.colors.accentBlue + '40',
@@ -178,8 +195,48 @@ const TopBar: React.FC<TopBarProps> = ({
         <Text style={[styles.buttonText, {color: '#FFFFFF', fontSize: arrowFontSize}]}>{'››'}</Text>
       </Pressable>
 
+      {/* Search magnifier — opens centralized Bible+Hymn search.
+          Minimalist plain white magnifier; full-height touch zone like the
+          arrow buttons, no border, no ripple mask. */}
+      {onSearchPress ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Hitady"
+          style={({pressed}) => [
+            styles.iconButton,
+            {width: iconButtonWidth},
+            pressed && {opacity: 0.6},
+          ]}
+          onPress={onSearchPress}
+        >
+          {/* Classic magnifier: lens circle + handle stroke at 45°. */}
+          <View style={{width: searchIconSize, height: searchIconSize}}>
+            <View
+              style={[
+                styles.searchLens,
+                {
+                  width: searchIconSize * 0.7,
+                  height: searchIconSize * 0.7,
+                  borderRadius: searchIconSize,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.searchHandle,
+                {
+                  width: searchIconSize * 0.34,
+                  top: searchIconSize * 0.62,
+                  left: searchIconSize * 0.58,
+                },
+              ]}
+            />
+          </View>
+        </Pressable>
+      ) : null}
+
       {/* Hamburger menu - always present */}
-      <View style={styles.rightActions}>
+      <View ref={menuTargetRef} collapsable={false} style={styles.rightActions}>
         <AnimatedHamburger
           isOpen={isMenuOpen || false}
           onPress={onMenuPress}
@@ -214,6 +271,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 22,
     overflow: 'hidden',
+  },
+  searchLens: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    borderRadius: 50,
+  },
+  searchHandle: {
+    position: 'absolute',
+    height: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+    transform: [{rotate: '45deg'}],
   },
   buttonText: {
     color: 'white',

@@ -6,6 +6,7 @@ import MainScreen from '../screens/MainScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SearchScreen from '../screens/SearchScreen';
+import GlobalSearchScreen from '../screens/GlobalSearchScreen';
 import VerseListScreen from '../screens/VerseListScreen';
 import MiscScreen from '../screens/MiscScreen';
 import FanekemDetailsScreen from '../screens/FanekemDetailsScreen';
@@ -14,6 +15,7 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import PersonalizationScreen from '../screens/PersonalizationScreen';
 import CultModeScreen from '../screens/CultModeScreen';
 import NotesScreen from '../screens/NotesScreen';
+import HelpScreen from '../screens/HelpScreen';
 
 export type RootStackParamList = {
   Home:
@@ -29,6 +31,7 @@ export type RootStackParamList = {
   History: { mode: 'bible' | 'hymnal' };
   Notes: undefined;
   Search: { mode: 'bible' | 'hymnal' };
+  GlobalSearch: { mode: 'bible' | 'hymnal' };
   VerseList: { bookId: number; bookName: string; query: string; matchWholeWord?: boolean };
   Misc: undefined;
   FanekemDetails: {title: string; content: string};
@@ -36,6 +39,7 @@ export type RootStackParamList = {
   PrivacyPolicy: {mandatory?: boolean} | undefined;
   Personalization: {firstRun?: boolean} | undefined;
   CultMode: undefined;
+  Help: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -43,11 +47,15 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 type RootNavigatorProps = {
   initialRouteName?: keyof RootStackParamList;
   privacyPolicyMandatory?: boolean;
+  // TEMP(testing): start Personalization in first-run mode so it resets to Home
+  // on selection and auto-starts the tutorial chain.
+  forceFirstRun?: boolean;
 };
 
 const RootNavigator = ({
   initialRouteName,
   privacyPolicyMandatory,
+  forceFirstRun,
 }: RootNavigatorProps) => {
   const {theme} = useTheme();
 
@@ -97,6 +105,11 @@ const RootNavigator = ({
         })}
       />
       <Stack.Screen
+        name="GlobalSearch"
+        component={GlobalSearchScreen}
+        options={{title: t('search.titleBible'), ...headerOptions}}
+      />
+      <Stack.Screen
         name="VerseList"
         component={VerseListScreen}
         options={{title: t('verseList.title'), ...headerOptions}}
@@ -122,12 +135,18 @@ const RootNavigator = ({
       <Stack.Screen
         name="Personalization"
         component={PersonalizationScreen}
+        initialParams={forceFirstRun ? {firstRun: true} : undefined}
         options={{title: t('personalization.title'), ...headerOptions}}
       />
       <Stack.Screen
         name="CultMode"
         component={CultModeScreen}
         options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={{title: 'Toro-lalana', ...headerOptions}}
       />
       <Stack.Screen
         name="PrivacyPolicy"

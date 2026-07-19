@@ -5004,41 +5004,42 @@
     "ffpm_175": {
         "laharana": "175",
         "sokajy": "ffpm",
-        "lohateny": "",
+        "lohateny": "Avia, Fanahy ô, fanahy Masino ô",
         "mpanoratra": [],
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Avia, Fanahy ô,\nFanahy Masina ô !\nMidina eto aminay\nHitari-dàlana !",
+                "tononkira": "Avia, Fanahy ô,\nFanahy Masino ô!\nMidina eto aminay\nHitari-dalana.",
                 "fiverenany": false
             },
             {
                 "andininy": 2,
-                "tononkira": "Fa diso làlana\nKa ory izahay ;\nNy sainay dia maizina,\nNy fonay ratsy koa",
+                "tononkira": "Fa diso làlana\nKa ory izahay;\nNy sainay dia maizina,\nNy fonay ratsy koa.",
                 "fiverenany": false
             },
             {
                 "andininy": 3,
-                "tononkira": "Midina Hianao,\nRy Mpanazva anay,\nHanaisotra ny maizina,\nAtý anatinay !",
+                "tononkira": "Midina Hianao,\nRy Mpanazava anay,\nHanaisotra ny aizina\nAty anatinay!",
                 "fiverenany": false
             },
             {
                 "andininy": 4,
-                "tononkira": "Avia, Mpananatra ô !\nMombà anay tokoa ;\nAmpahatsiarovinao\nNy teny mahasoa.",
+                "tononkira": "Avia Mpananatro ô!\nMombà anay tokoa;\nAmpahatsiarovinao!\nNy teny mahasoa,",
                 "fiverenany": false
             },
             {
                 "andininy": 5,
-                "tononkira": "Ry Mpampianatra  ô !\nAmpionao izahay,\nKa aoka re ho marina\nIzay ianaranay !",
+                "tononkira": "Ry Mpampianatra ô!\nAmpionao izahay\nKa aoka re ho marina\nIzay ianaranay!",
                 "fiverenany": false
             },
             {
                 "andininy": 6,
-                "tononkira": "Mitomoera atý\nAnatin’ny fonay ;\nIzany indrindra, ry Tompo,\nNo angatahinay !",
+                "tononkira": "Mitomoera aty\nAnatin’ny fonay;\nIzany indrindra Tompo ô,\nNo angatahinay!",
                 "fiverenany": false
             }
         ]
     },
+
     "ffpm_176": {
         "laharana": "176",
         "sokajy": "ffpm",
@@ -6063,23 +6064,23 @@
     "ffpm_213": {
         "laharana": "213",
         "sokajy": "ffpm",
-        "lohateny": "",
+        "lohateny": "Ry fanahy mangetaheta",
         "mpanoratra": [],
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Ry fanahy mangetaheta,\nMila fitsaharana ;\nAza kivy, mahareta,\nSentonao hifarana !\nFa ny tenin'i Jehovah,\nSoa mangarangarana ;\nLoharano tsy miova,\nAo no hasambarana.",
-                "fiverenany": false
+                "tononkira": "Ry fanahy mangetaheta\nMila fitsaharana:\nAza kivy, mahareta,\nSentonao hifarana!\nFa ny tenin’i Jehovah,\nSoa mangarangarana;\nLoharano tsy miova,\nAo no hasambarana.",
+                "fiverenany": true
             },
             {
                 "andininy": 2,
-                "tononkira": "Ry tontolo mila vonjy,\nTe ho afa-patotra,\nAo ny tenin'ny Mpamonjy\nDia  Kristy Mpanavotra !\nTeny velona sy mamy,\nFeno fananarana ;\nHotorina eran-tany \nFa fampihavanana.",
-                "fiverenany": false
+                "tononkira": "Ry tontolo mila vonjy,\nTe ho afa-patotra,\nAo ny tenin’ny Mpamonjy\nDia Kristy Mpanavotra!\nTeny velona sy mamy,\nFeno fananarana;\nHo torina eran-tany,\nFa fampihavanana.",
+                "fiverenany": true
             },
             {
                 "andininy": 3,
-                "tononkira": "Ry Mpanjakan'ny mpanjaka,\nAo, tendreo ny lelako\nMba hitory sy hizaka,\nHampandre ny havako,\nDia  tahio ny Teny reny\nTsy ho very hasina,\nKa hamoy zato heny\nNy Baiboly masina.",
-                "fiverenany": false
+                "tononkira": "Ry Mpanjakan’ny mpanjaka!\nAo, tendreo ny lelako\nMba hitory sy hizaka,\nHampandre ny havako,\nDia tahio ny teny ireny\nTsy ho very hasina,\nKa hamoa zato heny\nNy Baiboly Masina.",
+                "fiverenany": true
             }
         ]
     },
@@ -10490,27 +10491,32 @@
     "ffpm_377": {
         "laharana": "377",
         "sokajy": "ffpm",
-        "lohateny": "",
+        "lohateny": "Tsy mba hisy tonga ary an-danitra",
         "mpanoratra": [],
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Tsy mba hisy tonga arý\nan-danitra\nRaha tsy mandrombaka\ntokoa ;\nNy mpiady tsara izay\nmaharitra\nNo handray anjara lova soa.\nEty sady tery ny vavahady ao,\nKely sy mideza ny lalana\nmankao ;\nNefa aza kivy, ry havako izao,\nFa izay malaina dia ho very.",
+                "tononkira": "Tsy mba hisy tonga ary an-danitra\nRaha tsy mandrombaka tokoa ;\nNy mpiady tsara izay maharitra\nNo handray anjara lova soa.\nEty ary tery ny vavahady ao,\nKely sy mideza ny lalana mankao ;\nNefa aza kivy, ry havako izao,\nFa izay malaina dia ho very.",
                 "fiverenany": false
             },
             {
                 "andininy": 2,
-                "tononkira": "Maro no mitady hisakana\nanao,\nKoa mba tohero, ry sakaiza ;\nMba reseo mafy ny\nfahavalonao.\nFetsy izy  ireo ka mahaiza,\nIzay rehetra mamin’izao\ntontolo izao\nDia avelao, fa mamandrika\nanao ;\nAoka mba Jesosy no\nhifalianao,\nEny hifalianao tokoa.",
+                "tononkira": "Maro no mitady hisakana anao,\nKoa mba tohero, ry sakaiza ;\nMba reseo mafy ny fahavalonao,\nFetsy izy ireo ka mahaiza.\nIzay rehetra mamin’izao tontolo izao\nDia avelao, fa mamandrika anao ;\nAoka mba Jesosy no hifalianao,\nEny hifalianao tokoa.",
                 "fiverenany": false
             },
             {
                 "andininy": 3,
-                "tononkira": "Satroboninahitra tsy ho\nazonao\nRaha tsy katsahinao tokoa\nFa hevero kosa ny fifalianao\nRaha tonga ao an-dapa soa,\nFa hahita maso ny Tompo\nhianao,\nKa hifaly amin’\nAndriamanitrao.\nKoa miomàna re,\nry sakaiza ô !\nMba ho faly ao am-pitsarana.",
+                "tononkira": "Satroboninahitra tsy ho azonao\nRaha tsy katsahinao tokoa ;\nFa hevero kosa ny fifalianao\nRaha tonga ao an-dapa soa,\nFa hahita maso ny Tompo hianao,\nKa hifaly amin’Andriamanitrao.\nKoa miomàna re, ry sakaiza ô !\nMba ho faly ao am-pitsarana.",
                 "fiverenany": false
             },
             {
                 "andininy": 4,
-                "tononkira": "Dia miangavy, mangataka\naminao,\nMba modia, ry mpirenireny !\nFa ny Tomponao ta-handray\nanao izao.\nHianao tsy sitrany ho very.\nIzy dia mananty ny tanany\nizao\nKa ny fonao simba mba\natolorinao\nHosoloan’i Jeso fo tsara sy\nvaovao ;\nIzany mba hevero, ry sakaiza !",
+                "tononkira": "He, ny tany soa tsy mba ho hitanao,\nMarina tokoa anie izany ;\nKa ny ao an-danitra tsy ho azonao\nRaha fatra-pankafy ny tany ;\nRaha tsy matoky ny Tompo hianao\nDia helo afo no ho anjaranao.\nKoa miverena, fa ny Mpanavotrao\nVonona handray anao mihitsy.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 5,
+                "tononkira": "Dia miangavy, mangataka aminao,\nMba modia, ry mpirenireny !\nFa ny Tomponao ta-handray anao izao\nHianao tsy sitrany ho very.\nIzy dia mananty ny tanany izao,\nKa ny fonao simba mba atolorinao\nHosoloan’i Jeso fo tsara sy vaovao ;\nIzany mba hevero, ry sakaiza !",
                 "fiverenany": false
             }
         ]
@@ -11912,7 +11918,7 @@
             },
             {
                 "andininy": 2,
-                "tononkira": "Manatona Anao, ry be\nindrafo,\nNy olo-mahantra anio,\nFa be siasia, sy reraka am-po\nKa raisonao ankehitrio !\nNy maty omeonao aina\nvaovao,\nNy sasatra ampiadano,\nNy masonay jamba mba\nhazavao\nNy rofin'ny fonay sitrano.",
+                "tononkira": "Manatona Anao, ry be\nindrafo,\nNy olo-mahantra anio,\nFa be siasia, sy reraka am-po\nKa raisonao ankehitrio !\nNy maty omeo aina\nvaovao,\nNy sasatra ampiadano,\nNy masonay jamba mba\nhazavao\nNy rofin'ny fonay sitrano.",
                 "fiverenany": false
             },
             {
@@ -14775,107 +14781,104 @@
         ]
     },
     "ffpm_526": {
-    "laharana": "526",
-    "sokajy": "ffpm",
-    "lohateny": "Jerosalema ambony",
-    "mpanoratra": [],
-    "hira": [
-        {
-            "andininy": 1,
-            "tononkira": "Jerosalema ambony\nIrin’ny fo izao,\nFa ny aty\nDia tsy mba fy ;\nNy lanitra hazony,\nFa mahamanina.\nJerosalema ambony\nIrin’ny fo izao.",
-            "fiverenany": false
-        },
-        {
-            "andininy": 2,
-            "tononkira": "Fa any hofafana\nNy ranomaso be\nIzay latsaka\nTan-dalana\nKa hody fiderana\nSy fifaliam-be.\nFa any hofafana\nNy ranomaso be.",
-            "fiverenany": false
-        },
-        {
-            "andininy": 3,
-            "tononkira": "Jesosy Tompontsika\nIzay ao an-dapany,\nManao hoe :\nIreto re\nNy oloko nafindra\nHandray ny lovany.\nJesosy Tompontsika\nManasa anao hankao.",
-            "fiverenany": false
-        }
-    ]
-},
-"ffpm_527": {
-    "laharana": "527",
-    "sokajy": "ffpm",
-    "lohateny": "Nahoana no voageja aty",
-    "mpanoratra": [],
-    "hira": [
-        {
-            "andininy": 1,
-            "tononkira": "Nahoana no voageja aty\nIty tena tsy tamana ity ?\nNahoana no tsy hitanay\nIlay tany tadiavinay ?",
-            "fiverenany": false
-        },
-        {
-            "andininy": 0,
-            "tononkira": "Ry lanitra ô, ry lanitra ô,\nHianao tokoa irin’ny fo,\nIrin’ny fo.",
-            "fiverenany": true
-        },
-        {
-            "andininy": 2,
-            "tononkira": "Ny sombin-tsoa hita aty\nNo mariky ny be ary :\nIzao tsy mahafa-po izao\nNo anirianay mba ho ao.\nRy lanitra ô, sns…",
-            "fiverenany": false
-        },
-        {
-            "andininy": 3,
-            "tononkira": "Ny fitiavanay aty\nNo tena akon’ny ary.\nIzao tsy tanteraka izao\nManandratra ny fo ho ao.\nRy lanitra ô, sns…",
-            "fiverenany": false
-        },
-        {
-            "andininy": 4,
-            "tononkira": "Izao fiainanay izao\nTandindon’ny fiainana ao ;\nNy andro tsy mateza aty\nDia tapaky ny mbola ary.\nRy lanitra ô, sns…",
-            "fiverenany": false
-        },
-        {
-            "andininy": 5,
-            "tononkira": "Izao hazavana kely izao\nDia taratry ny betsaka ao.\nSomambisamby ny aty,\nMazava indrindra ny ary.\nRy lanitra ô, sns…",
-            "fiverenany": false
-        },
-        {
-            "andininy": 6,
-            "tononkira": "Ao aminao, ry lanitra ô.\nNo mampionona ny fo,\nFa Andriamanitra no ao,\nKa tena maminay hianao.\nRy lanitra ô, sns…",
-            "fiverenany": false
-        }
-    ]
-}
-,
-"ffpm_528": {
-    "laharana": "528",
-    "sokajy": "ffpm",
-    "lohateny": "Tsaroako ho avy ny maraina",
-    "mpanoratra": [],
-    "hira": [
-        {
-            "andininy": 1,
-            "tononkira": "Tsaroako ho avy ny maraina,\nIzay hisavan’ny zavona aty\nKa hitrangan’ny masoandron’aina,\nDia Jeso, Ilay malalako ary.",
-            "fiverenany": false
-        },
-        {
-            "andininy": 2,
-            "tononkira": "Hevero fa tsy hisy fahotana,\nNa heloka, na fahoriana ;\nNy ranomasintsika hofafana\nKa hosoloam-pihobiana.",
-            "fiverenany": false
-        },
-        {
-            "andininy": 3,
-            "tononkira": "Ny havan-tiana tety an-tany\nNandao antsika ka nisaonana,\nIreo no hitsena antsika any,\nKa fifaliana no hihaonana.",
-            "fiverenany": false
-        },
-        {
-            "andininy": 4,
-            "tononkira": "Ny fiderana ataon’ny olo-maro.\nIzay samy masina sy ravo ao,\nSy hobin’ny anjely no hiharo,\nEndrey ny hatsaran’ny hira vao.",
-            "fiverenany": false
-        },
-        {
-            "andininy": 5,
-            "tononkira": "Ry tany tsara, aoka hahafaly\nNy foko ny mihevitra anao,\nRaha saro-dàlana sy mampijaly\nNy tany itoerako izao.",
-            "fiverenany": false
-        }
-    ]
-}
-
-,
+        "laharana": "526",
+        "sokajy": "ffpm",
+        "lohateny": "Jerosalema ambony",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Jerosalema ambony\nIrin’ny fo izao,\nFa ny aty\nDia tsy mba fy ;\nNy lanitra hazony,\nFa mahamanina.\nJerosalema ambony\nIrin’ny fo izao.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 2,
+                "tononkira": "Fa any hofafana\nNy ranomaso be\nIzay latsaka\nTan-dalana\nKa hody fiderana\nSy fifaliam-be.\nFa any hofafana\nNy ranomaso be.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Jesosy Tompontsika\nIzay ao an-dapany,\nManao hoe :\nIreto re\nNy oloko nafindra\nHandray ny lovany.\nJesosy Tompontsika\nManasa anao hankao.",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ffpm_527": {
+        "laharana": "527",
+        "sokajy": "ffpm",
+        "lohateny": "Nahoana no voageja aty",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Nahoana no voageja aty\nIty tena tsy tamana ity ?\nNahoana no tsy hitanay\nIlay tany tadiavinay ?",
+                "fiverenany": false
+            },
+            {
+                "andininy": 0,
+                "tononkira": "Ry lanitra ô, ry lanitra ô,\nHianao tokoa irin’ny fo,\nIrin’ny fo.",
+                "fiverenany": true
+            },
+            {
+                "andininy": 2,
+                "tononkira": "Ny sombin-tsoa hita aty\nNo mariky ny be ary :\nIzao tsy mahafa-po izao\nNo anirianay mba ho ao.\nRy lanitra ô, sns…",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Ny fitiavanay aty\nNo tena akon’ny ary.\nIzao tsy tanteraka izao\nManandratra ny fo ho ao.\nRy lanitra ô, sns…",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
+                "tononkira": "Izao fiainanay izao\nTandindon’ny fiainana ao ;\nNy andro tsy mateza aty\nDia tapaky ny mbola ary.\nRy lanitra ô, sns…",
+                "fiverenany": false
+            },
+            {
+                "andininy": 5,
+                "tononkira": "Izao hazavana kely izao\nDia taratry ny betsaka ao.\nSomambisamby ny aty,\nMazava indrindra ny ary.\nRy lanitra ô, sns…",
+                "fiverenany": false
+            },
+            {
+                "andininy": 6,
+                "tononkira": "Ao aminao, ry lanitra ô.\nNo mampionona ny fo,\nFa Andriamanitra no ao,\nKa tena maminay hianao.\nRy lanitra ô, sns…",
+                "fiverenany": false
+            }
+        ]
+    },
+    "ffpm_528": {
+        "laharana": "528",
+        "sokajy": "ffpm",
+        "lohateny": "Tsaroako ho avy ny maraina",
+        "mpanoratra": [],
+        "hira": [
+            {
+                "andininy": 1,
+                "tononkira": "Tsaroako ho avy ny maraina,\nIzay hisavan’ny zavona aty\nKa hitrangan’ny masoandron’aina,\nDia Jeso, Ilay malalako ary.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 2,
+                "tononkira": "Hevero fa tsy hisy fahotana,\nNa heloka, na fahoriana ;\nNy ranomasintsika hofafana\nKa hosoloam-pihobiana.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Ny havan-tiana tety an-tany\nNandao antsika ka nisaonana,\nIreo no hitsena antsika any,\nKa fifaliana no hihaonana.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 4,
+                "tononkira": "Ny fiderana ataon’ny olo-maro.\nIzay samy masina sy ravo ao,\nSy hobin’ny anjely no hiharo,\nEndrey ny hatsaran’ny hira vao.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 5,
+                "tononkira": "Ry tany tsara, aoka hahafaly\nNy foko ny mihevitra anao,\nRaha saro-dàlana sy mampijaly\nNy tany itoerako izao.",
+                "fiverenany": false
+            }
+        ]
+    },
     "ffpm_529": {
         "laharana": "529",
         "sokajy": "ffpm",
@@ -14922,17 +14925,22 @@
     "ffpm_530": {
         "laharana": "530",
         "sokajy": "ffpm",
-        "lohateny": "",
+        "lohateny": "Fitiavana ranovelona",
         "mpanoratra": [],
         "hira": [
             {
                 "andininy": 1,
-                "tononkira": "Fitiavana rano velona,\nLoha.rano lalina ;\nKa miafina ao anatiny\nNy fiainan-danitra.\n\nFitiavana no nirahina\nAvy tamin-Jehovah ;\nO, mba raisonao, dia ho fanta­trao\nNy fahasarnbarana.",
+                "tononkira": "Fitiavana rano velona,\nLoharano lalina;\nKa miafina ao anatiny\nNy fiainan-danitra!",
                 "fiverenany": false
             },
             {
                 "andininy": 2,
-                "tononkira": "Fitiavana didy tokana\nAry didy lehibe ;\nMitoera ao, hitoeranao Amim-piadanam-be.",
+                "tononkira": "Fitiavana no nirahina\nAvy tamin-Jehovah;\nO, mba raisonao, dia ho fantatrao\nNy fahasambarana.",
+                "fiverenany": false
+            },
+            {
+                "andininy": 3,
+                "tononkira": "Fitiavana didy tokana\nAry didy lehibe;\nMitoera ao, hitoeranao\nAmim-piadanam-be.",
                 "fiverenany": false
             }
         ]

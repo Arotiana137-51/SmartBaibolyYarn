@@ -9,9 +9,17 @@ import {
 } from 'react-native';
 import {t} from '../i18n/strings';
 import {useTheme} from '../contexts/ThemeContext';
+import {useTutorialTarget} from '../contexts/TutorialContext';
+import TutorialOverlay from './TutorialOverlay';
 import ToggleThemeButton from './ToggleThemeButton';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {getRelativeLuminance, lightenHex} from '../utils/colorUtils';
+
+// Jesosy/Jesoa slide toggle geometry — a two-label pill with a knob that
+// covers exactly one half and slides between them.
+const VARIANT_SEGMENT_WIDTH = 74;
+const VARIANT_KNOB_WIDTH = VARIANT_SEGMENT_WIDTH;
+const VARIANT_TRACK_PAD = 3;
 
 export type HamburgerMenuItemKey =
   | 'favorites'
@@ -20,7 +28,8 @@ export type HamburgerMenuItemKey =
   | 'misc'
   | 'notes'
   | 'personalization'
-  | 'cultMode';
+  | 'cultMode'
+  | 'help';
 
 type Props = {
   visible: boolean;
@@ -59,6 +68,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
 }) => {
   const {theme, isLowEndMode} = useTheme();
   const {variant: jesusNameVariant, setVariant: setJesusNameVariant} = useJesusName();
+  const cultItemRef = useTutorialTarget('cultMenuItem');
 
   // In dark mode the menu card uses backgroundSecondary (#1C1C1E), so an accent
   // like Deep Navy or Espresso reads as dark-on-dark. Lighten the accent only
@@ -79,6 +89,23 @@ const HamburgerMenuPopover: React.FC<Props> = ({
   }, [theme.isDark, theme.colors.accentBlue]);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.96)).current;
+
+  // Sliding-knob toggle for the Jesosy/Jesoa name, mirroring ToggleThemeButton.
+  // jesosy → left (0), jesoa → right (1).
+  const variantSlide = useRef(
+    new Animated.Value(jesusNameVariant === 'jesoa' ? 1 : 0),
+  ).current;
+  useEffect(() => {
+    Animated.timing(variantSlide, {
+      toValue: jesusNameVariant === 'jesoa' ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [jesusNameVariant, variantSlide]);
+  const variantKnobTranslate = variantSlide.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, VARIANT_KNOB_WIDTH],
+  });
 
   const fontPercent = Math.round(fontScale * 100);
 
@@ -138,6 +165,7 @@ const HamburgerMenuPopover: React.FC<Props> = ({
         {key: 'cultMode' as const, label: t('menu.cultMode')},
         {key: 'personalization' as const, label: t('menu.personalization')},
         {key: 'notes' as const, label: t('menu.notes')},
+        {key: 'help' as const, label: 'Toro-lalana'},
       ] satisfies Array<{key: HamburgerMenuItemKey; label: string}>,
     []
   );
@@ -244,6 +272,9 @@ const HamburgerMenuPopover: React.FC<Props> = ({
             {items.map(item => (
               <Pressable
                 key={item.key}
+                // Tutorial spotlights the Fotoam-pivavahana row via this ref.
+                ref={item.key === 'cultMode' ? cultItemRef : undefined}
+                collapsable={false}
                 onPress={() => onSelect(item.key)}
                 style={({pressed}) => [
                   styles.menuItem,
@@ -262,28 +293,48 @@ const HamburgerMenuPopover: React.FC<Props> = ({
                 Anaran'ny Tompo
               </Text>
 
+              {/* Sliding-knob toggle, mirroring the dark/light theme switch. */}
               <Pressable
-                onPress={() => setJesusNameVariant('jesosy')}
-                style={({pressed}) => [
-                  styles.variantRow,
-                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null,
-                ]}>
-                <Text style={[styles.variantLabel, {color: menuAccent}]}>Jesosy</Text>
-                <Text style={[styles.variantMark, {color: menuCheckAccent}]}>
-                  {jesusNameVariant === 'jesosy' ? '✓' : ''}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setJesusNameVariant('jesoa')}
-                style={({pressed}) => [
-                  styles.variantRow,
-                  pressed ? {backgroundColor: theme.colors.backgroundTertiary} : null,
-                ]}>
-                <Text style={[styles.variantLabel, {color: menuAccent}]}>Jesoa</Text>
-                <Text style={[styles.variantMark, {color: menuCheckAccent}]}>
-                  {jesusNameVariant === 'jesoa' ? '✓' : ''}
-                </Text>
+                accessibilityRole="switch"
+                accessibilityState={{checked: jesusNameVariant === 'jesoa'}}
+                accessibilityLabel="Anaran'ny Tompo"
+                onPress={() =>
+                  setJesusNameVariant(jesusNameVariant === 'jesoa' ? 'jesosy' : 'jesoa')
+                }
+                style={({pressed}) => [pressed ? {opacity: 0.9} : null]}>
+                <View
+                  style={[
+                    styles.variantTrack,
+                    {
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderColor: theme.isDark ? '#FFFFFF20' : '#00000020',
+                    },
+                  ]}>
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.variantKnob,
+                      {
+                        backgroundColor: menuCheckAccent,
+                        transform: [{translateX: variantKnobTranslate}],
+                      },
+                    ]}
+                  />
+                  {(['jesosy', 'jesoa'] as const).map(variant => {
+                    const active = jesusNameVariant === variant;
+                    return (
+                      <View key={variant} style={styles.variantSegment} pointerEvents="none">
+                        <Text
+                          style={[
+                            styles.variantSegmentText,
+                            {color: active ? '#FFFFFF' : menuAccent},
+                          ]}>
+                          {variant === 'jesosy' ? 'Jesosy' : 'Jesoa'}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </Pressable>
             </View>
 
@@ -307,6 +358,10 @@ const HamburgerMenuPopover: React.FC<Props> = ({
             </View>
           </View>
         </Animated.View>
+
+        {/* Tutorial spotlight for the 'tap Fotoam-pivavahana' step — lives inside
+            the popover's own native tree, same pattern as the selection modals. */}
+        <TutorialOverlay scope="modal" />
       </View>
     </Modal>
   );
@@ -424,21 +479,31 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginBottom: 8,
   },
-  variantRow: {
+  variantTrack: {
     flexDirection: 'row',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 999,
+    padding: VARIANT_TRACK_PAD,
+    overflow: 'hidden',
+  },
+  variantKnob: {
+    position: 'absolute',
+    top: VARIANT_TRACK_PAD,
+    left: VARIANT_TRACK_PAD,
+    bottom: VARIANT_TRACK_PAD,
+    width: VARIANT_KNOB_WIDTH,
+    borderRadius: 999,
+  },
+  variantSegment: {
+    width: VARIANT_SEGMENT_WIDTH,
+    paddingVertical: 6,
     alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'center',
   },
-  variantLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  variantMark: {
-    width: 22,
-    textAlign: 'right',
-    fontSize: 16,
-    fontWeight: '900',
+  variantSegmentText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   menuItem: {
     paddingVertical: 14,

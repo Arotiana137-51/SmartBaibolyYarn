@@ -14,6 +14,8 @@ import { Hymn } from '../hooks/useHymnsData';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAdaptiveInsets } from '../hooks/useAdaptiveInsets';
 import { useResponsive } from '../theme/responsive';
+import { useTutorial, useTutorialTarget } from '../contexts/TutorialContext';
+import TutorialOverlay from './TutorialOverlay';
 
 interface HymnSelectionModalProps {
   visible: boolean;
@@ -65,6 +67,9 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   onHymnSelect,
 }) => {
   const { theme } = useTheme();
+  const tutorial = useTutorial();
+  const categoryTabsRef = useTutorialTarget('hymnCategoryTabs');
+  const keypadRef = useTutorialTarget('hymnKeypad');
   const insets = useAdaptiveInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { verticalScale, fontFor, isSmall } = useResponsive();
@@ -107,7 +112,8 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
   const handleCategoryChange = useCallback((category: string) => {
     setSelectedCategory(category);
     setInputNumber('');
-  }, []);
+    tutorial.notifyProgress('category');
+  }, [tutorial]);
 
   const handleNumberInput = useCallback((num: string) => {
     setInputNumber(prev => {
@@ -221,7 +227,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
     >
       <Pressable style={[styles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.15)' }]} onPress={handleClose}>
         <View style={styles.modalContent} pointerEvents="box-none">
-          <View style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset, backgroundColor: theme.colors.navBackground }]}>
+          <View ref={categoryTabsRef} collapsable={false} style={[styles.categoryTabsSafeArea, { paddingTop: tabsTopInset, backgroundColor: theme.colors.navBackground }]}>
             {/*
               4 categories no longer fit comfortably as flex:1 on narrow
               phones (each tab would shrink to ~90px and clip the longer
@@ -271,7 +277,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
           </View>
 
           <View style={[styles.keypadPanel, { top: tabsTopInset + tabRowHeight }]} pointerEvents="box-none">
-            <Pressable style={styles.keypadCard} onPress={() => {}}>
+            <Pressable ref={keypadRef} collapsable={false} style={styles.keypadCard} onPress={() => {}}>
               <View style={[styles.inputContainer, { width: keypadWidth }]}>
                 <View style={[
                   styles.inputField,
@@ -311,6 +317,7 @@ const HymnSelectionModal: React.FC<HymnSelectionModalProps> = ({
           </View>
         </View>
       </Pressable>
+      <TutorialOverlay scope="modal" />
     </Modal>
   );
  };
