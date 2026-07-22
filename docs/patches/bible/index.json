@@ -1,5 +1,7 @@
 {
-  "latest": 20260521,
-  "patches": [],
+  "latest": 20260722,
+  "patches": [
+    20260722
+  ],
   "minBaseline": 20260521
 }
