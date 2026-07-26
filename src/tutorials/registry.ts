@@ -21,10 +21,18 @@ export type TargetId =
   | 'hymnCategoryTabs'  // category strip inside HymnSelectionModal
   | 'hymnKeypad'        // numeric keypad
   | 'cultAddButtons'    // Hampio Baiboly / Fihirana row on CultModeScreen
+  | 'cultFlashRow'      // the just-added playlist row (spotlit + blinks post-add)
   | 'cultList'          // the playlist itself (what-to-read, drag to reorder)
   | 'cultActivateToggle'// Velomy ny fotoana switch row on CultModeScreen
   | 'cultReaderNav'     // ‹ playlist chevron in the reader (Home) once active
   | 'cultReaderNavNext' // › playlist chevron (paired with cultReaderNav)
+  // Highlight tutorial — targets inside the ChapterEditorModal (a native RN
+  // Modal; the verse text is a WebView, everything else is native RN Views).
+  | 'hlReaderArea'      // the normal Bible reader (hole = real long-press to open the menu)
+  | 'hlVerseText'       // the WebView chapter body (hole = real press-drag selection)
+  | 'hlColorPicker'     // the highlight-color swatch row
+  | 'hlEraseBtn'        // "Fafao" footer button (erase the selected highlight)
+  | 'hlSaveBtn'         // "Tahirizo" footer button (commit)
   | 'notificationGlow'; // daily devotional cue
 
 // A side-effect the engine performs when the step becomes active — it drives
@@ -38,7 +46,11 @@ export type DriveVerb =
   | 'openMenu'
   // Cult tutorial: go back to the reader (Home) and force-show the playlist
   // ‹ › chevrons so the last step can spotlight the real control.
-  | 'showCultReaderNav';
+  | 'showCultReaderNav'
+  // Highlight tutorial: make sure we're on the Bible reader so the user can
+  // perform the real long-press that opens the highlight menu themselves. Used
+  // both to open the menu the first time and to reopen it for the delete drill.
+  | 'showBibleReader';
 
 // When does the step advance to the next one?
 //  - 'tap'         : user taps the coach card's Next button
@@ -66,6 +78,10 @@ export type CoachStep = {
   // For 'targetEvent' steps: the progress key the driven UI must reach to
   // advance. Bible: 'chapter' | 'verse' | 'selected'. Hymn: 'category' | 'selected'.
   awaitProgress?: string;
+  // Optional animated gesture hint drawn over the spotlight hole — a
+  // native-style cue so the required gesture is obvious. 'longPress' = a
+  // press-and-hold fingertip with an expanding ring.
+  gesture?: 'longPress';
 };
 
 export type Tutorial = {
@@ -83,6 +99,7 @@ export type Tutorial = {
 
 export const ONBOARDING_ID = 'onboarding';
 export const CULT_TUTORIAL_ID = 'cultMode';
+export const HIGHLIGHT_TUTORIAL_ID = 'highlight';
 
 export const TUTORIALS: Tutorial[] = [
   {
@@ -221,8 +238,13 @@ export const TUTORIALS: Tutorial[] = [
       {
         id: 'cultAddHymn',
         targetId: 'cultAddButtons',
+        // Also spotlight the just-added Bible row: punching it out of the scrim
+        // keeps it bright (not darkened) and the hole-pulse makes it blink, so
+        // the user sees where their verse landed. Card on top so it doesn't
+        // cover the row; skip pill auto-relocates to a bottom corner.
+        extraTargetIds: ['cultFlashRow'],
         scope: 'cult',
-        placement: 'bottom',
+        placement: 'top',
         text: "Ampio hira izao: tsindrio \"Hampio Fihirana\" dia soraty ny laharan-kira.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultHymnAdded',
@@ -246,7 +268,7 @@ export const TUTORIALS: Tutorial[] = [
         targetId: 'cultActivateToggle',
         scope: 'cult',
         placement: 'bottom',
-        text: "Rehefa voalahatrao ireo teny sy hira, dia velomy ity teboka ity. Avy eo dia miverena ary amin'ny ",
+        text: "Rehefa voalahatrao ireo teny sy hira, dia velomy ity teboka PLAY ity. Avy eo dia misesy ao amin'ny ecran principal ny teny sy hira nalahatrao ",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultActivated',
       },
@@ -257,12 +279,139 @@ export const TUTORIALS: Tutorial[] = [
         scope: 'screen',
         drive: 'showCultReaderNav',
         placement: 'top',
-        text: "Velona ny fotoana! Tsindrio › hatramin'ny farany dia miverina ‹ hatramin'ny voalohany: hitanao miova avy hatrany ny teny na hira harahina.",
+        text: "Velona ny fotoana! Tsindrio  ny teboka < (prev) na > (next) ahafahanao mifindra amin'ny teny na ny hira nalahatrao.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultNavStepped',
       },
       {
         id: 'cultDone',
+        targetId: null,
+        scope: 'screen',
+        text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+      },
+    ],
+  },
+  {
+    id: HIGHLIGHT_TUTORIAL_ID,
+    title: 'Manasongadina teny', // Highlighting words
+    icon: '🖍️',
+    order: 2,
+    launchRoute: 'Home',
+    steps: [
+      {
+        id: 'hlIntro',
+        targetId: null,
+        scope: 'screen',
+        text: "Azonao asongadinana loko ny teny, andianteny na ampahany amin'ny toko iray.",
+      },
+      {
+        // Real gesture: the hole falls on the normal Bible reader, so the user's
+        // own long-press opens the highlight menu (no force-open). We only drive
+        // 'showBibleReader' to make sure we're on the Bible tab first. Advances
+        // when the editor actually opens (awaitProgress: 'highlightMenuOpened').
+        id: 'hlOpenMenu',
+        targetId: 'hlReaderArea',
+        scope: 'screen',
+        drive: 'showBibleReader',
+        gesture: 'longPress',
+        text: 'Tsindrio ela (long press) andininy iray eto amin\'ny famakiana mba hisokafan\'ny fitaovana fanasongadinana.',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'highlightMenuOpened',
+      },
+      {
+        // Gentle intro to the menu that just opened — no hole yet (targetId
+        // null in modal scope → floating card over the real editor), so the
+        // user first sees "this is the highlighting tool" before being asked to
+        // do anything inside it.
+        id: 'hlMenuIntro',
+        targetId: null,
+        scope: 'modal',
+        text: "Ity ny fitaovana fanasongadinana. Eto no anasongadinanao teny, misafidy loko, ary mitahiry. Andao hozahantsika tsikelikely.",
+      },
+      {
+        // Now inside the real ChapterEditorModal: the hole falls on the verse
+        // text (WebView) so the genuine Android press-and-drag selection works.
+        // Same long-press hand hint as the open-menu step so the gesture is
+        // obvious — the user presses, then drags to extend the selection.
+        // Tap-advance, NOT auto: a press-and-drag fires a selection event on the
+        // first partial selection mid-drag, which would advance before the user
+        // finished picking the words. Let them select fully, then tap Manaraka.
+        id: 'hlSelect',
+        targetId: 'hlVerseText',
+        scope: 'modal',
+        gesture: 'longPress',
+        text: 'Tsindrio ela dia sintony (press-and-drag) hisafidianana ny teny tianao hasongadinina, avy eo tsindrio "Manaraka →".',
+      },
+      {
+        // Card BELOW the swatch row: the color picker sits high in the sheet
+        // (header → toolbar → colors), so there's no room to fit the card above
+        // it — a 'top' card clamps down onto the swatches and hides them. The
+        // large WebView area is right below the row, so drop the card there; the
+        // colors stay fully visible with the card pointing up at them.
+        id: 'hlPickColor',
+        targetId: 'hlColorPicker',
+        scope: 'modal',
+        placement: 'bottom',
+        text: 'Rehefa voafidy ny teny, tsindrio ny loko iray eto.',
+      },
+      {
+        id: 'hlSave',
+        targetId: 'hlSaveBtn',
+        scope: 'modal',
+        placement: 'top',
+        text: 'Tsindrio "Tahirizo" hitehirizana ny fanasongadinana.',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'editorSaved',
+      },
+      // --- Delete drill: don't assume the user knows how to remove a highlight.
+      // Saving closed the editor, so we walk them back in and spotlight each
+      // real control one at a time. ---
+      {
+        id: 'hlDeleteIntro',
+        targetId: null,
+        scope: 'screen',
+        text: "Tsara! Voatahiry ny fanasongadinana. Ankehitriny hianarantsika ny fomba hamafana azy raha diso na tsy ilaina intsony.",
+      },
+      {
+        // Reopen the editor on the same chapter (drive), then ask for the real
+        // long-press on the highlighted verse.
+        id: 'hlDeleteReopen',
+        targetId: 'hlReaderArea',
+        scope: 'screen',
+        drive: 'showBibleReader',
+        gesture: 'longPress',
+        text: "Hidiro indray ny fitaovana: tsindrio ela ilay andininy nasongadinao teo.",
+        advanceOn: 'targetEvent',
+        awaitProgress: 'highlightMenuOpened',
+      },
+      {
+        // Re-select the highlighted words with the same press-and-drag gesture.
+        id: 'hlDeleteSelect',
+        targetId: 'hlVerseText',
+        scope: 'modal',
+        gesture: 'longPress',
+        text: "Tsindrio ela dia sintony (press-and-drag) ilay teny voasongadina mba hifidianana azy indray, avy eo tsindrio \"Manaraka →\".",
+      },
+      {
+        // Spotlight the real Fafao button in the footer.
+        id: 'hlDeleteErase',
+        targetId: 'hlEraseBtn',
+        scope: 'modal',
+        placement: 'top',
+        text: 'Tsindrio "Fafao" hanesorana ny loko tamin\'ny teny voafidy.',
+      },
+      {
+        // Erasing only stages the change; Tahirizo commits it, same as adding.
+        id: 'hlDeleteSave',
+        targetId: 'hlSaveBtn',
+        scope: 'modal',
+        placement: 'top',
+        text: 'Tsindrio "Tahirizo" hitehirizana ny fanesorana. Izay ihany — mora, sa tsy izany?',
+        advanceOn: 'targetEvent',
+        awaitProgress: 'editorSaved',
+      },
+      {
+        id: 'hlDone',
         targetId: null,
         scope: 'screen',
         text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",

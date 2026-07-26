@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   StyleSheet,
   Text,
@@ -51,11 +51,35 @@ const CultModeScreen = () => {
   const {hymns} = useHymnsData();
   const tutorial = useTutorial();
   const addButtonsRef = useTutorialTarget('cultAddButtons');
+  const flashRowRef = useTutorialTarget('cultFlashRow');
   const listRef = useTutorialTarget('cultList');
   const activateRowRef = useTutorialTarget('cultActivateToggle');
 
   const [bibleModalVisible, setBibleModalVisible] = useState(false);
   const [hymnModalVisible, setHymnModalVisible] = useState(false);
+
+  // Briefly highlight a row right after it's added, so the user sees where the
+  // verse/hymn landed in the playlist. Cleared after the flash.
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashEntry = useCallback(
+    (id: string) => {
+      setHighlightId(id);
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      // During the tutorial the overlay spotlights + pulses this row for the
+      // whole step, so keep it referenced (don't auto-clear) or the hole would
+      // vanish mid-step and drop the row back under the scrim.
+      if (tutorial.activeTutorial) return;
+      highlightTimer.current = setTimeout(() => setHighlightId(null), 1600);
+    },
+    [tutorial.activeTutorial],
+  );
+  useEffect(
+    () => () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    },
+    [],
+  );
 
   const handleBibleSelect = useCallback(
     (
@@ -78,7 +102,7 @@ const CultModeScreen = () => {
         verseStart = 1;
         verseEnd = 999;
       }
-      addEntry({
+      const id = addEntry({
         type: 'bible',
         bookId,
         bookName,
@@ -88,9 +112,10 @@ const CultModeScreen = () => {
         label: buildBibleLabel(bookName, chapter, verseStart, verseEnd),
       });
       setBibleModalVisible(false);
+      flashEntry(id);
       tutorial.notifyProgress('cultBibleAdded');
     },
-    [addEntry, tutorial],
+    [addEntry, flashEntry, tutorial],
   );
 
   const handleHymnSelect = useCallback(
@@ -98,7 +123,7 @@ const CultModeScreen = () => {
       // HymnSelectionModal's callback doesn't include the title, so look it up.
       const hymn = hymns.find(h => h.id === hymnId);
       const title = hymn?.title ?? '';
-      addEntry({
+      const id = addEntry({
         type: 'hymn',
         hymnId,
         category,
@@ -107,9 +132,10 @@ const CultModeScreen = () => {
         label: buildHymnLabel(category, number, title),
       });
       setHymnModalVisible(false);
+      flashEntry(id);
       tutorial.notifyProgress('cultHymnAdded');
     },
-    [addEntry, hymns, tutorial],
+    [addEntry, flashEntry, hymns, tutorial],
   );
 
   const handleRemove = useCallback(
@@ -130,12 +156,18 @@ const CultModeScreen = () => {
     ({item, drag, isActive: dragActive}: RenderItemParams<CultEntry>) => (
       <ScaleDecorator>
         <Pressable
+          ref={item.id === highlightId ? flashRowRef : undefined}
+          collapsable={false}
           onLongPress={drag}
           delayLongPress={200}
           style={[
             styles.itemContainer,
             {backgroundColor: theme.colors.backgroundSecondary},
             dragActive && styles.itemActive,
+            item.id === highlightId && [
+              styles.itemHighlight,
+              {borderColor: theme.colors.navBackground},
+            ],
           ]}>
           <View style={styles.dragHandle}>
             <Text
@@ -172,7 +204,7 @@ const CultModeScreen = () => {
         </Pressable>
       </ScaleDecorator>
     ),
-    [theme.colors, handleRemove],
+    [theme.colors, handleRemove, highlightId, flashRowRef],
   );
 
   const headerComponent = useMemo(
@@ -343,7 +375,12 @@ const CultModeScreen = () => {
         onHymnSelect={handleHymnSelect}
       />
 
-      <TutorialOverlay scope="cult" />
+      {/* Hide the coach overlay while an add-modal is open: the hymn modal is a
+          transparent native Modal, so the card would otherwise bleed through
+          behind it. Nothing to coach while the modal is up anyway. */}
+      {!bibleModalVisible && !hymnModalVisible ? (
+        <TutorialOverlay scope="cult" />
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -415,6 +452,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemActive: {opacity: 0.85},
+  itemHighlight: {borderWidth: 2},
   dragHandle: {paddingRight: 12},
   dragHandleText: {fontSize: 18},
   itemContent: {flex: 1},

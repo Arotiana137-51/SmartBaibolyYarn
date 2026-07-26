@@ -16,6 +16,7 @@ import {
   type TargetId,
   type Tutorial,
 } from '../tutorials/registry';
+import {APP_VERSION} from '../services/appVersion';
 
 // Persistence — same try/catch idiom as utils/primaryColorStorage.ts.
 const ONBOARDING_DONE_KEY = '@onboarding_done';
@@ -96,7 +97,9 @@ export const TutorialProvider = ({children}: {children: React.ReactNode}) => {
     try {
       await AsyncStorage.multiSet([
         [statusKey(tutorialId), 'done'],
-        ...(tutorialId === ONBOARDING_ID ? [[ONBOARDING_DONE_KEY, 'true'] as [string, string]] : []),
+        // Stamp the version that completed onboarding; a later version bump
+        // makes this stale so the flow replays once on the new release.
+        ...(tutorialId === ONBOARDING_ID ? [[ONBOARDING_DONE_KEY, APP_VERSION] as [string, string]] : []),
       ]);
     } catch {
       // ignore persistence errors
@@ -214,12 +217,15 @@ export const useTutorialTarget = (id: TargetId) => {
   return ref;
 };
 
+// Onboarding is "done" only if it was completed on the CURRENT app version.
+// First install (no value) and first launch after a version bump (stale value)
+// both return false, so the flow replays exactly once per release. Accepts the
+// legacy 'true' marker as done for the current version, so users mid-upgrade
+// from the old scheme don't get onboarding re-shown on this same version.
 export const isOnboardingDone = async (): Promise<boolean> => {
-  // TEMP for onboarding dev — always replay on launch. Remove this line before
-  // release so the walkthrough shows only once.
-  return false;
   try {
-    return (await AsyncStorage.getItem(ONBOARDING_DONE_KEY)) === 'true';
+    const v = await AsyncStorage.getItem(ONBOARDING_DONE_KEY);
+    return v === APP_VERSION || v === 'true';
   } catch {
     return false;
   }

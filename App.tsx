@@ -8,10 +8,10 @@ import RootNavigator from './src/navigation/RootNavigator';
 import {ThemeProvider, useTheme} from './src/contexts/ThemeContext';
 import {JesusNameProvider, useJesusName} from './src/contexts/JesusNameContext';
 import {CultModeProvider} from './src/contexts/CultModeContext';
-import {InAppNotificationProvider} from './src/contexts/InAppNotificationContext';
 import {TutorialProvider} from './src/contexts/TutorialContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {STORAGE_KEY_PRIVACY_POLICY_ACCEPTED} from './src/screens/PrivacyPolicyScreen';
+import {isOnboardingDone} from './src/contexts/TutorialContext';
 import {ErrorBoundary} from './src/components/ErrorBoundary';
 import {
   installGlobalErrorHandler,
@@ -22,10 +22,10 @@ import {
 // default handler runs, so production crashes carry a real message/stack.
 installGlobalErrorHandler();
 
-// TEMP(testing): force the complete onboarding flow (color selection → basic
-// navigation tutorial → Fotoam-pivavahana tutorial) on every launch. Set back
-// to false before release.
-const FORCE_ONBOARDING_FLOW = true;
+// Force the complete onboarding flow (color selection → basic navigation
+// tutorial → Fotoam-pivavahana tutorial) on every launch. Dev-only; must stay
+// false in release so returning users land on Home, not the color picker.
+const FORCE_ONBOARDING_FLOW = false;
 
 // Splash screen component
 const SplashScreen = () => (
@@ -42,6 +42,9 @@ const AppContent = () => {
   const {isReady: isJesusNameReady} = useJesusName();
   const [privacyPolicyChecked, setPrivacyPolicyChecked] = useState(false);
   const [privacyPolicyAccepted, setPrivacyPolicyAccepted] = useState(false);
+  // Whether onboarding already ran on THIS app version. false = first install
+  // or first launch after a version bump → replay the color/tutorial flow.
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Move any crash captured on the previous run into the upload queue. The
@@ -55,13 +58,18 @@ const AppContent = () => {
     let isMounted = true;
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY_PRIVACY_POLICY_ACCEPTED);
+        const [stored, obDone] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY_PRIVACY_POLICY_ACCEPTED),
+          isOnboardingDone(),
+        ]);
         if (isMounted) {
           setPrivacyPolicyAccepted(stored === 'true');
+          setOnboardingDone(obDone);
         }
       } catch {
         if (isMounted) {
           setPrivacyPolicyAccepted(false);
+          setOnboardingDone(false);
         }
       } finally {
         if (isMounted) {
@@ -77,7 +85,7 @@ const AppContent = () => {
 
   const providersReady = isReady && isJesusNameReady && isInitialized;
 
-  if (!providersReady || !privacyPolicyChecked) {
+  if (!providersReady || !privacyPolicyChecked || onboardingDone === null) {
     return <SplashScreen />;
   }
 
@@ -85,12 +93,23 @@ const AppContent = () => {
     return <RootNavigator initialRouteName="Personalization" forceFirstRun />;
   }
 
-  return (
-    <RootNavigator
-      initialRouteName={privacyPolicyAccepted ? 'Home' : 'PrivacyPolicy'}
-      privacyPolicyMandatory={!privacyPolicyAccepted}
-    />
-  );
+  // Privacy gate comes first (legal). Once accepted, replay the onboarding flow
+  // on first install and after each version bump; otherwise land on Home so the
+  // color picker never appears on an ordinary launch.
+  if (!privacyPolicyAccepted) {
+    return (
+      <RootNavigator
+        initialRouteName="PrivacyPolicy"
+        privacyPolicyMandatory
+      />
+    );
+  }
+
+  if (!onboardingDone) {
+    return <RootNavigator initialRouteName="Personalization" forceFirstRun />;
+  }
+
+  return <RootNavigator initialRouteName="Home" />;
 };
 
 // Main App component with providers
@@ -103,13 +122,11 @@ const App = () => {
             <JesusNameProvider>
               <DatabaseProvider>
                 <CultModeProvider>
-                  <InAppNotificationProvider>
-                    <TutorialProvider>
-                      <NavigationContainer>
-                        <AppContent />
-                      </NavigationContainer>
-                    </TutorialProvider>
-                  </InAppNotificationProvider>
+                  <TutorialProvider>
+                    <NavigationContainer>
+                      <AppContent />
+                    </NavigationContainer>
+                  </TutorialProvider>
                 </CultModeProvider>
               </DatabaseProvider>
             </JesusNameProvider>

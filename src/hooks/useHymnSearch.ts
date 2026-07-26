@@ -1,7 +1,11 @@
 import { useCallback, useState } from 'react';
 import { hymnsDatabaseService } from '../services/database/DatabaseService';
 import {t} from '../i18n/strings';
-import { normalizeForFtsQuery, makeFtsPrefixQuery } from '../utils/searchNormalize';
+import {
+  normalizeForFtsQuery,
+  makeFtsPrefixQuery,
+  execWithLikeFallback,
+} from '../utils/searchNormalize';
 import {
   JESUS_VARIANTS,
   expandJesusToken,
@@ -140,22 +144,17 @@ export const useHymnSearch = () => {
         LIMIT 200
       `;
 
-      let results: { rows: any[] };
-      try {
-        results = await hymnsDatabaseService.executeQuerySilent(ftsSearchQuery, [ftsParam, ftsParam]);
-      } catch (e: any) {
-        const message = typeof e?.message === 'string' ? e.message : '';
-        if (message.toLowerCase().includes('no such module: fts5')) {
-          // No fts5: fall back to LIKE. Mirror the Jesus-name expansion by trying
-          // each variant param; each one is matched against text/title/authors.
-          const likeParams = makeJesusNameLikeParams(query);
-          const whereClause = likeParams
-            .map(
-              () =>
-                '(lower(v.text) LIKE lower(?) OR lower(h.title) LIKE lower(?) OR lower(h.authors) LIKE lower(?))',
-            )
-            .join(' OR ');
-          const likeSearchQuery = `
+      // LIKE fallback (no fts5): mirror the Jesus-name expansion by trying each
+      // variant param against text/title/authors. Each variant fills three
+      // placeholders.
+      const likeParams = makeJesusNameLikeParams(query);
+      const likeWhere = likeParams
+        .map(
+          () =>
+            '(lower(v.text) LIKE lower(?) OR lower(h.title) LIKE lower(?) OR lower(h.authors) LIKE lower(?))',
+        )
+        .join(' OR ');
+      const likeSearchQuery = `
         SELECT DISTINCT
           h.id,
           h.number,
@@ -166,17 +165,16 @@ export const useHymnSearch = () => {
           v.verse_number
         FROM Hymns h
         JOIN HymnVerses v ON h.id = v.hymn_id
-        WHERE ${whereClause}
+        WHERE ${likeWhere}
         ORDER BY h.number, v.verse_number
         LIMIT 200
       `;
-          // Each variant fills three placeholders (text, title, authors).
-          const boundParams = likeParams.flatMap(p => [p, p, p]);
-          results = await hymnsDatabaseService.executeQuery(likeSearchQuery, boundParams);
-        } else {
-          throw e;
-        }
-      }
+
+      const results = await execWithLikeFallback(
+        hymnsDatabaseService,
+        {sql: ftsSearchQuery, params: [ftsParam, ftsParam]},
+        {sql: likeSearchQuery, params: likeParams.flatMap(p => [p, p, p])},
+      );
       // Collapse the per-verse rows (already ordered best-score-first) into one
       // result per hymn. The first row seen for a hymn is its best match, so it
       // drives the card snippet; subsequent verse rows accumulate into

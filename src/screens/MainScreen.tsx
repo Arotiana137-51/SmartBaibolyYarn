@@ -45,7 +45,7 @@ import HamburgerMenuPopover, {
 import {useTheme} from '../contexts/ThemeContext';
 import {useCultMode} from '../contexts/CultModeContext';
 import {useTutorial, useTutorialTarget, isOnboardingDone} from '../contexts/TutorialContext';
-import {ONBOARDING_ID, CULT_TUTORIAL_ID} from '../tutorials/registry';
+import {ONBOARDING_ID, CULT_TUTORIAL_ID, HIGHLIGHT_TUTORIAL_ID} from '../tutorials/registry';
 import TutorialOverlay from '../components/TutorialOverlay';
 import type {DriveVerb} from '../tutorials/registry';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -53,6 +53,7 @@ import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
 import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import {hexToRgba} from '../utils/colorUtils';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
   enqueueIssueReport,
@@ -63,26 +64,10 @@ import {
 // Persisted last-read Bible position, restored on launch instead of the
 // hardcoded Marka 16 default. {bookId, bookName, chapter}.
 const LAST_READ_BIBLE_KEY = 'last_read_bible';
-
-// Mix a hex color with a given alpha. Used for the cult-mode chevrons so
-// the pill follows the active theme's navBackground with a touch of
-// transparency (no need to duplicate the helper from CustomBottomNav at
-// runtime — chevrons are rendered alongside but in a different component).
-const hexToRgba = (hex: string, alpha: number): string => {
-  const normalized = hex.replace('#', '');
-  const parsed =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map(ch => ch + ch)
-          .join('')
-      : normalized;
-  const int = parseInt(parsed, 16);
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
+// Persisted last-read mode ('bible' | 'hymnal') and hymn id, so a user who
+// closed the app on a hymn reopens on that hymn, not the Bible default.
+const LAST_READ_MODE_KEY = 'last_read_mode';
+const LAST_READ_HYMN_KEY = 'last_read_hymn';
 
 const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
@@ -237,6 +222,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const cultMode = useCultMode();
   const tutorial = useTutorial();
   const glowTargetRef = useTutorialTarget('notificationGlow');
+  const hlReaderAreaRef = useTutorialTarget('hlReaderArea');
   const cultReaderNavRef = useTutorialTarget('cultReaderNav');
   const cultReaderNavNextRef = useTutorialTarget('cultReaderNavNext');
 
@@ -338,6 +324,21 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // Initial Bible position: restore the user's last-read book+chapter from
   // storage; fall back to Marka 16 only when there's nothing saved. Skipped
   // when a book is already set (deep link / route param).
+  // Restore last-read mode once on launch, unless a route param already forced
+  // one (deep link / explicit navigation).
+  const didRestoreMode = useRef(false);
+  useEffect(() => {
+    if (didRestoreMode.current) return;
+    didRestoreMode.current = true;
+    if (route.params?.mode) return;
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(LAST_READ_MODE_KEY);
+        if (stored === 'hymnal' || stored === 'bible') setMode(stored);
+      } catch {}
+    })();
+  }, [route.params?.mode]);
+
   const didRestoreBible = useRef(false);
   useEffect(() => {
     if (didRestoreBible.current || books.length === 0) {
@@ -367,18 +368,38 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     })();
   }, [books, currentBook]);
 
+  const didRestoreHymn = useRef(false);
   useEffect(() => {
-    if (mode === 'hymnal' && hymns.length > 0 && !currentHymnId) {
-      const ffpm1 = hymns.find(h => h.id === 'ffpm_1' || (h.category === 'ffpm' && h.number === 1));
-      const firstFfpm = hymns
-        .filter(h => h.category === 'ffpm')
-        .sort((a, b) => a.number - b.number)[0];
-      const defaultHymn = ffpm1 ?? firstFfpm ?? hymns[0];
+    if (mode !== 'hymnal' || hymns.length === 0 || currentHymnId) return;
 
-      setCurrentHymnId(defaultHymn.id);
-      setCurrentHymnNumber(defaultHymn.number);
-      setCurrentHymnCategory(defaultHymn.category || null);
+    const applyHymn = (id: string) => {
+      const hymn = hymns.find(h => h.id === id);
+      if (!hymn) return false;
+      setCurrentHymnId(hymn.id);
+      setCurrentHymnNumber(hymn.number);
+      setCurrentHymnCategory(hymn.category || null);
+      return true;
+    };
+
+    const ffpm1 = hymns.find(h => h.id === 'ffpm_1' || (h.category === 'ffpm' && h.number === 1));
+    const firstFfpm = hymns
+      .filter(h => h.category === 'ffpm')
+      .sort((a, b) => a.number - b.number)[0];
+    const defaultHymn = ffpm1 ?? firstFfpm ?? hymns[0];
+
+    if (didRestoreHymn.current) {
+      applyHymn(defaultHymn.id);
+      return;
     }
+    didRestoreHymn.current = true;
+    // Restore last-read hymn; fall back to FFPM 1 if nothing saved or it's gone.
+    (async () => {
+      try {
+        const storedId = await AsyncStorage.getItem(LAST_READ_HYMN_KEY);
+        if (storedId && applyHymn(storedId)) return;
+      } catch {}
+      applyHymn(defaultHymn.id);
+    })();
   }, [mode, hymns, currentHymnId]);
 
   useEffect(() => {
@@ -493,11 +514,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         LAST_READ_BIBLE_KEY,
         JSON.stringify({bookId: currentBook.id, bookName: currentBook.name, chapter: currentChapter}),
       ).catch(() => {});
+      AsyncStorage.setItem(LAST_READ_MODE_KEY, 'bible').catch(() => {});
     } else if (mode === 'hymnal' && currentHymnId && hymnVerses.length > 0) {
       const currentHymn = hymns.find(h => h.id === currentHymnId);
       if (currentHymn) {
         logHymnAccess(currentHymn);
       }
+      AsyncStorage.setItem(LAST_READ_MODE_KEY, 'hymnal').catch(() => {});
+      AsyncStorage.setItem(LAST_READ_HYMN_KEY, currentHymnId).catch(() => {});
     }
   }, [mode, currentBook, currentChapter, currentHymnId, verses, hymnVerses, hymns, logBibleAccess, logHymnAccess]);
 
@@ -786,6 +810,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const handleChapterMarksSave = (next: ChapterMark[]) => {
     setAllMarks(next);
     setChapterEditorVisible(false);
+    // Advance the highlight tutorial's "Tahirizo" step off the real save.
+    tutorial.notifyProgress('editorSaved');
   };
 
   const handleChapterMarksClear = () => {
@@ -878,6 +904,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           // chevrons render on the reader — just return there to show them.
           navigation.navigate('Home');
           return;
+        case 'showBibleReader':
+          // Highlight tutorial: just make sure we're on the Bible reader. The
+          // user performs the real long-press to open the menu themselves — we
+          // never force it open, so they learn the genuine gesture.
+          setMode('bible');
+          return;
         default:
           return;
       }
@@ -933,6 +965,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setTimeout(() => tutorial.start(CULT_TUTORIAL_ID), 350);
     } else if (prev === CULT_TUTORIAL_ID) {
       cultMode.endTutorial();
+    } else if (prev === HIGHLIGHT_TUTORIAL_ID) {
+      // Skipping/finishing the highlight walkthrough also dismisses the editor
+      // it opened, so "Ampiasa avy hatrany" leaves the user on the clean reader.
+      setChapterEditorVisible(false);
     }
   }, [tutorial.activeTutorial, tutorial, navigation, cultMode]);
 
@@ -975,6 +1011,12 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   useEffect(() => {
     if (isMenuOpen) tutorial.notifyProgress('menuOpened');
   }, [isMenuOpen, tutorial]);
+
+  // Highlight tutorial: advance the 'long-press to open the menu' step when the
+  // editor actually opens from the user's own long-press (never a forced open).
+  useEffect(() => {
+    if (chapterEditorVisible) tutorial.notifyProgress('highlightMenuOpened');
+  }, [chapterEditorVisible, tutorial]);
 
   const handleTitlePress = () => {
     if (mode === 'hymnal') {
@@ -1067,6 +1109,8 @@ const MainScreen = ({navigation}: MainScreenProps) => {
         double-tap / long-press / swipe-to-switch-mode all keep working.
       */}
       <Pressable
+        ref={hlReaderAreaRef}
+        collapsable={false}
         onPress={bannerVisible ? dismissBanner : undefined}
         android_ripple={null}
         style={styles.readerContainer}

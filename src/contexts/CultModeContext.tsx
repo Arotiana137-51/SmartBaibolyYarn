@@ -29,7 +29,8 @@ type CultEntryInput =
 type CultModeContextValue = {
   // Playlist
   entries: CultEntry[];
-  addEntry: (entry: CultEntryInput) => void;
+  // Returns the id of the newly created entry so callers can highlight it.
+  addEntry: (entry: CultEntryInput) => string;
   removeEntry: (id: string) => void;
   reorderEntries: (fromIndex: number, toIndex: number) => void;
   clearAll: () => Promise<void>;
@@ -127,12 +128,14 @@ export const CultModeProvider = ({children}: {children: ReactNode}) => {
   };
 
   const addEntry = useCallback((entry: CultEntryInput) => {
+    const id = generateCultEntryId();
     setEntries(prev => {
-      const withId = {...entry, id: generateCultEntryId()} as CultEntry;
+      const withId = {...entry, id} as CultEntry;
       const next = [...prev, withId];
       persistPlaylist(next);
       return next;
     });
+    return id;
   }, []);
 
   const removeEntry = useCallback((id: string) => {

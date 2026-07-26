@@ -12,6 +12,8 @@ import {
 import {WebView, type WebViewMessageEvent} from 'react-native-webview';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../contexts/ThemeContext';
+import {useTutorialTarget} from '../contexts/TutorialContext';
+import TutorialOverlay from './TutorialOverlay';
 import {TEXT_STYLES, scaleFontSize} from '../constants/Typography';
 import type {
   ChapterDisplay,
@@ -555,6 +557,11 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
   const {theme} = useTheme();
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
+  // Highlight-tutorial spotlight targets (native Views inside this RN modal).
+  const hlVerseTextRef = useTutorialTarget('hlVerseText');
+  const hlColorPickerRef = useTutorialTarget('hlColorPicker');
+  const hlEraseRef = useTutorialTarget('hlEraseBtn');
+  const hlSaveRef = useTutorialTarget('hlSaveBtn');
   const [pendingMarks, setPendingMarks] = useState<ChapterMark[]>(initialMarks);
   const [selectedHighlightColor, setSelectedHighlightColor] = useState<string>(highlightColor);
   const [selectionOffsets, setSelectionOffsets] = useState<
@@ -895,7 +902,7 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
             />
           </View>
 
-          <View style={styles.colorPickerContainer}>
+          <View ref={hlColorPickerRef} collapsable={false} style={styles.colorPickerContainer}>
             <Text style={[styles.colorPickerLabel, {color: theme.colors.textSecondary}]}>
               Highlight Color:
             </Text>
@@ -917,7 +924,7 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
             </View>
           </View>
 
-          <View style={styles.webContainer}>
+          <View ref={hlVerseTextRef} collapsable={false} style={styles.webContainer}>
             {chapter ? (
               <WebView
                 ref={webViewRef}
@@ -999,31 +1006,39 @@ const ChapterEditorModal: React.FC<ChapterEditorModalProps> = ({
           ) : null}
 
           <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
-            <Pressable
-              style={[
-                styles.footerButton,
-                {backgroundColor: theme.colors.backgroundTertiary},
-                !selectionOffsets ? {opacity: 0.5} : null,
-              ]}
-              onPress={handleEraseSelection}
-              disabled={!selectionOffsets}>
-              <Text
-                style={[styles.footerButtonText, {color: theme.colors.textPrimary}]}>
-                Fafao
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.footerButton,
-                styles.footerPrimary,
-                {backgroundColor: theme.colors.accentBlue},
-              ]}
-              onPress={handleSave}>
-              <Text style={[styles.footerButtonText, {color: '#FFFFFF'}]}>
-                Tahirizo
-              </Text>
-            </Pressable>
+            <View ref={hlEraseRef} collapsable={false} style={styles.footerButtonWrap}>
+              <Pressable
+                style={[
+                  styles.footerButton,
+                  {backgroundColor: theme.colors.backgroundTertiary},
+                  !selectionOffsets ? {opacity: 0.5} : null,
+                ]}
+                onPress={handleEraseSelection}
+                disabled={!selectionOffsets}>
+                <Text
+                  style={[styles.footerButtonText, {color: theme.colors.textPrimary}]}>
+                  Fafao
+                </Text>
+              </Pressable>
+            </View>
+            <View ref={hlSaveRef} collapsable={false} style={styles.footerButtonWrap}>
+              <Pressable
+                style={[
+                  styles.footerButton,
+                  styles.footerPrimary,
+                  {backgroundColor: theme.colors.accentBlue},
+                ]}
+                onPress={handleSave}>
+                <Text style={[styles.footerButtonText, {color: '#FFFFFF'}]}>
+                  Tahirizo
+                </Text>
+              </Pressable>
+            </View>
           </View>
+
+          {/* Highlight-tutorial overlay — spotlights the native controls above
+              while a modal-scope step is active. No-op otherwise. */}
+          <TutorialOverlay scope="modal" />
         </View>
       </View>
 
@@ -1276,6 +1291,9 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: 8,
   },
+  // Wrapper so the tutorial can measure the button as a native View (the hole
+  // target); sizes to its child, so it doesn't alter footer layout.
+  footerButtonWrap: {},
   footerButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,

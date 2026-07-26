@@ -1,97 +1,19 @@
 import { useCallback, useState } from 'react';
 import { bibleDatabaseService } from '../services/database/DatabaseService';
 import {t} from '../i18n/strings';
+import {
+  normalizeForFtsQuery,
+  makeFtsPrefixQuery,
+  execWithLikeFallback,
+} from '../utils/searchNormalize';
+import {
+  expandJesusToken,
+  containsJesusNameVariant,
+  makeJesusNameLikeParams,
+} from '../utils/searchSynonyms';
 
 export type BibleSearchOptions = {
   matchWholeWord?: boolean;
-};
-
-const JESUS_VARIANTS = ['jesosy', 'jesoa'];
-
-const looksLikeJesusPrefix = (token: string) => {
-  if (!token) return false;
-  const t = token.toLowerCase();
-  if (JESUS_VARIANTS.some(v => v.startsWith(t) || t.startsWith(v))) return true;
-  return t.startsWith('jeso') || t === 'jes' || t === 'je';
-};
-
-const containsJesusNameVariant = (query: string) => {
-  const q = query.toLowerCase();
-  if (JESUS_VARIANTS.some(v => q.includes(v))) return true;
-  return q.split(/\s+/).filter(Boolean).some(looksLikeJesusPrefix);
-};
-
-const makeJesusNameLikeParams = (query: string) => {
-  const safe = query;
-  const variants = new Set<string>([safe]);
-  const qLower = safe.toLowerCase();
-
-  if (qLower.includes('jesosy')) {
-    variants.add(safe.replace(/jesosy/gi, 'Jesoa'));
-  }
-  if (qLower.includes('jesoa')) {
-    variants.add(safe.replace(/jesoa/gi, 'Jesosy'));
-  }
-
-  // If the query contains a "jeso"-like prefix anywhere (e.g. "jeso o"),
-  // collapse spaces and add the canonical variants so LIKE still finds them.
-  const collapsed = safe.replace(/\s+/g, '');
-  if (/jeso/i.test(collapsed)) {
-    variants.add('Jesosy');
-    variants.add('Jesoa');
-  }
-
-  return Array.from(variants).map(v => `%${v}%`);
-};
-
-const normalizeForFtsQuery = (value: string) => {
-  const raw = (value ?? '').toString();
-  if (!raw) return '';
-
-  // 1) Lowercase
-  // 2) Split diacritics (NFD) then drop combining marks
-  // 3) Replace punctuation/symbols with spaces (also strips quotes which would break MATCH)
-  // 4) Collapse whitespace
-  return raw
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
-
-const makeFtsPrefixQuery = (normalized: string) => {
-  const tokens = normalized.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return '';
-
-  const baseTokens = tokens.map(tok => `${tok}*`).join(' AND ');
-  const branches = new Set<string>([baseTokens]);
-
-  // Robustness: if there are multiple tokens and any are short (≤2 chars),
-  // the user may have inserted a stray space mid-word. Try a collapsed variant.
-  const collapsed = tokens.join('');
-  if (tokens.length > 1 && tokens.some(t => t.length <= 2)) {
-    branches.add(`${collapsed}*`);
-  }
-
-  // Jesus-name expansion: cover Jesoa/Jesosy variants whenever the query
-  // contains a "jeso"-like prefix, even partial ("jeso o", "jes").
-  const expand = containsJesusNameVariant(normalized);
-  if (expand) {
-    // Replace any token that looks like a Jesus prefix with each canonical variant.
-    for (const variant of JESUS_VARIANTS) {
-      const replaced = tokens
-        .map(tok => (looksLikeJesusPrefix(tok) ? `${variant}*` : `${tok}*`))
-        .join(' AND ');
-      branches.add(replaced);
-      // Also try with all spaces collapsed (handles "jeso o" → "jesoo" → variant).
-      branches.add(`${variant}*`);
-    }
-  }
-
-  const list = Array.from(branches).filter(Boolean);
-  return list.length === 1 ? list[0] : list.map(s => `(${s})`).join(' OR ');
 };
 
 export interface BibleSearchResult {
@@ -111,6 +33,18 @@ export interface BibleVerseResult {
   verseNumber: number;
   text: string;
 }
+
+// LIKE-fallback params: expand the Jesus-name variants when the query mentions
+// it, otherwise a single %query% param.
+const likeParamsFor = (query: string, normalizedQuery: string): string[] =>
+  containsJesusNameVariant(normalizedQuery)
+    ? makeJesusNameLikeParams(query)
+    : [`%${query}%`];
+
+const likeWhereFor = (params: string[], column = 'v.text'): string =>
+  params.length === 1
+    ? `${column} LIKE ?`
+    : `(${params.map(() => `${column} LIKE ?`).join(' OR ')})`;
 
 export const useBibleSearch = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -134,7 +68,9 @@ export const useBibleSearch = () => {
       if (!normalizedQuery) {
         return [];
       }
-      const ftsParam = matchWholeWord ? `"${normalizedQuery}"` : makeFtsPrefixQuery(normalizedQuery);
+      const ftsParam = matchWholeWord
+        ? `"${normalizedQuery}"`
+        : makeFtsPrefixQuery(normalizedQuery, expandJesusToken);
 
       const ftsCandidatesQuery = `
         SELECT
@@ -151,12 +87,7 @@ export const useBibleSearch = () => {
         ORDER BY v.book_id, v.chapter, v.verse_number
       `;
 
-      const shouldExpandJesus = containsJesusNameVariant(normalizedQuery);
-      const expandedLikeParams = shouldExpandJesus ? makeJesusNameLikeParams(query) : [`%${query}%`];
-      const likeWhere = expandedLikeParams.length === 1
-        ? 'v.text LIKE ?'
-        : `(${expandedLikeParams.map(() => 'v.text LIKE ?').join(' OR ')})`;
-
+      const likeParams = likeParamsFor(query, normalizedQuery);
       const likeCandidatesQuery = `
         SELECT
           v.book_id,
@@ -167,21 +98,15 @@ export const useBibleSearch = () => {
           v.text
         FROM Verses v
         JOIN Books b ON v.book_id = b.id
-        WHERE ${likeWhere}
+        WHERE ${likeWhereFor(likeParams)}
         ORDER BY v.book_id, v.chapter, v.verse_number
       `;
 
-      let candidates: { rows: any[] };
-      try {
-        candidates = await bibleDatabaseService.executeQuerySilent(ftsCandidatesQuery, [ftsParam]);
-      } catch (e: any) {
-        const message = typeof e?.message === 'string' ? e.message : '';
-        if (message.toLowerCase().includes('no such module: fts5') || message.toLowerCase().includes('no such table')) {
-          candidates = await bibleDatabaseService.executeQuery(likeCandidatesQuery, [...expandedLikeParams]);
-        } else {
-          throw e;
-        }
-      }
+      const candidates = await execWithLikeFallback(
+        bibleDatabaseService,
+        {sql: ftsCandidatesQuery, params: [ftsParam]},
+        {sql: likeCandidatesQuery, params: likeParams},
+      );
 
       const byBook = new Map<
         number,
@@ -197,8 +122,6 @@ export const useBibleSearch = () => {
       >();
 
       for (const row of candidates.rows as any[]) {
-        const text = String(row.text ?? '');
-
         const bookId = row.book_id as number;
         const existing = byBook.get(bookId);
         if (!existing) {
@@ -244,7 +167,9 @@ export const useBibleSearch = () => {
       if (!normalizedQuery) {
         return [];
       }
-      const ftsParam = matchWholeWord ? `"${normalizedQuery}"` : makeFtsPrefixQuery(normalizedQuery);
+      const ftsParam = matchWholeWord
+        ? `"${normalizedQuery}"`
+        : makeFtsPrefixQuery(normalizedQuery, expandJesusToken);
 
       const ftsQuery = `
         SELECT
@@ -260,12 +185,7 @@ export const useBibleSearch = () => {
         ORDER BY v.chapter, v.verse_number
       `;
 
-      const shouldExpandJesus = containsJesusNameVariant(normalizedQuery);
-      const expandedLikeParams = shouldExpandJesus ? makeJesusNameLikeParams(query) : [`%${query}%`];
-      const likeWhere = expandedLikeParams.length === 1
-        ? 'v.text LIKE ?'
-        : `(${expandedLikeParams.map(() => 'v.text LIKE ?').join(' OR ')})`;
-
+      const likeParams = likeParamsFor(query, normalizedQuery);
       const likeQuery = `
         SELECT
           v.book_id,
@@ -275,21 +195,15 @@ export const useBibleSearch = () => {
           v.text
         FROM Verses v
         JOIN Books b ON v.book_id = b.id
-        WHERE v.book_id = ? AND ${likeWhere}
+        WHERE v.book_id = ? AND ${likeWhereFor(likeParams)}
         ORDER BY v.chapter, v.verse_number
       `;
 
-      let results: { rows: any[] };
-      try {
-        results = await bibleDatabaseService.executeQuerySilent(ftsQuery, [ftsParam, bookId]);
-      } catch (e: any) {
-        const message = typeof e?.message === 'string' ? e.message : '';
-        if (message.toLowerCase().includes('no such module: fts5') || message.toLowerCase().includes('no such table')) {
-          results = await bibleDatabaseService.executeQuery(likeQuery, [bookId, ...expandedLikeParams]);
-        } else {
-          throw e;
-        }
-      }
+      const results = await execWithLikeFallback(
+        bibleDatabaseService,
+        {sql: ftsQuery, params: [ftsParam, bookId]},
+        {sql: likeQuery, params: [bookId, ...likeParams]},
+      );
 
       const verseResults: BibleVerseResult[] = [];
       for (const row of results.rows as any[]) {

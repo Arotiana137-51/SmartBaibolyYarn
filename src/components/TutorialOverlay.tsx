@@ -24,6 +24,7 @@ const HOLE_PAD = 8;
 const CARD_MAX_WIDTH = 300;
 const CARD_GAP = 14;
 const SCRIM = 'rgba(0,0,0,0.72)';
+const GESTURE_HINT_SIZE = 96;
 
 type Rect = {x: number; y: number; width: number; height: number};
 
@@ -62,6 +63,9 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   const [skipSize, setSkipSize] = useState({w: 0, h: 0});
 
   const pulse = useSharedValue(0);
+  // Long-press hint animation: 0 → 1 press-and-hold cycle driving a fingertip
+  // dip and an expanding "held" ring, native-style.
+  const press = useSharedValue(0);
 
   const stepScope: TargetScope = step?.scope ?? 'screen';
   const isMine = !!step && stepScope === scope;
@@ -157,11 +161,52 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     };
   });
 
+  const showLongPressHint = isMine && step?.gesture === 'longPress' && rects.length > 0;
+
+  // Drive the long-press hint loop only while it's shown and motion is allowed.
+  useEffect(() => {
+    if (!showLongPressHint || reduceMotion) {
+      cancelAnimation(press);
+      press.value = 0;
+      return;
+    }
+    press.value = withRepeat(
+      withTiming(1, {duration: 1400, easing: Easing.inOut(Easing.ease)}),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(press);
+  }, [showLongPressHint, reduceMotion, press]);
+
+  // Fingertip: dips down and shrinks slightly as the "hold" begins, then lifts.
+  const fingerStyle = useAnimatedStyle(() => {
+    const held = Math.min(1, press.value * 2); // reach the surface in the first half
+    return {
+      transform: [
+        {translateY: 6 - held * 6},
+        {scale: 1 - held * 0.12},
+      ],
+      opacity: 0.35 + held * 0.65,
+    };
+  });
+
+  // Held ring: expands + fades during the hold phase to signal "keep pressing".
+  const ringStyle = useAnimatedStyle(() => {
+    const hold = Math.max(0, (press.value - 0.35) / 0.65); // grow after contact
+    return {
+      transform: [{scale: 0.3 + hold * 1.1}],
+      opacity: (1 - hold) * 0.7,
+    };
+  });
+
   if (!activeTutorial || !isMine) return null;
 
+  const isLast = stepIndex === stepCount - 1;
+
   // Modal-scope WITHOUT a measured target: fall back to a floating coach card
-  // pinned to the bottom (no hole). Once the target is measured (rect set) we
-  // fall through to the shared spotlight+dim path below, same as screen steps.
+  // (no hole). Centered vertically so it doesn't cover the menu's controls.
+  // Once the target is measured (rect set) we fall through to the shared
+  // spotlight+dim path below, same as screen steps.
   if (stepScope === 'modal' && rects.length === 0) {
     return (
       <View style={styles.modalCardWrap} pointerEvents="box-none">
@@ -180,14 +225,25 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
           style={[
             styles.card,
             styles.modalCard,
-            // Clear the floating Baiboly/Fihirana toggle: it sits at
-            // insets.bottom + 12 and is ~42px tall. Push the card above it.
+            // Bottom-left so it clears the menu's controls above it.
             {backgroundColor: accent, marginBottom: insets.bottom + 66},
           ]}>
           <Text style={styles.counterOnAccent}>
             {stepIndex + 1} / {stepCount}
           </Text>
           <Text style={styles.bodyOnAccent}>{step?.text}</Text>
+          {/* Card-only intro steps advance on tap — show the Next button.
+              targetEvent steps advance from the real UI, so no button. */}
+          {step?.advanceOn === 'targetEvent' ? null : (
+            <Pressable
+              onPress={next}
+              style={[styles.nextBtn, styles.nextBtnOnAccent]}
+              accessibilityRole="button">
+              <Text style={[styles.nextText, {color: accent}]}>
+                {isLast ? 'Vita ✓' : 'Manaraka →'}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -267,8 +323,6 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     Math.min(cardTop, H - ch - MARGIN - insets.bottom),
   );
 
-  const isLast = stepIndex === stepCount - 1;
-
   // Skip-pill anchor: default top-right, but if a hole or the coach card would
   // sit under it, fall through corners (TR → TL → BR → BL) to the first that
   // clears both. Keeps the pill from covering the very control the step wants
@@ -278,15 +332,18 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   const skipBottom = insets.bottom + 16;
   const sw = skipSize.w || 190;
   const sh = skipSize.h || 40;
-  const overlaps = (ax: number, ay: number): boolean => {
-    const hit = (r: {left: number; top: number; right: number; bottom: number}) =>
+  const hit =
+    (ax: number, ay: number) =>
+    (r: {left: number; top: number; right: number; bottom: number}) =>
       ax < r.right && ax + sw > r.left && ay < r.bottom && ay + sh > r.top;
-    if (holes.some(h => hit({left: h.x, top: h.y, right: h.x + h.width, bottom: h.y + h.height})))
-      return true;
-    // Coach card spans ~86% width centered; treat its band as blocked.
-    const cardLeft = screen.width * 0.07;
-    return hit({left: cardLeft, top: cardTop, right: screen.width - cardLeft, bottom: cardTop + ch});
-  };
+  // Coach card spans ~86% width centered; treat its band as blocked.
+  const cardLeft = screen.width * 0.07;
+  const overlapsCard = (ax: number, ay: number): boolean =>
+    hit(ax, ay)({left: cardLeft, top: cardTop, right: screen.width - cardLeft, bottom: cardTop + ch});
+  const overlapsHole = (ax: number, ay: number): boolean =>
+    holes.some(h =>
+      hit(ax, ay)({left: h.x, top: h.y, right: h.x + h.width, bottom: h.y + h.height}),
+    );
   // Corners as (ax, ay) top-left positions, TR → TL → BR → BL.
   const rightX = screen.width - 12 - sw;
   const bottomY = H - skipBottom - sh;
@@ -296,8 +353,14 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     {ax: rightX, ay: bottomY, style: {right: 12, left: undefined, top: bottomY}},
     {ax: 12, ay: bottomY, style: {left: 12, right: undefined, top: bottomY}},
   ];
-  const skipAnchor =
-    (candidates.find(c => !overlaps(c.ax, c.ay)) ?? candidates[0]).style;
+  // Clearing the card is the hard constraint (a pill under it is invisible);
+  // clearing a hole is only a tiebreak — a flex:1 target (the playlist) fills
+  // every corner, so demanding both would fall back to TR, under the card.
+  const skipAnchor = (
+    candidates.find(c => !overlapsCard(c.ax, c.ay) && !overlapsHole(c.ax, c.ay)) ??
+    candidates.find(c => !overlapsCard(c.ax, c.ay)) ??
+    candidates[0]
+  ).style;
 
   return (
     <View
@@ -345,6 +408,27 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
               ]}
             />
           ))}
+          {/* Long-press gesture hint — a native-style fingertip + expanding
+              "held" ring, centered on the first hole. pointerEvents none so the
+              real long-press underneath still registers. */}
+          {showLongPressHint && holes[0] ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.gestureHint,
+                {
+                  left: holes[0].x + holes[0].width / 2 - GESTURE_HINT_SIZE / 2,
+                  top: holes[0].y + holes[0].height / 2 - GESTURE_HINT_SIZE / 2,
+                },
+              ]}>
+              <Animated.View
+                style={[styles.pressRing, ringStyle, {borderColor: accent}]}
+              />
+              <Animated.Text style={[styles.fingerGlyph, fingerStyle]}>
+                👆
+              </Animated.Text>
+            </View>
+          ) : null}
         </>
       ) : (
         // Centered step: full dim, taps blocked.
@@ -409,6 +493,23 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 0},
     elevation: 0,
   },
+  gestureHint: {
+    position: 'absolute',
+    width: GESTURE_HINT_SIZE,
+    height: GESTURE_HINT_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressRing: {
+    position: 'absolute',
+    width: GESTURE_HINT_SIZE,
+    height: GESTURE_HINT_SIZE,
+    borderRadius: GESTURE_HINT_SIZE / 2,
+    borderWidth: 3,
+  },
+  fingerGlyph: {
+    fontSize: 44,
+  },
   skip: {
     position: 'absolute',
     right: 12,
@@ -446,11 +547,17 @@ const styles = StyleSheet.create({
   modalCardWrap: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
+    alignItems: 'flex-start',
   },
   modalCard: {
-    marginBottom: 40,
+    alignSelf: 'flex-start',
+    marginLeft: 16,
     bottom: undefined,
     top: undefined,
+  },
+  nextBtnOnAccent: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 14,
   },
   counterOnAccent: {
     fontSize: 12,

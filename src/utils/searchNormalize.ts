@@ -91,70 +91,26 @@ export const makeFtsPrefixQuery = (
   return list.length === 1 ? list[0] : list.map(s => `(${s})`).join(' OR ');
 };
 
-// Loose-match check used for ranking (not for filtering). True when every
-// token in the (already-normalized) query appears as a substring of the
-// (already-normalized) target.
-export const allTokensPresent = (
-  normalizedQuery: string,
-  normalizedTarget: string,
-): boolean => {
-  if (!normalizedQuery || !normalizedTarget) return false;
-  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return false;
-  return tokens.every(tok => normalizedTarget.includes(tok));
+// Run an FTS5 query, falling back to a LIKE query when the fts5 module or the
+// virtual table is missing (older SQLite / DB not yet extracted). Both hooks
+// share this: the try/catch shape and the "no such module/table" sniff were
+// copy-pasted per call site before. Non-fts5 errors re-throw.
+type QueryRunner = {
+  executeQuerySilent: (sql: string, params: any[]) => Promise<{rows: any[]}>;
+  executeQuery: (sql: string, params: any[]) => Promise<{rows: any[]}>;
 };
-
-// Generate trigrams from a normalized string. Word boundaries are preserved
-// by padding each token with `_` on both sides before slicing — so "jeso"
-// yields "_je", "jes", "eso", "so_". `_` is used (instead of a literal
-// space) so each trigram is a SINGLE FTS token: SQLite's default tokenizer
-// would otherwise split " je" into "je", losing the boundary signal.
-//
-// The trigram set is the basis for typo-tolerant fuzzy matching: index the
-// trigrams of every searchable text as space-separated tokens, then a query
-// that shares enough trigrams (Jaccard similarity ≥ FUZZY_MIN_SIMILARITY)
-// with that text is a fuzzy hit. This catches single missing/extra/
-// transposed letters (e.g. "mptia" vs "mpitia") that the prefix index can't.
-export const generateTrigrams = (normalized: string): string[] => {
-  if (!normalized) return [];
-  const out: string[] = [];
-  for (const token of normalized.split(/\s+/).filter(Boolean)) {
-    const padded = `_${token}_`;
-    for (let i = 0; i + 3 <= padded.length; i++) {
-      out.push(padded.slice(i, i + 3));
+export const execWithLikeFallback = async (
+  service: QueryRunner,
+  fts: {sql: string; params: any[]},
+  like: {sql: string; params: any[]},
+): Promise<{rows: any[]}> => {
+  try {
+    return await service.executeQuerySilent(fts.sql, fts.params);
+  } catch (e: any) {
+    const message = (typeof e?.message === 'string' ? e.message : '').toLowerCase();
+    if (message.includes('no such module: fts5') || message.includes('no such table')) {
+      return service.executeQuery(like.sql, like.params);
     }
+    throw e;
   }
-  return out;
-};
-
-// Pack trigrams into a space-separated string suitable for indexing in an
-// FTS5 column with the default tokenizer. Index-time and query-time MUST
-// produce trigrams identically — that's the contract.
-export const trigramsAsIndexString = (normalized: string): string => {
-  return generateTrigrams(normalized).join(' ');
-};
-
-// Build the FTS5 MATCH expression that asks the trigram index for any text
-// containing AT LEAST ONE of the query's trigrams. We rank candidates in JS
-// by Jaccard similarity (see `trigramSimilarity`) — the OR-of-trigrams MATCH
-// is just the cheap candidate filter.
-export const makeTrigramMatchQuery = (normalized: string): string => {
-  const grams = Array.from(new Set(generateTrigrams(normalized)));
-  if (grams.length === 0) return '';
-  return grams.join(' OR ');
-};
-
-// Jaccard similarity between two trigram sets, in [0, 1]. Used as the rank
-// score for fuzzy candidates.
-export const trigramSimilarity = (
-  queryNormalized: string,
-  targetNormalized: string,
-): number => {
-  const a = new Set(generateTrigrams(queryNormalized));
-  const b = new Set(generateTrigrams(targetNormalized));
-  if (a.size === 0 || b.size === 0) return 0;
-  let intersection = 0;
-  for (const g of a) if (b.has(g)) intersection++;
-  const union = a.size + b.size - intersection;
-  return union === 0 ? 0 : intersection / union;
 };

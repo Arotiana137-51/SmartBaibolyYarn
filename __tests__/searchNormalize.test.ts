@@ -1,5 +1,4 @@
 import {
-  allTokensPresent,
   makeFtsPrefixQuery,
   normalizeForFtsQuery,
 } from '../src/utils/searchNormalize';
@@ -109,25 +108,5 @@ describe('makeFtsPrefixQuery + ftsExpressionMatches contract', () => {
   it('returns empty for an empty/whitespace query', () => {
     expect(makeFtsPrefixQuery(normalizeForFtsQuery(''))).toBe('');
     expect(makeFtsPrefixQuery(normalizeForFtsQuery('   '))).toBe('');
-  });
-});
-
-describe('allTokensPresent (used for ranking)', () => {
-  it('returns true when every query token is a substring of the target', () => {
-    expect(
-      allTokensPresent(
-        normalizeForFtsQuery('Jeso o mpitia anay'),
-        normalizeForFtsQuery('Jeso ô, Mpitia anay'),
-      ),
-    ).toBe(true);
-  });
-
-  it('returns false when one token is missing from the target', () => {
-    expect(
-      allTokensPresent(
-        normalizeForFtsQuery('Jeso o mpitia anay sambatra'),
-        normalizeForFtsQuery('Jeso ô, Mpitia anay'),
-      ),
-    ).toBe(false);
   });
 });
