@@ -107,6 +107,17 @@ const HamburgerMenuPopover: React.FC<Props> = ({
     outputRange: [0, VARIANT_KNOB_WIDTH],
   });
 
+  // Stop all in-flight animations on unmount so the native driver doesn't detach
+  // an interpolation node mid-run (InterpolationAnimatedNode.onDetached crash).
+  useEffect(
+    () => () => {
+      opacity.stopAnimation();
+      scale.stopAnimation();
+      variantSlide.stopAnimation();
+    },
+    [opacity, scale, variantSlide],
+  );
+
   const fontPercent = Math.round(fontScale * 100);
 
   useEffect(() => {

@@ -70,6 +70,10 @@ const ToggleThemeButton: React.FC<Props> = ({isDarkMode, onToggle, disabled}) =>
     }).start();
   }, [isDarkMode, translateX, isLowEndMode]);
 
+  // Stop any in-flight animation on unmount so the native driver doesn't detach
+  // the interpolation node mid-run (InterpolationAnimatedNode.onDetached crash).
+  useEffect(() => () => translateX.stopAnimation(), [translateX]);
+
   const knobTranslate = useMemo(() => {
     const maxX = TRACK_WIDTH - KNOB_SIZE - KNOB_PADDING * 2;
     return translateX.interpolate({

@@ -36,6 +36,10 @@ const AnimatedHamburger: React.FC<AnimatedHamburgerProps> = ({
     }).start();
   }, [isOpen, animatedValue, isLowEndMode]);
 
+  // Stop any in-flight animation on unmount so the native driver doesn't detach
+  // the interpolation node mid-run (InterpolationAnimatedNode.onDetached crash).
+  React.useEffect(() => () => animatedValue.stopAnimation(), [animatedValue]);
+
   const barHeight = size * 0.08;
   const barSpacing = size * 0.25;
   const containerHeight = barHeight * 3 + barSpacing * 2;

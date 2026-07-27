@@ -400,7 +400,11 @@ const BibleReaderView: React.FC<BibleReaderViewProps> = ({
         maxToRenderPerBatch: 12,
         updateCellsBatchingPeriod: 40,
         windowSize: 10,
-        removeClippedSubviews: Platform.OS === 'android',
+        // Off on Android: removeClippedSubviews races on Fabric (new arch) and
+        // crashes as ReactClippingViewManager.addView IndexOutOfBoundsException /
+        // SurfaceMountingManager RetryableMountingLayerException. Fabric recycles
+        // views anyway, so the perf gain here is negligible.
+        removeClippedSubviews: false,
       };
 
   const bottomScrollSpacer =

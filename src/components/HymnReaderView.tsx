@@ -1,5 +1,5 @@
 import React, {useCallback, useMemo} from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { HymnVerse } from '../hooks/useHymnsData';
 import { useTheme, useLowEndMode } from '../contexts/ThemeContext';
@@ -265,7 +265,9 @@ const HymnReaderView: React.FC<HymnReaderViewProps> = ({
         maxToRenderPerBatch: 8,
         updateCellsBatchingPeriod: 40,
         windowSize: 8,
-        removeClippedSubviews: Platform.OS === 'android',
+        // Off on Android: see BibleReaderView — removeClippedSubviews races on
+        // Fabric and crashes in the clipping/mounting managers.
+        removeClippedSubviews: false,
       };
 
   return (
