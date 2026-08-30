@@ -16,8 +16,6 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../components/TopBar';
-import NotificationGlow from '../components/NotificationGlow';
-import ReaderRevealBanner from '../components/ReaderRevealBanner';
 import BibleReaderView, {type SelectedVerseRange} from '../components/BibleReaderView';
 import HymnReaderView from '../components/HymnReaderView';
 import BibleSelectionModal, {type VerseSelection} from '../components/BibleSelectionModal';
@@ -29,8 +27,6 @@ import VerseActionPopover from '../components/VerseActionPopover';
 import ChapterEditorModal from '../components/ChapterEditorModal';
 import HymnActionPopover from '../components/HymnActionPopover';
 import {useChapterMarks} from '../hooks/useChapterMarks';
-import {useDailyDevotional} from '../hooks/useDailyDevotional';
-import {useDevotionalUnread} from '../hooks/useDevotionalUnread';
 import {useJesusName} from '../contexts/JesusNameContext';
 import {buildChapterDisplay, type ChapterMark} from '../utils/chapterMarks';
 import {BibleCrossReference, BibleVerse, useBibleData} from '../hooks/useBibleData';
@@ -118,36 +114,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const [mode, setMode] = useState<AppMode>(route.params?.mode || 'bible');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
-  // Reader banner visibility — per-session: defaults to true on mount,
-  // user-dismissable via the × button or by tapping outside the card. The
-  // Banner starts CLOSED. The horizontal glow above is the unread cue;
-  // the banner itself only renders once the user explicitly taps the glow
-  // (or scrolls down into it). This keeps reading uninterrupted — a tap
-  // on the bar is opt-in. State lives here (not inside the banner) so
-  // dismissal and reveal both survive Bible↔Hymn mode switches.
-  const [bannerVisible, setBannerVisible] = useState(false);
-
-  // Devotional + unread signal in one place. The devotional IS the
-  // notification: a date we haven't shown yet drives the top glow; the
-  // user dismissing the banner marks it seen and the glow stops. No
-  // separate notification list, no producer bridge — one piece of content,
-  // one signal.
-  const {data: devotional} = useDailyDevotional();
-  const {hasUnread: devotionalUnread, markSeen: markDevotionalSeen} =
-    useDevotionalUnread(devotional?.date ?? null);
-
-  const revealBanner = useCallback(() => {
-    // Tap on the glow opens the banner. We do NOT mark seen here — only
-    // on explicit dismissal — so users who accidentally tap and immediately
-    // dismiss still get the unread cue on the next launch.
-    setBannerVisible(true);
-  }, []);
-
-  const dismissBanner = useCallback(() => {
-    setBannerVisible(false);
-    markDevotionalSeen();
-  }, [markDevotionalSeen]);
-  
   const [currentBook, setCurrentBook] = useState<{ id: number; name: string } | null>(
     route.params?.selectedBook || null
   );
@@ -221,7 +187,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const { logAccess: logHymnAccess } = useHymnHistory();
   const cultMode = useCultMode();
   const tutorial = useTutorial();
-  const glowTargetRef = useTutorialTarget('notificationGlow');
   const hlReaderAreaRef = useTutorialTarget('hlReaderArea');
   const cultReaderNavRef = useTutorialTarget('cultReaderNav');
   const cultReaderNavNextRef = useTutorialTarget('cultReaderNavNext');
@@ -1081,37 +1046,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onSearchPress={() => navigation.navigate('GlobalSearch', { mode })}
         />
       )}
-      {/*
-        Unread devotional indicator. Lives between the TopBar and the
-        (collapsed) banner. Tapping the glow reveals the banner — the
-        banner itself is hidden by default so reading is uninterrupted.
-        hitSlop enlarges the tap target without changing the visual size
-        of the 16-px component.
-      */}
-      <Pressable
-        ref={glowTargetRef}
-        collapsable={false}
-        onPress={devotionalUnread ? revealBanner : undefined}
-        hitSlop={12}
-        accessibilityLabel="Hidio ny hafatra androany"
-        accessibilityRole="button">
-        <NotificationGlow active={devotionalUnread} />
-      </Pressable>
-      <ReaderRevealBanner
-        devotional={devotional}
-        visible={bannerVisible}
-        onDismiss={dismissBanner}
-      />
-      {/*
-        Reader area is a Pressable so a tap on empty space (or even on a
-        verse) dismisses the banner when it's open. With no banner the
-        Pressable has no onPress and behaves like a plain View — verse
-        double-tap / long-press / swipe-to-switch-mode all keep working.
-      */}
       <Pressable
         ref={hlReaderAreaRef}
         collapsable={false}
-        onPress={bannerVisible ? dismissBanner : undefined}
         android_ripple={null}
         style={styles.readerContainer}
         {...swipeResponder.panHandlers}>

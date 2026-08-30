@@ -32,8 +32,7 @@ export type TargetId =
   | 'hlVerseText'       // the WebView chapter body (hole = real press-drag selection)
   | 'hlColorPicker'     // the highlight-color swatch row
   | 'hlEraseBtn'        // "Fafao" footer button (erase the selected highlight)
-  | 'hlSaveBtn'         // "Tahirizo" footer button (commit)
-  | 'notificationGlow'; // daily devotional cue
+  | 'hlSaveBtn';        // "Tahirizo" footer button (commit)
 
 // A side-effect the engine performs when the step becomes active — it drives
 // the REAL app UI (opens the actual modal, switches mode) so the user learns
@@ -188,8 +187,6 @@ export const TUTORIALS: Tutorial[] = [
         advanceOn: 'targetEvent',
         awaitProgress: 'selected',
       },
-      // NOTE: devotional step removed until that feature stabilizes —
-      // re-add a {targetId:'notificationGlow'} step here when it's ready.
       {
         id: 'done',
         targetId: null,
