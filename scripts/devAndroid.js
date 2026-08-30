@@ -39,7 +39,8 @@ const main = async () => {
 
   await delay(2500);
 
-  await run('yarn', ['react-native', 'run-android', '--port', String(port)]);
+  const extraArgs = process.argv.slice(2);
+  await run('yarn', ['react-native', 'run-android', '--port', String(port), ...extraArgs]);
 };
 
 main().catch(err => {

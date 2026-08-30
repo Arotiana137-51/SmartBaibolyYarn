@@ -10,7 +10,8 @@ const main = async () => {
   // eslint-disable-next-line no-console
   console.log(`Starting Metro on port: ${port}`);
 
-  const child = spawn('yarn', ['react-native', 'start', '--port', String(port)], {
+  const extraArgs = process.argv.slice(2);
+  const child = spawn('yarn', ['react-native', 'start', '--port', String(port), ...extraArgs], {
     shell: true,
     stdio: 'inherit',
   });

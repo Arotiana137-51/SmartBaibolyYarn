@@ -3,9 +3,9 @@
     "version": "0.0.1",
     "private": true,
     "scripts": {
-        "android": "yarn react-native run-android",
+        "android": "node scripts/devAndroid.js",
         "ios": "yarn react-native run-ios",
-        "start": "yarn react-native start",
+        "start": "node scripts/devMetro.js",
         "dev:metro": "node scripts/devMetro.js",
         "dev:android": "node scripts/devAndroid.js",
         "test": "jest",
