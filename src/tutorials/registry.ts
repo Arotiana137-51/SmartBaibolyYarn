@@ -28,6 +28,7 @@ export type TargetId =
   | 'cultActivateToggle'// Velomy ny fotoana switch row on CultModeScreen
   | 'cultReaderNav'     // ‹ playlist chevron in the reader (Home) once active
   | 'cultReaderNavNext' // › playlist chevron (paired with cultReaderNav)
+  | 'cultStopButton'    // ■ stop button in the reader transport bar (Home)
   // Highlight tutorial — targets inside the ChapterEditorModal (a native RN
   // Modal; the verse text is a WebView, everything else is native RN Views).
   | 'hlReaderArea'      // the normal Bible reader (hole = real long-press to open the menu)
@@ -281,6 +282,15 @@ export const TUTORIALS: Tutorial[] = [
         text: "Velona ny fotoana! Tsindrio  ny teboka < (prev) na > (next) ahafahanao mifindra amin'ny teny na ny hira nalahatrao.",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultNavStepped',
+      },
+      {
+        id: 'cultStop',
+        targetId: 'cultStopButton',
+        scope: 'screen',
+        placement: 'top',
+        text: "Rehefa vita ny famakiana, tsindrio ny teboka ■ eo afovoan'ireo tsindry, hampitsaharana ny Fotoam-pivavahana.",
+        advanceOn: 'targetEvent',
+        awaitProgress: 'cultStopped',
       },
       {
         id: 'cultDone',

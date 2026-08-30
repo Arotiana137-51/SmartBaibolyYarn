@@ -49,6 +49,7 @@ import { TEXT_STYLES, scaleFontSize } from '../constants/Typography';
 import { ISSUE_REPORT_ENDPOINT_URL } from '../constants/reporting';
 import { useResponsive } from '../theme/responsive';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
+import {t} from '../i18n/strings';
 import {hexToRgba} from '../utils/colorUtils';
 import type {InlineBibleRef} from '../utils/bibleRefs';
 import {
@@ -68,6 +69,12 @@ const LAST_READ_HYMN_KEY = 'last_read_hymn';
 const TOP_BAR_TOOLBAR_BASE = Platform.OS === 'android' ? 56 : 44;
 const TOP_BAR_EXTRA_TOP_PADDING = 6;
 const HAMBURGER_CARET_HEIGHT = 12;
+// Clears CustomBottomNav's own height (not measured — it sizes itself) plus
+// a visible gap, so the transport controls float just above the tab bar.
+const CULT_PLAYER_BAR_LIFT = 88;
+// Shared translucency for the prev/stop/next pills AND their icon glyphs, so
+// the verse/hymn text keeps showing through the controls while reading.
+const CULT_PLAYER_BUTTON_ALPHA = 0.48;
 
 export type AppMode = 'bible' | 'hymnal';
 
@@ -197,6 +204,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const hlReaderAreaRef = useTutorialTarget('hlReaderArea');
   const cultReaderNavRef = useTutorialTarget('cultReaderNav');
   const cultReaderNavNextRef = useTutorialTarget('cultReaderNavNext');
+  const cultStopButtonRef = useTutorialTarget('cultStopButton');
 
   const [crossRefModalVisible, setCrossRefModalVisible] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<BibleVerse | null>(null);
@@ -1014,6 +1022,25 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   };
 
+  // Same alpha as the transport buttons' own background, so the glyphs fade
+  // together with the pill instead of sitting fully opaque on top of it.
+  // Applied as a View `opacity` (not a translucent border/fill color): the
+  // prev/next glyph is a triangle built from the border-trick (transparent
+  // top/bottom borders + a solid side border on a 0x0 box) — giving that
+  // border color its own alpha leaves a faint seam where it meets the
+  // transparent borders, visible as a small polygon around the triangle.
+  // Opacity fades the whole already-rendered (opaque, seamless) icon instead.
+  const cultPlayerIconStyle = {opacity: CULT_PLAYER_BUTTON_ALPHA};
+  // A dark drop shadow reads as depth on a light background but disappears
+  // (or muddies) on a dark one — swap it for a gentle light glow instead.
+  const cultPlayerShadow = {
+    elevation: 6,
+    shadowColor: isDarkMode ? '#FFFFFF' : '#000000',
+    shadowOpacity: isDarkMode ? 0.18 : 0.25,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 4},
+  };
+
   return (
     <SafeAreaView
       edges={['left', 'right']}
@@ -1158,14 +1185,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       <CustomBottomNav
         activeMode={mode}
         onTabPress={setMode}
-        compact={cultMode.isActive}
       />
       {cultMode.isActive ? (
         <View
           pointerEvents="box-none"
           style={[
-            styles.cultChevronOverlay,
-            {bottom: insets.bottom + 16},
+            styles.cultPlayerBar,
+            {bottom: insets.bottom + CULT_PLAYER_BAR_LIFT},
           ]}>
           <Pressable
             ref={cultReaderNavRef}
@@ -1174,13 +1200,33 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             disabled={cultMode.isFirst}
             hitSlop={12}
             style={[
-              styles.cultChevron,
-              {backgroundColor: hexToRgba(theme.colors.navBackground, 0.75)},
-              cultMode.isFirst && styles.cultChevronDisabled,
+              styles.cultPlayerChevron,
+              {backgroundColor: hexToRgba(theme.colors.navBackground, CULT_PLAYER_BUTTON_ALPHA)},
+              cultPlayerShadow,
+              cultMode.isFirst && styles.cultPlayerButtonDisabled,
             ]}>
-            <Text style={styles.cultChevronText}>‹</Text>
+            <View style={[styles.skipIconRow, cultPlayerIconStyle]}>
+              <View style={styles.skipBar} />
+              <View style={styles.triangleLeft} />
+            </View>
           </Pressable>
-          <View style={styles.cultChevronSpacer} pointerEvents="none" />
+          <Pressable
+            ref={cultStopButtonRef}
+            collapsable={false}
+            onPress={() => {
+              cultMode.toggleActive(false);
+              tutorial.notifyProgress('cultStopped');
+            }}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={t('cultMode.deactivate')}
+            style={[
+              styles.cultPlayerStopButton,
+              {backgroundColor: hexToRgba(theme.colors.navBackground, CULT_PLAYER_BUTTON_ALPHA)},
+              cultPlayerShadow,
+            ]}>
+            <View style={[styles.cultPlayerStopIcon, cultPlayerIconStyle]} />
+          </Pressable>
           <Pressable
             ref={cultReaderNavNextRef}
             collapsable={false}
@@ -1188,11 +1234,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
             disabled={cultMode.isLast}
             hitSlop={12}
             style={[
-              styles.cultChevron,
-              {backgroundColor: hexToRgba(theme.colors.navBackground, 0.75)},
-              cultMode.isLast && styles.cultChevronDisabled,
+              styles.cultPlayerChevron,
+              {backgroundColor: hexToRgba(theme.colors.navBackground, CULT_PLAYER_BUTTON_ALPHA)},
+              cultPlayerShadow,
+              cultMode.isLast && styles.cultPlayerButtonDisabled,
             ]}>
-            <Text style={styles.cultChevronText}>›</Text>
+            <View style={[styles.skipIconRow, cultPlayerIconStyle]}>
+              <View style={styles.triangleRight} />
+              <View style={styles.skipBar} />
+            </View>
           </Pressable>
         </View>
       ) : null}
@@ -1361,31 +1411,68 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingBottom: 24,
   },
-  cultChevronOverlay: {
+  // Positioned above CustomBottomNav (which keeps its normal, unmodified
+  // layout) instead of flanking it, so the transport controls sit in the
+  // thumb-reachable zone of the screen while holding the phone one-handed.
+  cultPlayerBar: {
     position: 'absolute',
     left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    justifyContent: 'center',
+    gap: 40,
   },
-  cultChevronSpacer: {flex: 1},
-  cultChevron: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  cultPlayerChevron: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     // backgroundColor is set inline from theme.colors.navBackground at ~75%
     // alpha so the pill follows the active theme (teal in both modes today,
     // any future theme override automatically) with a slight see-through.
   },
-  cultChevronDisabled: {opacity: 0.35},
-  cultChevronText: {
-    fontSize: 26,
-    lineHeight: 28,
-    fontWeight: '400',
-    color: '#FFFFFF',
+  cultPlayerButtonDisabled: {opacity: 0.35},
+  // Classic "skip to previous/next track" glyph (iOS Control Center, Apple
+  // Music, Spotify): a triangle butted against a vertical bar, not a bare
+  // chevron — the shape users already recognize as media transport controls.
+  skipIconRow: {flexDirection: 'row', alignItems: 'center', gap: 2},
+  skipBar: {width: 3, height: 16, borderRadius: 1, backgroundColor: '#FFFFFF'},
+  triangleRight: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftWidth: 13,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: '#FFFFFF',
+  },
+  triangleLeft: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderRightWidth: 13,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderRightColor: '#FFFFFF',
+  },
+  cultPlayerStopButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // elevation/shadow* are applied inline (cultPlayerShadow) — shared with
+    // the prev/next buttons and swapped for dark mode.
+  },
+  cultPlayerStopIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
   },
   modalBackdrop: {
     flex: 1,
