@@ -99,12 +99,11 @@ export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children})
           if (storedThemeMode === 'dark') {
             setIsDarkMode(true);
           }
-          return;
-        }
-
-        const legacyDarkMode = await AsyncStorage.getItem(STORAGE_KEY_DARK_MODE);
-        if (legacyDarkMode === 'true') {
-          setIsDarkMode(true);
+        } else {
+          const legacyDarkMode = await AsyncStorage.getItem(STORAGE_KEY_DARK_MODE);
+          if (legacyDarkMode === 'true') {
+            setIsDarkMode(true);
+          }
         }
 
         const lowEndMode = await AsyncStorage.getItem(STORAGE_KEY_LOW_END_MODE);
