@@ -151,24 +151,31 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       setMode(params.mode);
     }
 
-    if (params.selectedBook) {
-      setMode('bible');
-      setCurrentBook(params.selectedBook);
+    // React Navigation merges (not replaces) params when navigating back to a
+    // screen already in the stack, so a stale Bible or hymn field from an
+    // earlier visit can still be sitting in `params`. Gate each side on the
+    // incoming `mode` so a leftover field never overrides the field the
+    // caller actually meant to set.
+    if (params.mode !== 'hymnal') {
+      if (params.selectedBook) {
+        setMode('bible');
+        setCurrentBook(params.selectedBook);
+      }
+
+      if (typeof params.selectedChapter === 'number') {
+        setMode('bible');
+        setCurrentChapter(params.selectedChapter);
+      }
+
+      if (typeof params.selectedVerse === 'number') {
+        setMode('bible');
+        setSelectedVerseRange(null);
+        setSelectedVerseNumber(params.selectedVerse);
+        setShouldScrollToVerse(params.selectedVerse);
+      }
     }
 
-    if (typeof params.selectedChapter === 'number') {
-      setMode('bible');
-      setCurrentChapter(params.selectedChapter);
-    }
-
-    if (typeof params.selectedVerse === 'number') {
-      setMode('bible');
-      setSelectedVerseRange(null);
-      setSelectedVerseNumber(params.selectedVerse);
-      setShouldScrollToVerse(params.selectedVerse);
-    }
-
-    if (params.selectedHymnId) {
+    if (params.mode !== 'bible' && params.selectedHymnId) {
       setMode('hymnal');
       setCurrentHymnId(params.selectedHymnId);
     }
