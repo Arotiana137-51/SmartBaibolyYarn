@@ -1,10 +1,17 @@
 const {spawn} = require('child_process');
-const {getFreePort} = require('./getFreePort');
+const {getFreePort, findRunningMetro, writeMetroLock, clearMetroLock} = require('./getFreePort');
 
 const main = async () => {
   const startPort = Number(process.env.METRO_PORT_START ?? 8081);
   const endPort = Number(process.env.METRO_PORT_END ?? 8099);
   const host = process.env.METRO_HOST ?? '127.0.0.1';
+
+  const existingPort = await findRunningMetro({host});
+  if (existingPort) {
+    // eslint-disable-next-line no-console
+    console.log(`Metro is already running on port ${existingPort}. Not starting another instance.`);
+    return;
+  }
 
   const port = await getFreePort({startPort, endPort, host});
   // eslint-disable-next-line no-console
@@ -15,8 +22,12 @@ const main = async () => {
     shell: true,
     stdio: 'inherit',
   });
+  writeMetroLock({port, pid: child.pid});
 
-  child.on('exit', code => process.exit(code ?? 0));
+  child.on('exit', code => {
+    clearMetroLock();
+    process.exit(code ?? 0);
+  });
 };
 
 main().catch(err => {

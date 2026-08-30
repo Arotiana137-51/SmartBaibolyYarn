@@ -1,4 +1,8 @@
 const net = require('net');
+const fs = require('fs');
+const path = require('path');
+
+const LOCK_FILE = path.join(__dirname, '..', '.metro.lock.json');
 
 const isListening = (port, host, timeoutMs = 200) =>
   new Promise(resolve => {
@@ -48,4 +52,40 @@ const getFreePort = async ({
   throw new Error(`No free port found in range ${startPort}-${endPort}`);
 };
 
-module.exports = {getFreePort};
+const isProcessAlive = pid => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const writeMetroLock = ({port, pid}) => {
+  fs.writeFileSync(LOCK_FILE, JSON.stringify({port, pid}));
+};
+
+const clearMetroLock = () => {
+  fs.rmSync(LOCK_FILE, {force: true});
+};
+
+// Reuses a Metro this project already started, so `yarn start` / `yarn android`
+// run back-to-back don't pile up duplicate Metro instances.
+const findRunningMetro = async ({host}) => {
+  let lock;
+  try {
+    lock = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+
+  const stillRunning = isProcessAlive(lock.pid) && !(await isPortFree(lock.port, host));
+  if (!stillRunning) {
+    clearMetroLock();
+    return null;
+  }
+
+  return lock.port;
+};
+
+module.exports = {getFreePort, findRunningMetro, writeMetroLock, clearMetroLock};

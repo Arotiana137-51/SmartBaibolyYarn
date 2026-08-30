@@ -1,5 +1,5 @@
 const {spawn} = require('child_process');
-const {getFreePort} = require('./getFreePort');
+const {getFreePort, findRunningMetro, writeMetroLock} = require('./getFreePort');
 
 const run = (command, args, options = {}) =>
   new Promise((resolve, reject) => {
@@ -25,6 +25,16 @@ const main = async () => {
   const endPort = Number(process.env.METRO_PORT_END ?? 8099);
   const host = process.env.METRO_HOST ?? '127.0.0.1';
 
+  const existingPort = await findRunningMetro({host});
+  if (existingPort) {
+    // eslint-disable-next-line no-console
+    console.log(`Metro is already running on port ${existingPort}. Reusing it.`);
+
+    const extraArgs = process.argv.slice(2);
+    await run('yarn', ['react-native', 'run-android', '--port', String(existingPort), ...extraArgs]);
+    return;
+  }
+
   const port = await getFreePort({startPort, endPort, host});
   // eslint-disable-next-line no-console
   console.log(`Using Metro port: ${port}`);
@@ -36,6 +46,7 @@ const main = async () => {
   });
 
   metro.unref();
+  writeMetroLock({port, pid: metro.pid});
 
   await delay(2500);
 
