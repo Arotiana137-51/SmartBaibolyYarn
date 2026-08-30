@@ -133,8 +133,8 @@ export const useBibleData = () => {
          FROM VersesFts f
          JOIN Verses v ON v.id = f.rowid
          JOIN Books b ON b.id = v.book_id
-         WHERE f MATCH ?
-         ORDER BY bm25(f)
+         WHERE VersesFts MATCH ?
+         ORDER BY bm25(VersesFts)
          LIMIT 100`,
         [query]
       );

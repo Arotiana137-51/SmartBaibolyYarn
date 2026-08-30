@@ -5,6 +5,10 @@ import {
   normalizeForFtsQuery,
   makeFtsPrefixQuery,
   execWithLikeFallback,
+  generateTrigrams,
+  makeTrigramMatchQuery,
+  trigramOverlapScore,
+  TRIGRAM_MIN_OVERLAP,
 } from '../utils/searchNormalize';
 import {
   JESUS_VARIANTS,
@@ -13,6 +17,67 @@ import {
   looksLikeJesusPrefix,
   makeJesusNameLikeParams,
 } from '../utils/searchSynonyms';
+
+// Typo/merged-word fallback: only reached when the strict query below finds
+// NOTHING. Mirrors it structurally (title arm + verse arm, one hymn row
+// each), but ranks by actual trigram overlap against the query rather than
+// bm25, and re-sorts so title matches still lead (bm25's own TITLE_SCORE_BOOST
+// has no equivalent here since we're not using bm25 to rank).
+const fetchHymnTrigramFallback = async (normalizedQuery: string): Promise<any[]> => {
+  const trigrams = generateTrigrams(normalizedQuery);
+  if (trigrams.length === 0) return [];
+  const trigramExpr = makeTrigramMatchQuery(trigrams);
+
+  try {
+    // A UNION ALL with no ORDER BY before LIMIT truncates in scan order, not
+    // relevance order — the verse arm alone easily exceeds 200 rows for a
+    // common trigram, which would starve the title arm out entirely before
+    // SQLite ever looks at it. Score each arm with its own bm25() as a
+    // regular column (same trick the strict query above uses) and rank the
+    // combined set in an outer ORDER BY before truncating.
+    const { rows } = await hymnsDatabaseService.executeQuerySilent<any>(
+      `
+        SELECT id, number, category, title, authors, matched_verse, verse_number, overlap_text, is_title
+        FROM (
+          SELECT h.id, h.number, h.category, h.title, h.authors,
+                 v.text as matched_verse, v.verse_number,
+                 v.text as overlap_text, 0 as is_title,
+                 bm25(HymnVersesTrigram) as raw_score
+          FROM HymnVersesTrigram t
+          JOIN HymnVerses v ON v.rowid = t.rowid
+          JOIN Hymns h ON h.id = v.hymn_id
+          WHERE HymnVersesTrigram MATCH ?
+
+          UNION ALL
+
+          SELECT h.id, h.number, h.category, h.title, h.authors,
+                 NULL as matched_verse, NULL as verse_number,
+                 (h.title || ' ' || COALESCE(h.authors, '')) as overlap_text, 1 as is_title,
+                 bm25(HymnsTrigram) as raw_score
+          FROM HymnsTrigram ht
+          JOIN Hymns h ON h.rowid = ht.rowid
+          WHERE HymnsTrigram MATCH ?
+        )
+        ORDER BY raw_score ASC
+        LIMIT 200
+      `,
+      [trigramExpr, trigramExpr],
+    );
+
+    return rows
+      .map(row => ({
+        ...row,
+        overlap: trigramOverlapScore(trigrams, normalizeForFtsQuery(row.overlap_text)),
+      }))
+      .filter(row => row.overlap >= TRIGRAM_MIN_OVERLAP)
+      .sort((a, b) => Number(b.is_title) - Number(a.is_title) || b.overlap - a.overlap);
+  } catch (e) {
+    // No trigram table (DB not yet rebuilt, or fts5 unavailable) — the caller
+    // already has the strict tier's (empty) result; degrade quietly.
+    console.warn('Hymn trigram fallback unavailable:', (e as any)?.message ?? e);
+    return [];
+  }
+};
 
 export type HymnSearchOptions = {
   matchWholeWord?: boolean;
@@ -170,11 +235,21 @@ export const useHymnSearch = () => {
         LIMIT 200
       `;
 
-      const results = await execWithLikeFallback(
-        hymnsDatabaseService,
-        {sql: ftsSearchQuery, params: [ftsParam, ftsParam]},
-        {sql: likeSearchQuery, params: likeParams.flatMap(p => [p, p, p])},
-      );
+      let resultRows = (
+        await execWithLikeFallback(
+          hymnsDatabaseService,
+          {sql: ftsSearchQuery, params: [ftsParam, ftsParam]},
+          {sql: likeSearchQuery, params: likeParams.flatMap(p => [p, p, p])},
+        )
+      ).rows as any[];
+
+      // Strict search found nothing: fall back to trigram fuzzy matching so a
+      // typo or a merged Malagasy elision still surfaces the hymn instead of
+      // an empty result screen.
+      if (resultRows.length === 0 && !matchWholeWord && normalizedQuery.length >= 3) {
+        resultRows = await fetchHymnTrigramFallback(normalizedQuery);
+      }
+
       // Collapse the per-verse rows (already ordered best-score-first) into one
       // result per hymn. The first row seen for a hymn is its best match, so it
       // drives the card snippet; subsequent verse rows accumulate into
@@ -182,7 +257,7 @@ export const useHymnSearch = () => {
       // ranking across hymns.
       const byHymn = new Map<string, HymnSearchResult>();
 
-      for (const row of results.rows as any[]) {
+      for (const row of resultRows) {
         const existing = byHymn.get(row.id);
         const hasVerse =
           row.matched_verse !== null && row.matched_verse !== undefined;

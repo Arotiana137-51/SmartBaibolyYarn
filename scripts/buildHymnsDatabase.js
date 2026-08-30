@@ -98,6 +98,21 @@ async function buildHymns(dbPath, version) {
     content=''
   )`);
 
+  // Trigram-tokenized twins of HymnsFts/HymnVersesFts, over the SAME
+  // normalized text. Typo/merged-word fuzzy fallback only, used when the
+  // strict prefix query finds nothing — see src/utils/searchNormalize.ts.
+  await runAsync(db, `CREATE VIRTUAL TABLE HymnsTrigram USING fts5(
+    title_plain,
+    authors_plain,
+    tokenize='trigram',
+    content=''
+  )`);
+  await runAsync(db, `CREATE VIRTUAL TABLE HymnVersesTrigram USING fts5(
+    text_plain,
+    tokenize='trigram',
+    content=''
+  )`);
+
   // ---- Import hymns ----
   //
   // Source loaders implement a tiny shared interface ({ sourcePath, load() }
@@ -159,6 +174,11 @@ async function buildHymns(dbPath, version) {
   );
   const insHymnsFtsAsync = (p) =>
     new Promise((res, rej) => insHymnsFts.run(p, (e) => (e ? rej(e) : res())));
+  const insHymnsTrigram = db.prepare(
+    `INSERT INTO HymnsTrigram(rowid, title_plain, authors_plain) VALUES (?, ?, ?)`
+  );
+  const insHymnsTrigramAsync = (p) =>
+    new Promise((res, rej) => insHymnsTrigram.run(p, (e) => (e ? rej(e) : res())));
 
   for (const h of hymnRows) {
     const titlePlain = normalizeForFtsContent(String(h.title || ''));
@@ -173,23 +193,33 @@ async function buildHymns(dbPath, version) {
       Number(h.number) || 0,
       String(h.category || ''),
     ]);
+    await insHymnsTrigramAsync([h.rowid, titlePlain, authorsPlain]);
   }
   await finalizeAsync(insHymnsFts);
+  await finalizeAsync(insHymnsTrigram);
 
   const verseRows = await allAsync(db, `SELECT id, text FROM HymnVerses`);
   const insVersesFts = db.prepare(`INSERT INTO HymnVersesFts(rowid, text_plain) VALUES (?, ?)`);
   const insVersesFtsAsync = (p) =>
     new Promise((res, rej) => insVersesFts.run(p, (e) => (e ? rej(e) : res())));
+  const insVersesTrigram = db.prepare(`INSERT INTO HymnVersesTrigram(rowid, text_plain) VALUES (?, ?)`);
+  const insVersesTrigramAsync = (p) =>
+    new Promise((res, rej) => insVersesTrigram.run(p, (e) => (e ? rej(e) : res())));
   for (const r of verseRows) {
-    await insVersesFtsAsync([r.id, normalizeForFtsContent(String(r.text || ''))]);
+    const plain = normalizeForFtsContent(String(r.text || ''));
+    await insVersesFtsAsync([r.id, plain]);
+    await insVersesTrigramAsync([r.id, plain]);
   }
   await finalizeAsync(insVersesFts);
+  await finalizeAsync(insVersesTrigram);
 
   console.log(`  ↳ ${hymnRows.length} hymns, ${verseRows.length} verses indexed`);
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO HymnsFts(HymnsFts) VALUES('optimize')`);
   await runAsync(db, `INSERT INTO HymnVersesFts(HymnVersesFts) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO HymnsTrigram(HymnsTrigram) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO HymnVersesTrigram(HymnVersesTrigram) VALUES('optimize')`);
   await runAsync(db, `ANALYZE`);
   await runAsync(db, `VACUUM`);
 

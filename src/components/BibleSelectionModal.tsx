@@ -6,9 +6,11 @@ import {
   StyleSheet,
   TextInput,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { useBibleData } from '../hooks/useBibleData';
+import { useBibleSearch, BibleSearchResult } from '../hooks/useBibleSearch';
 import {useTheme} from '../contexts/ThemeContext';
 import {getBibleBookShortName} from '../utils/bibleBookNames';
 import TutorialOverlay from './TutorialOverlay';
@@ -64,6 +66,26 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
   // tap resolves and closes immediately — same verse → single, a different verse
   // → the n–m range. No confirm step.
   const [pendingStartVerse, setPendingStartVerse] = useState<number | null>(null);
+
+  // Content search fallback: the book-name filter above only helps when you
+  // already know which book you want. Typing actual verse words runs the
+  // same robust FTS + fuzzy-typo engine as the main search screens, so a
+  // remembered phrase can jump straight to the chapter/verse instead of
+  // requiring a manual book → chapter → verse drill-down.
+  const [contentResults, setContentResults] = useState<BibleSearchResult[]>([]);
+  const { searchBible, isLoading: isContentSearching } = useBibleSearch();
+
+  useEffect(() => {
+    if (currentStep !== 'book' || !searchQuery.trim()) {
+      setContentResults([]);
+      return;
+    }
+    const id = setTimeout(async () => {
+      const results = await searchBible(searchQuery);
+      setContentResults(results);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [currentStep, searchQuery, searchBible]);
 
   const bottomScrollSpacer =
     Math.max(insets.bottom, 0) +
@@ -148,6 +170,23 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
     setPendingStartVerse(null);
     setCurrentStep('verse');
   }, []);
+
+  // A content-search hit jumps straight to its chapter with the matched
+  // verse pre-armed as the pending start — tapping that SAME verse number in
+  // the grid adds it immediately (single verse), or a different one forms a
+  // range, exactly like the existing two-tap flow.
+  const handleContentResultPress = useCallback(
+    (result: BibleSearchResult) => {
+      if (!result.matchedChapter || !result.matchedVerseNumber) return;
+      const book = books.find(b => b.id === result.bookId);
+      if (!book) return;
+      setSelectedBook({ id: book.id, name: book.name, chapters: book.chapters });
+      setSelectedChapter(result.matchedChapter);
+      setPendingStartVerse(result.matchedVerseNumber);
+      setCurrentStep('verse');
+    },
+    [books],
+  );
 
   const handleClose = useCallback(() => {
     setCurrentStep('book');
@@ -354,6 +393,47 @@ const BibleSelectionModalOptimized: React.FC<BibleSelectionModalOptimizedProps> 
           />
         </View>
       )}
+
+      {/* Verse-content search results — a phrase the user actually remembers
+          jumps straight to chapter/verse instead of requiring the book name. */}
+      {currentStep === 'book' && searchQuery.trim() ? (
+        isContentSearching ? (
+          <View style={styles.contentSearchLoading}>
+            <ActivityIndicator color={theme.colors.accentBlue} />
+          </View>
+        ) : contentResults.length > 0 ? (
+          <View style={[styles.contentResultsWrap, {borderBottomColor: theme.colors.divider}]}>
+            <FlatList
+              data={contentResults}
+              keyExtractor={item => `content-${item.bookId}`}
+              style={styles.contentResultsList}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({item}) => (
+                <Pressable
+                  style={({pressed}) => [
+                    styles.contentResultRow,
+                    {borderBottomColor: theme.colors.divider},
+                    pressed && {opacity: 0.7},
+                  ]}
+                  onPress={() => handleContentResultPress(item)}
+                >
+                  <Text style={[styles.contentResultRef, {color: theme.colors.accentBlue}]}>
+                    {getBibleBookShortName(item.bookName, item.bookId)} {item.matchedChapter}:{item.matchedVerseNumber}
+                  </Text>
+                  {item.matchedText ? (
+                    <Text
+                      style={[styles.contentResultSnippet, {color: theme.colors.textSecondary}]}
+                      numberOfLines={2}
+                    >
+                      {item.matchedText}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              )}
+            />
+          </View>
+        ) : null
+      ) : null}
 
       {/* Content */}
       {currentStep === 'book' ? (
@@ -589,6 +669,31 @@ const styles = StyleSheet.create({
   },
   searchPlaceholder: {
     color: 'rgba(0,0,0,0.45)',
+  },
+  contentSearchLoading: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  contentResultsWrap: {
+    maxHeight: 240,
+    borderBottomWidth: 1,
+  },
+  contentResultsList: {
+    flexGrow: 0,
+  },
+  contentResultRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  contentResultRef: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  contentResultSnippet: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   content: {
     flex: 1,

@@ -1,7 +1,20 @@
-# Search overhaul — working reference (Phase 1 in progress)
+# Search overhaul — working reference (Phases 1-3 done)
 
 > **Status doc.** If work is interrupted, resume from here. Created 2026-06-19.
-> Scope decided with the user: see "Roadmap" at bottom. **Phase 1 is the active task.**
+> Scope decided with the user: see "Roadmap" at bottom.
+>
+> **Update 2026-08-30:** Phases 1, 2, and 3 are done. Phase 3 (trigram fuzzy
+> fallback) shipped as part of a "make search as robust as possible" pass —
+> new `tokenize='trigram'` FTS5 tables (`VersesTrigram`, `HymnVersesTrigram`,
+> `HymnsTrigram`), a fallback tier in `useBibleSearch.ts`/`useHymnSearch.ts`
+> that only fires when the strict query returns zero rows, DB versions bumped
+> to 20260830, both DBs rebuilt. Same session also found and fixed an
+> unrelated, more severe bug: `useBibleSearch.ts` and `useBibleData.ts` used
+> `FROM VersesFts f ... WHERE f MATCH ?` (the join ALIAS instead of the FTS5
+> table's real name), which throws on every single query and was silently
+> swallowed — Bible search returned zero results for everything, full stop,
+> independent of anything in this doc. Only Phase 4 (cult-mode search) is
+> still open.
 
 ## The reported bug
 

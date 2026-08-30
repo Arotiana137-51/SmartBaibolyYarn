@@ -220,6 +220,28 @@ const BibleSearchScreenContent = ({
   const [searchResults, setSearchResults] = useState<BibleSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  const normalizedHighlightQuery = useMemo(() => normalizeForHighlight(searchQuery), [searchQuery]);
+
+  const highlightText = useCallback(
+    (text: string, baseColor: string) => {
+      if (!text) return text;
+      if (!normalizedHighlightQuery) {
+        return <Text style={{ color: baseColor }}>{text}</Text>;
+      }
+      const ranges = findHighlightRanges(text, normalizedHighlightQuery);
+      const segments = segmentTextForHighlight(text, ranges);
+      return segments.map((seg, index) => (
+        <Text
+          key={index}
+          style={seg.match ? { color: theme.colors.accentBlue, fontWeight: '600' } : { color: baseColor }}
+        >
+          {seg.text}
+        </Text>
+      ));
+    },
+    [normalizedHighlightQuery, theme.colors.accentBlue],
+  );
+
   useEffect(() => {
     const hasOld = searchResults.some(r => getTestamentFromBookId(r.bookId) === 'old');
     const hasNew = searchResults.some(r => getTestamentFromBookId(r.bookId) === 'new');
@@ -323,12 +345,23 @@ const BibleSearchScreenContent = ({
             <Text style={[styles.resultCount, { color: theme.colors.accentBlue }]}>
               {t('search.resultCount', {count: item.verseCount})}
             </Text>
+            {item.matchedText ? (
+              <Text
+                style={[styles.resultSnippet, { color: theme.colors.textSecondary }]}
+                numberOfLines={2}
+              >
+                {item.matchedChapter && item.matchedVerseNumber
+                  ? `${item.matchedChapter}:${item.matchedVerseNumber} — `
+                  : ''}
+                {highlightText(item.matchedText, theme.colors.textSecondary)}
+              </Text>
+            ) : null}
           </View>
           <ChevronRight color={theme.colors.textSecondary} size={24} />
         </View>
       </Pressable>
     ),
-    [handleBookPress, theme.colors]
+    [handleBookPress, theme.colors, highlightText]
   );
 
   return (

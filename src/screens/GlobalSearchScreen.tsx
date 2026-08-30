@@ -185,6 +185,12 @@ const GlobalSearchScreen = () => {
             <Text style={[styles.cardCount, { color: theme.colors.accentBlue }]}>
               {t('search.resultCount', { count: b.verseCount })}
             </Text>
+            {b.matchedText ? (
+              <Text style={[styles.hymnSnippet, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+                {b.matchedChapter && b.matchedVerseNumber ? `${b.matchedChapter}:${b.matchedVerseNumber} — ` : ''}
+                {highlight(b.matchedText, theme.colors.textSecondary)}
+              </Text>
+            ) : null}
           </Pressable>
         );
       }

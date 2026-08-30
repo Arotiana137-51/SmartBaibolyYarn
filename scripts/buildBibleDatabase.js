@@ -94,6 +94,17 @@ async function buildBible(dbPath, version) {
     content=''
   )`);
 
+  // Trigram-tokenized twin of VersesFts, over the SAME normalized text. Used
+  // only as a typo/merged-word fuzzy fallback when the strict prefix query
+  // above finds nothing — see src/utils/searchNormalize.ts. Costs extra disk
+  // space (every overlapping 3-char window gets indexed) but never changes
+  // primary search behavior.
+  await runAsync(db, `CREATE VIRTUAL TABLE VersesTrigram USING fts5(
+    text_plain,
+    tokenize='trigram',
+    content=''
+  )`);
+
   // ---- Source: prefer YAML, fallback to legacy MG65 JSON ----
   const sourcePaths = getSourceDataPaths();
   const databasePaths = getDatabasePaths();
@@ -174,11 +185,14 @@ async function buildBible(dbPath, version) {
     `INSERT OR REPLACE INTO Verses (id, book_id, chapter, verse_number, text, title) VALUES (?, ?, ?, ?, ?, ?)`
   );
   const insertFts = db.prepare(`INSERT INTO VersesFts(rowid, text_plain) VALUES (?, ?)`);
+  const insertTrigram = db.prepare(`INSERT INTO VersesTrigram(rowid, text_plain) VALUES (?, ?)`);
 
   const insVerseAsync = (p) =>
     new Promise((res, rej) => insertVerse.run(p, (e) => (e ? rej(e) : res())));
   const insFtsAsync = (p) =>
     new Promise((res, rej) => insertFts.run(p, (e) => (e ? rej(e) : res())));
+  const insTrigramAsync = (p) =>
+    new Promise((res, rej) => insertTrigram.run(p, (e) => (e ? rej(e) : res())));
 
   let verseId = 1;
 
@@ -209,6 +223,7 @@ async function buildBible(dbPath, version) {
         const plain = normalizeForFtsContent(display);
         await insVerseAsync([verseId, bookId, row.chapter, row.verseNumber, display, row.title]);
         await insFtsAsync([verseId, plain]);
+        await insTrigramAsync([verseId, plain]);
         verseId += 1;
       }
     }
@@ -235,17 +250,20 @@ async function buildBible(dbPath, version) {
       const plain = normalizeForFtsContent(display);
       await insVerseAsync([verseId, id, chapter, verseNumber, display, null]);
       await insFtsAsync([verseId, plain]);
+      await insTrigramAsync([verseId, plain]);
       verseId += 1;
     }
   }
 
   await finalizeAsync(insertVerse);
   await finalizeAsync(insertFts);
+  await finalizeAsync(insertTrigram);
 
   console.log(`  ↳ ${verseId - 1} verses indexed`);
 
   console.log('  optimizing FTS + VACUUM ...');
   await runAsync(db, `INSERT INTO VersesFts(VersesFts) VALUES('optimize')`);
+  await runAsync(db, `INSERT INTO VersesTrigram(VersesTrigram) VALUES('optimize')`);
   await runAsync(db, `ANALYZE`);
   await runAsync(db, `VACUUM`);
 

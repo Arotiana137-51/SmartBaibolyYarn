@@ -91,10 +91,16 @@ export const makeFtsPrefixQuery = (
   return list.length === 1 ? list[0] : list.map(s => `(${s})`).join(' OR ');
 };
 
-// Run an FTS5 query, falling back to a LIKE query when the fts5 module or the
-// virtual table is missing (older SQLite / DB not yet extracted). Both hooks
-// share this: the try/catch shape and the "no such module/table" sniff were
-// copy-pasted per call site before. Non-fts5 errors re-throw.
+// Run an FTS5 query, falling back to a LIKE query on ANY failure (missing
+// fts5 module, missing table, a malformed MATCH expression, a query-builder
+// bug — anything). We used to only fall back for specific error strings
+// ('no such module: fts5' / 'no such table'), which meant a differently-worded
+// SQL error (e.g. referencing a JOIN alias instead of the FTS5 table's real
+// name in a MATCH clause) silently re-threw, was swallowed by the caller's
+// try/catch, and returned zero results with no visible error — exactly what
+// happened to Bible search. LIKE is a strict, always-available superset
+// fallback (slower, less precise, but correct), so degrading to it on any FTS
+// failure is strictly safer than re-throwing.
 type QueryRunner = {
   executeQuerySilent: (sql: string, params: any[]) => Promise<{rows: any[]}>;
   executeQuery: (sql: string, params: any[]) => Promise<{rows: any[]}>;
@@ -107,10 +113,67 @@ export const execWithLikeFallback = async (
   try {
     return await service.executeQuerySilent(fts.sql, fts.params);
   } catch (e: any) {
-    const message = (typeof e?.message === 'string' ? e.message : '').toLowerCase();
-    if (message.includes('no such module: fts5') || message.includes('no such table')) {
-      return service.executeQuery(like.sql, like.params);
-    }
-    throw e;
+    console.warn('FTS query failed, falling back to LIKE:', e?.message ?? e);
+    return service.executeQuery(like.sql, like.params);
   }
 };
+
+// ---------------------------------------------------------------------------
+// Trigram fuzzy fallback — typo/merged-word tolerance on top of the strict
+// prefix search above.
+//
+// The strict AND-of-prefixes query above requires every token to appear as a
+// prefix of some indexed token; it has no tolerance for a misspelled letter,
+// a missing/extra letter, or a Malagasy elision typed as one merged word
+// (e.g. "aminny" for "amin'ny", which the index stores as two separate
+// tokens "amin" and "ny"). When the strict query finds NOTHING, a query
+// against a `tokenize='trigram'` FTS5 table over the same normalized content
+// can still recover the right rows: it indexes every overlapping 3-character
+// window of the text (spaces included), so a partial character-level overlap
+// is enough to find a candidate regardless of where word boundaries fall.
+//
+// This is a fallback tier only — triggered by the caller when the strict tier
+// returns zero rows — because trigram ranking is inherently noisier than
+// exact/prefix matching.
+
+// Every overlapping 3-char window of an already-normalized string. Strings
+// shorter than 3 chars can't form a trigram; use the whole string as its own
+// single "trigram" so short queries still produce a queryable term.
+export const generateTrigrams = (normalized: string): string[] => {
+  const s = normalized;
+  if (s.length < 3) return s ? [s] : [];
+  const out = new Set<string>();
+  for (let i = 0; i <= s.length - 3; i++) {
+    out.add(s.slice(i, i + 3));
+  }
+  return Array.from(out);
+};
+
+// Build the FTS5 MATCH expression for a trigram-tokenized table: each
+// trigram double-quoted (trigrams routinely contain a space, which would
+// otherwise be parsed as a token separator) and OR'd together, so a row
+// matches if it shares ANY trigram with the query — bm25() then ranks rows
+// that share MORE (and rarer) trigrams higher.
+export const makeTrigramMatchQuery = (trigrams: string[]): string =>
+  trigrams.map(tg => `"${tg.replace(/"/g, '""')}"`).join(' OR ');
+
+// Post-query precision filter: bm25 over a trigram table favors short
+// documents that happen to share a few rare trigrams (classic bm25 length
+// normalization), which can rank a coincidental match above the real one. Re-score
+// each SQL-returned candidate by the actual fraction of the query's trigrams
+// it contains, and drop anything below `minOverlap` — cheap in JS because the
+// candidate set is already small (post-LIMIT).
+export const trigramOverlapScore = (
+  queryTrigrams: string[],
+  candidateNormalizedText: string,
+): number => {
+  if (queryTrigrams.length === 0) return 0;
+  const candidateSet = new Set(generateTrigrams(candidateNormalizedText));
+  let hits = 0;
+  for (const tg of queryTrigrams) {
+    if (candidateSet.has(tg)) hits += 1;
+  }
+  return hits / queryTrigrams.length;
+};
+
+export const TRIGRAM_MIN_OVERLAP = 0.5;
