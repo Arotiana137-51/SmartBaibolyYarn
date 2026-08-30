@@ -109,8 +109,8 @@ android {
         applicationId "com.ebaiboly.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "1.2.4"
+        versionCode 19
+        versionName "1.2.5"
         resConfigs "fr"
 
         // 16KB page size support - ensures native libs are aligned to 16KB boundaries.
@@ -164,7 +164,10 @@ android {
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             shrinkResources enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // proguard-android-optimize (not plain proguard-android) is what turns
+            // R8's optimization passes on — Play Console flags the plain file as
+            // "optimization not enabled".
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
 
             // Note: ABI filtering handled by splits.abi configuration above
         }
