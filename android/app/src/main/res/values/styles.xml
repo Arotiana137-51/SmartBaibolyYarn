@@ -7,6 +7,13 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <!-- App's default accent (matches ThemeContext's navBackground fallback,
+             '#004E64', used before the user picks a custom color in
+             Personalization). Native Android dialogs — the reading-reminder
+             time picker included — read this at the OS/theme level, not from
+             JS props, so it can't track a user's live custom color choice; this
+             is the closest a static resource can get. -->
+        <item name="colorAccent">#004E64</item>
     </style>
 
 </resources>

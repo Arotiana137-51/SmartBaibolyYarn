@@ -5,7 +5,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
 import {RootStackParamList} from '../navigation/RootNavigator';
-import {t} from '../i18n/strings';
 
 export const STORAGE_KEY_PRIVACY_POLICY_ACCEPTED = 'privacy_policy_accepted_v1';
 
@@ -48,11 +47,62 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
     };
   }, [isMandatory]);
 
-  const policyText = useMemo(() => {
+  // Malagasy section is a draft placeholder — legal copy, but still the
+  // user's language to review and correct, same as every other MG string in
+  // this app. Kept structurally parallel to the English section below so the
+  // two stay easy to compare/update together.
+  const policyTextMg = useMemo(() => {
+    return [
+      'Politikam-pitsimbinana ny tsiambaratelo (e-Baiboly)',
+      '',
+      'Nohavaozina farany: 2026-08-30',
+      '',
+      "Rindrankajy famakiana ny Baiboly sy ny fihirana ity. Tsy misy vidiny na fividianana ao anatin'ny rindrankajy.",
+      '',
+      'Angona angonina',
+      "- Tsy mila kaonty ianao.",
+      "- Ny ankafizinao, ny tantaram-pamakianao, ary ny fandrindrana dia tehirizina ao amin'ny finday ihany.",
+      "- Raha mampiasa ny \"Manao fitarainana\" ianao, dia mety halefan'ny rindrankajy any amin'ny mpampandroso ny lahatsoratra/ny toerana voatondro sy ny hevitrao.",
+      '',
+      "Fomba fampiasana ny angona",
+      "- Ny ankafizinao, ny tantara, ary ny fandrindrana dia ampiasaina hanomezana traikefa famakiana sy fitetezana manokana ao anatin'ny rindrankajy.",
+      "- Ny fitarainana voaray dia ampiasaina hanatsarana ny kalitaon'ny rindrankajy sy hanitsiana ny olana.",
+      '',
+      "Fiarovana ny angona",
+      "- Ny angona rehetra dia tehirizina ao amin'ny finday ary voaaro raha misy izany.",
+      "- Ny angona alefa ho an'ny fitarainana dia mandeha amin'ny alalan'ny HTTPS.",
+      "- Tsy misy angona manokana na saro-pady amidy amin'ny antoko fahatelo.",
+      '',
+      "Fitehirizana sy famafana ny angona",
+      "- Ny ankafizinao, ny tantara, ary ny fandrindrana dia mijanona ao amin'ny finday mandra-panesoranao ny rindrankajy na famafana ny angon-drindrankajy.",
+      "- Ny angon'ny fitarainana dia mety hotehirizin'ny mpampandroso mba hanitsiana ny olana.",
+      '',
+      'Ny zonao',
+      "- Azonao jerena, ovaina, na fafana ny angonao tehirizina ao amin'ny finday, amin'ny alalan'ny famafana ny angon-drindrankajy ao amin'ny paramaetatry ny finday.",
+      "- Azonao esorina ny rindrankajy amin'ny fotoana rehetra mba hanesorana ny angona rehetra tehirizina ao amin'ny finday.",
+      '',
+      "Fahazoan-dalana",
+      "- Ny fifandraisana Internet dia mety ampiasaina ho an'ny endri-drindrankajy tsy tery (ohatra: ny fitarainana).",
+      "- Ny rindrankajy dia mety mangataka fahazoan-dalana hampiseho fampahatsiarovana (\"Ora famakiana tiana\") — angataina IHANY IZAY raha alefanao io endri-drindrankajy tsy tery io. Fampahatsiarovana ao amin'ny finday ihany io, tsy misy angona alefa na angonina.",
+      '',
+      "Tolotra avy amin'ny antoko fahatelo",
+      "- Ny rindrankajy dia mety mampiasa tahirin-kevitra avy amin'ny antoko fahatelo ilaina amin'ny fiasany. Tsy misy SDK dob ampiasaina.",
+      "- Ny tahirin-kevitra avy amin'ny antoko fahatelo dia tsy afaka mahazo ny angonao manokana ankoatra izay ilaina amin'ny fiasany.",
+      '',
+      'Fanovana ity politika ity',
+      "- Mety hohavaozinay ity politika ity. Ny fanovana lehibe dia hampahafantarina ao anatin'ny rindrankajy.",
+      "- Ny daty voalaza eo ambony dia manondro ny fotoana nanaovana ny fanovana farany.",
+      '',
+      'Fifandraisana',
+      'Raha manana fanontaniana ianao, antsoy: arotianarandria@proton.me',
+    ].join('\n');
+  }, []);
+
+  const policyTextEn = useMemo(() => {
     return [
       'Privacy Policy (e-Baiboly)',
       '',
-      'Last updated: 2026-04-12',
+      'Last updated: 2026-08-30',
       '',
       'This app is a Bible and hymnal reader. It does not include in-app purchases or payments.',
       '',
@@ -80,6 +130,7 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
       '',
       'Permissions',
       '- Internet access may be used for optional features (for example, reporting).',
+      '- The app may request notification permission to show a reminder ("Ora famakiana tiana" / preferred reading-time reminder). This is only requested if you turn that optional feature on. The reminder is delivered entirely on your device — nothing is collected or transmitted for it.',
       '',
       'Third-party services',
       '- The app may use third-party libraries required for functionality. No advertising SDK is included by default.',
@@ -122,7 +173,7 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={[styles.title, {color: theme.colors.textPrimary}]}>Privacy Policy</Text>
-          
+
           <View
             style={[
               styles.card,
@@ -132,7 +183,19 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
               },
             ]}
           >
-            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>{policyText}</Text>
+            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>{policyTextMg}</Text>
+          </View>
+
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderColor: theme.colors.divider,
+              },
+            ]}
+          >
+            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>{policyTextEn}</Text>
           </View>
         </ScrollView>
 

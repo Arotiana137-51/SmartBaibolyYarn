@@ -17,6 +17,7 @@ import {
   installGlobalErrorHandler,
   drainFatalErrorToQueue,
 } from './src/services/reporting/crashReporter';
+import {ensureRemindersScheduled} from './src/services/reminders/readingReminder';
 
 // Capture uncaught JS errors (async, timers, event handlers) before RN's
 // default handler runs, so production crashes carry a real message/stack.
@@ -52,6 +53,10 @@ const AppContent = () => {
     // ships it, so the real error/stack behind a production JavascriptException
     // finally becomes visible. Fire-and-forget; never throws.
     drainFatalErrorToQueue();
+    // Re-arm any enabled reading-reminder slots — closes the gap where a
+    // force-stop or OEM battery manager silently drops a pending native
+    // trigger. Fire-and-forget; never throws.
+    ensureRemindersScheduled();
   }, []);
 
   useEffect(() => {

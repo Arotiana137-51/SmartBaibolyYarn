@@ -51,6 +51,41 @@ Ce document sert d’aide-mémoire pour remplir :
 ### Notes
 - "Collect" chez Apple = envoyé hors de l’app et stocké au-delà du temps nécessaire à la requête. Ici oui, car le signalement est stocké côté serveur pour correction.
 
+## Permission de notification (rappel de lecture optionnel)
+
+Fonctionnalité « Ora famakiana tiana » : rappel(s) de lecture quotidien/hebdomadaire,
+programmé(s) localement sur l'appareil (notifee), désactivé par défaut.
+
+### Résumé factuel
+- La permission de notification (Android `POST_NOTIFICATIONS`, autorisation
+  locale iOS) n'est demandée QUE si l'utilisateur active ce rappel optionnel
+  dans le menu — jamais au premier lancement.
+- Aucune donnée n'est collectée ni transmise pour cette fonctionnalité : la
+  programmation et le déclenchement se font entièrement sur l'appareil, sans
+  serveur ni backend.
+- Pas de géolocalisation, pas d'identifiant publicitaire, pas de tracking.
+
+### Google Play Console — Data safety
+- Ne modifie aucune réponse existante côté « Data collected » : cette
+  fonctionnalité ne collecte ni ne transmet rien.
+- Si le formulaire de la version Play Console utilisée demande de lister les
+  permissions sensibles utilisées : déclarer la notification comme utilisée
+  uniquement pour un rappel local optionnel, sans lien avec de la publicité
+  ou du tracking.
+- Le manifest Android déclare aussi `SCHEDULE_EXACT_ALARM` via la librairie
+  notifee, mais elle est explicitement retirée
+  (`tools:node="remove"` dans `android/app/src/main/AndroidManifest.xml`)
+  car l'app n'utilise que des rappels inexacts — rien à déclarer/justifier
+  pour cette permission côté review.
+
+### App Store Connect — App Privacy Details
+- Aucune nouvelle Data Type à déclarer : la fonctionnalité ne collecte rien
+  (notification locale uniquement, pas d'APNs/push distant).
+
+### In-app disclosure
+- Voir la section « Permissions » / « Fahazoan-dalana » de la politique de
+  confidentialité (in-app et `privacy-policy.html`).
+
 ## In-app disclosure (déjà dans l’UI)
 
 Texte recommandé :

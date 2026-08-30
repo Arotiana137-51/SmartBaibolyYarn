@@ -17,10 +17,13 @@
         "build:hymns": "node scripts/buildHymnsDatabase.js",
         "check:db": "node scripts/checkDevDb.js",
         "bump:db-version": "node scripts/bumpDbVersion.js",
-        "build:patch": "node scripts/buildPatch.js"
+        "build:patch": "node scripts/buildPatch.js",
+        "generate:theme-colors": "node scripts/generateAndroidThemeColors.js"
     },
     "dependencies": {
+        "@notifee/react-native": "^9.1.8",
         "@react-native-async-storage/async-storage": "^1.17.11",
+        "@react-native-community/datetimepicker": "^9.1.0",
         "@react-native-community/netinfo": "^12.0.1",
         "@react-native/new-app-screen": "0.83.1",
         "@react-navigation/bottom-tabs": "^7.3.3",

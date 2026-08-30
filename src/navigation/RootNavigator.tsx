@@ -16,6 +16,7 @@ import PersonalizationScreen from '../screens/PersonalizationScreen';
 import CultModeScreen from '../screens/CultModeScreen';
 import NotesScreen from '../screens/NotesScreen';
 import HelpScreen from '../screens/HelpScreen';
+import ReadingReminderScreen from '../screens/ReadingReminderScreen';
 
 export type RootStackParamList = {
   Home:
@@ -40,6 +41,7 @@ export type RootStackParamList = {
   Personalization: {firstRun?: boolean} | undefined;
   CultMode: undefined;
   Help: undefined;
+  ReadingReminder: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -147,6 +149,11 @@ const RootNavigator = ({
         name="Help"
         component={HelpScreen}
         options={{title: 'Toro-lalana', ...headerOptions}}
+      />
+      <Stack.Screen
+        name="ReadingReminder"
+        component={ReadingReminderScreen}
+        options={{title: 'Ora famakiana tiana', ...headerOptions}}
       />
       <Stack.Screen
         name="PrivacyPolicy"

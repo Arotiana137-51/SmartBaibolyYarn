@@ -683,6 +683,9 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'help':
         navigation.navigate('Help');
         return;
+      case 'readingReminder':
+        navigation.navigate('ReadingReminder');
+        return;
       default: {
         const _exhaustiveCheck: never = key;
         return _exhaustiveCheck;
