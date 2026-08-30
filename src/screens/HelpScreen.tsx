@@ -4,6 +4,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useTheme} from '../contexts/ThemeContext';
+import {TutorialIcon} from '../components/TutorialIcons';
 import {useTutorial, type TutorialStatus} from '../contexts/TutorialContext';
 import {TUTORIALS} from '../tutorials/registry';
 import type {RootStackParamList} from '../navigation/RootNavigator';
@@ -70,7 +71,13 @@ const HelpScreen = () => {
                   },
                   pressed && {opacity: 0.85},
                 ]}>
-                <Text style={styles.icon}>{tu.icon}</Text>
+                <View style={styles.icon}>
+                  <TutorialIcon
+                    name={tu.icon}
+                    color={accent}
+                    backgroundColor={theme.colors.backgroundSecondary}
+                  />
+                </View>
                 <View style={styles.cardBody}>
                   <Text style={[styles.cardTitle, {color: theme.colors.textPrimary}]}>
                     {tu.title}
@@ -100,7 +107,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  icon: {fontSize: 28, marginRight: 14},
+  icon: {marginRight: 14},
   cardBody: {flex: 1},
   cardTitle: {fontSize: 17, fontWeight: '700', marginBottom: 4},
   badge: {fontSize: 13, fontWeight: '600'},

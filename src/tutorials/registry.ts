@@ -1,3 +1,5 @@
+import type {TutorialIconName} from '../components/TutorialIcons';
+
 // Tutorial data — pure, append-only. To add a mini-tutorial later: append a
 // Tutorial object here (+ its steps). No engine change needed.
 //
@@ -86,7 +88,7 @@ export type CoachStep = {
 export type Tutorial = {
   id: string;
   title: string;                // MG, shown in the Help/Toro-lalana quest log
-  icon: string;                 // single glyph/emoji — no icon lib
+  icon: TutorialIconName;       // drawn by components/TutorialIcons — no icon lib
   autoStart?: boolean;
   order: number;
   // Which screen the Help quest-log sends the user to before starting. Defaults
@@ -104,7 +106,7 @@ export const TUTORIALS: Tutorial[] = [
   {
     id: ONBOARDING_ID,
     title: 'Fampidirana', // Getting started
-    icon: '🚀',
+    icon: 'rocket',
     autoStart: true,
     order: 0,
     steps: [
@@ -197,7 +199,7 @@ export const TUTORIALS: Tutorial[] = [
   {
     id: CULT_TUTORIAL_ID,
     title: 'Fotoam-pivavahana', // Worship-service playlist
-    icon: '⛪',
+    icon: 'church',
     order: 1,
     launchRoute: 'Home',
     steps: [
@@ -291,7 +293,7 @@ export const TUTORIALS: Tutorial[] = [
   {
     id: HIGHLIGHT_TUTORIAL_ID,
     title: 'Manasongadina teny', // Highlighting words
-    icon: '🖍️',
+    icon: 'highlighter',
     order: 2,
     launchRoute: 'Home',
     steps: [
