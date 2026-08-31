@@ -12,6 +12,7 @@ import FanekemDetailsScreen from '../screens/FanekemDetailsScreen';
 import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import PersonalizationScreen from '../screens/PersonalizationScreen';
+import OnboardingGateScreen from '../screens/OnboardingGateScreen';
 import CultModeScreen from '../screens/CultModeScreen';
 import NotesScreen from '../screens/NotesScreen';
 import HelpScreen from '../screens/HelpScreen';
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   About: undefined;
   PrivacyPolicy: {mandatory?: boolean} | undefined;
   Personalization: {firstRun?: boolean} | undefined;
+  OnboardingGate: undefined;
   CultMode: undefined;
   Help: undefined;
   ReadingReminder: undefined;
@@ -129,6 +131,11 @@ const RootNavigator = ({
         component={PersonalizationScreen}
         initialParams={forceFirstRun ? {firstRun: true} : undefined}
         options={{title: t('personalization.title'), ...headerOptions}}
+      />
+      <Stack.Screen
+        name="OnboardingGate"
+        component={OnboardingGateScreen}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="CultMode"

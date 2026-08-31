@@ -66,7 +66,9 @@ const PersonalizationScreen = () => {
 
   const goToHome = () => {
     if (isFirstRun) {
-      navigation.reset({index: 0, routes: [{name: 'Home'}]});
+      // Next first-run step: "do you already know the app?" — that screen
+      // resets to Home itself once answered.
+      navigation.reset({index: 0, routes: [{name: 'OnboardingGate'}]});
     } else {
       navigation.navigate('Home');
     }

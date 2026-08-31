@@ -230,3 +230,20 @@ export const isOnboardingDone = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// Marks a tutorial done WITHOUT running it — same persistence as finish()
+// above. Used when the user tells the "already know the app?" prompt yes, so
+// neither the main onboarding tutorial nor a chained one (e.g. Fotoam-
+// pivavahana) auto-starts.
+export const markTutorialDone = async (tutorialId: string): Promise<void> => {
+  try {
+    await AsyncStorage.multiSet([
+      [statusKey(tutorialId), 'done'],
+      ...(tutorialId === ONBOARDING_ID
+        ? [[ONBOARDING_DONE_KEY, APP_VERSION] as [string, string]]
+        : []),
+    ]);
+  } catch {
+    // ignore persistence errors
+  }
+};

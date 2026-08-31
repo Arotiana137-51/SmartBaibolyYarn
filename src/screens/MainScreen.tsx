@@ -898,11 +898,14 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     return () => tutorial.setDriveHandler(null);
   }, [tutorial, currentBook, currentChapter, navigation]);
 
-  // Auto-start onboarding on first launch (after color selection reset us to
-  // Home). Gate on the persisted flag; 400ms settle lets the reader paint.
-  // The module-level guard makes this fire once per app process — Home remounts
-  // (e.g. returning from the CultMode screen) must NOT relaunch onboarding,
-  // which was the source of the tutorial "looping back".
+  // Auto-start onboarding on first launch (after OnboardingGateScreen resets
+  // us to Home having chosen "show me"). Gate on the persisted flag; 400ms
+  // settle lets the reader paint. The module-level guard makes this fire once
+  // per app process — Home remounts (e.g. returning from the CultMode screen)
+  // must NOT relaunch onboarding, which was the source of the tutorial
+  // "looping back". When the gate screen's "already know" choice ran instead,
+  // it stamped both tutorials done, so isOnboardingDone() here is true and
+  // this is a no-op.
   useEffect(() => {
     if (onboardingAutoStarted) return;
     let cancelled = false;
