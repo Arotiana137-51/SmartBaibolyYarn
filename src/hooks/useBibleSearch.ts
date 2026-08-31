@@ -109,6 +109,15 @@ const likeWhereFor = (params: string[], column = 'v.text'): string =>
     ? `${column} LIKE ?`
     : `(${params.map(() => `${column} LIKE ?`).join(' OR ')})`;
 
+// searchBible's candidate queries used to have no LIMIT at all: a common word
+// could pull every matching verse (full text included) into JS before we
+// collapsed it down to one card per book. Capped at a row count far above the
+// ~66-book ceiling so every book's best snippet still gets in; the exact
+// per-book count comes from a separate cheap COUNT(*)/GROUP BY query instead
+// (see verseCountByBook below), so capping this one doesn't make displayed
+// counts wrong.
+const SEARCH_DETAIL_ROW_LIMIT = 300;
+
 export const useBibleSearch = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +158,14 @@ export const useBibleSearch = () => {
         JOIN Books b ON b.id = v.book_id
         WHERE VersesFts MATCH ?
         ORDER BY score ASC
+        LIMIT ${SEARCH_DETAIL_ROW_LIMIT}
+      `;
+      const ftsCountQuery = `
+        SELECT v.book_id, COUNT(*) as cnt
+        FROM VersesFts f
+        JOIN Verses v ON v.id = f.rowid
+        WHERE VersesFts MATCH ?
+        GROUP BY v.book_id
       `;
 
       const likeParams = likeParamsFor(query, normalizedQuery);
@@ -165,21 +182,42 @@ export const useBibleSearch = () => {
         JOIN Books b ON v.book_id = b.id
         WHERE ${likeWhereFor(likeParams)}
         ORDER BY v.book_id, v.chapter, v.verse_number
+        LIMIT ${SEARCH_DETAIL_ROW_LIMIT}
+      `;
+      const likeCountQuery = `
+        SELECT v.book_id, COUNT(*) as cnt
+        FROM Verses v
+        WHERE ${likeWhereFor(likeParams)}
+        GROUP BY v.book_id
       `;
 
-      let candidateRows = (
-        await execWithLikeFallback(
+      const [countResult, detailResult] = await Promise.all([
+        execWithLikeFallback(
+          bibleDatabaseService,
+          {sql: ftsCountQuery, params: [ftsParam]},
+          {sql: likeCountQuery, params: likeParams},
+        ),
+        execWithLikeFallback(
           bibleDatabaseService,
           {sql: ftsCandidatesQuery, params: [ftsParam]},
           {sql: likeCandidatesQuery, params: likeParams},
-        )
-      ).rows as BibleCandidateRow[];
+        ),
+      ]);
+
+      const verseCountByBook = new Map<number, number>(
+        (countResult.rows as {book_id: number; cnt: number}[]).map(r => [r.book_id, r.cnt]),
+      );
+      let candidateRows = detailResult.rows as BibleCandidateRow[];
 
       // Strict search found nothing: fall back to trigram fuzzy matching so a
       // typo or a merged Malagasy elision (e.g. "aminny" for "amin'ny") still
-      // surfaces the real verse instead of an empty result screen.
+      // surfaces the real verse instead of an empty result screen. Already
+      // LIMIT 60 inside fetchTrigramFallback, so it's counted by iterating the
+      // rows below rather than via verseCountByBook.
+      let usedTrigramFallback = false;
       if (candidateRows.length === 0 && !matchWholeWord && normalizedQuery.length >= 3) {
         candidateRows = await fetchTrigramFallback(normalizedQuery);
+        usedTrigramFallback = true;
       }
 
       // Group by book, keeping the BEST-scoring verse per book (lower bm25 /
@@ -209,14 +247,16 @@ export const useBibleSearch = () => {
             bookId,
             bookName: row.book_name,
             testament: getTestamentFromBookId(bookId),
-            verseCount: 1,
+            verseCount: usedTrigramFallback ? 1 : (verseCountByBook.get(bookId) ?? 1),
             matchedChapter: row.chapter,
             matchedVerseNumber: row.verse_number,
             matchedText: row.text,
             score,
           });
         } else {
-          existing.verseCount += 1;
+          if (usedTrigramFallback) {
+            existing.verseCount += 1;
+          }
           if (score < existing.score) {
             existing.matchedChapter = row.chapter;
             existing.matchedVerseNumber = row.verse_number;
