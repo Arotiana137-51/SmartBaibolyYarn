@@ -24,7 +24,6 @@ const VARIANT_TRACK_PAD = 3;
 export type HamburgerMenuItemKey =
   | 'favorites'
   | 'history'
-  | 'search'
   | 'misc'
   | 'notes'
   | 'personalization'
@@ -172,7 +171,6 @@ const HamburgerMenuPopover: React.FC<Props> = ({
       [
         {key: 'favorites' as const, label: t('menu.favorites')},
         {key: 'history' as const, label: t('menu.history')},
-        {key: 'search' as const, label: t('menu.search')},
         {key: 'misc' as const, label: t('menu.misc')},
         {key: 'cultMode' as const, label: t('menu.cultMode')},
         {key: 'personalization' as const, label: t('menu.personalization')},

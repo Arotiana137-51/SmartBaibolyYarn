@@ -50,20 +50,11 @@ type TranslationKey =
   | 'history.clearAll'
   | 'history.emptyBible'
   | 'history.emptyHymnal'
-  | 'search.titleBible'
-  | 'search.titleHymnal'
-  | 'search.settingsTitle'
-  | 'search.searchMode'
-  | 'search.raw'
-  | 'search.grouped'
-  | 'search.match'
-  | 'search.wholeWord'
   | 'search.placeholderBible'
   | 'search.placeholderHymns'
   | 'search.noResultsBible'
   | 'search.noResultsHymns'
   | 'search.resultCount'
-  | 'search.nMatches'
   | 'verseList.title'
   | 'verseList.searchLabel'
   | 'verseList.empty'
@@ -181,20 +172,11 @@ const translations: Translations = {
     'history.clearAll': 'Fafao daholo',
     'history.emptyBible': "Tsy mbola misy tsiahy Baiboly",
     'history.emptyHymnal': "Tsy mbola misy tsiahy Fihirana",
-    'search.titleBible': 'Fikarohana Baiboly',
-    'search.titleHymnal': 'Fikarohana Fihirana',
-    'search.settingsTitle': 'Fikirana',
-    'search.searchMode': 'Fomba fikarohana',
-    'search.raw': 'Fikarohana tsotra',
-    'search.grouped': 'Fikarohana araka sokajy',
-    'search.match': 'Fifanandrify',
-    'search.wholeWord': 'Teny manontolo',
     'search.placeholderBible': 'Tadiavo ao amin\'ny Baiboly...',
     'search.placeholderHymns': 'Tadiavo ao amin\'ny fihirana...',
     'search.noResultsBible': "Tsy nahitana valiny tao amin'ny Baiboly",
     'search.noResultsHymns': "Tsy nahitana valiny tao amin'ny fihirana",
     'search.resultCount': '{{count}} valiny',
-    'search.nMatches': '{{count}} andininy mifanaraka',
     'verseList.title': "Valin'ny fikarohana",
     'verseList.searchLabel': 'Fikarohana: "{{query}}"',
     'verseList.empty': "Tsy nahitana andininy ho an'ny \"{{query}}\" ao amin'ny {{book}}",

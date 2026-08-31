@@ -661,9 +661,6 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       case 'history':
         navigation.navigate('History', { mode });
         return;
-      case 'search':
-        navigation.navigate('Search', { mode });
-        return;
       case 'misc':
         navigation.navigate('Misc');
         return;
@@ -1080,7 +1077,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
           onTitlePress={handleTitlePress}
           onPreviousPress={handlePreviousChapter}
           onNextPress={handleNextChapter}
-          onSearchPress={() => navigation.navigate('GlobalSearch', { mode })}
+          onSearchPress={() => navigation.navigate('GlobalSearch')}
         />
       )}
       <Pressable

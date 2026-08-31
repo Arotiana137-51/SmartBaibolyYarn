@@ -5,7 +5,6 @@ import {useTheme} from '../contexts/ThemeContext';
 import MainScreen from '../screens/MainScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import HistoryScreen from '../screens/HistoryScreen';
-import SearchScreen from '../screens/SearchScreen';
 import GlobalSearchScreen from '../screens/GlobalSearchScreen';
 import VerseListScreen from '../screens/VerseListScreen';
 import MiscScreen from '../screens/MiscScreen';
@@ -31,8 +30,7 @@ export type RootStackParamList = {
   Favorites: { mode: 'bible' | 'hymnal' };
   History: { mode: 'bible' | 'hymnal' };
   Notes: undefined;
-  Search: { mode: 'bible' | 'hymnal' };
-  GlobalSearch: { mode: 'bible' | 'hymnal' };
+  GlobalSearch: undefined;
   VerseList: { bookId: number; bookName: string; query: string; matchWholeWord?: boolean };
   Misc: undefined;
   FanekemDetails: {title: string; content: string};
@@ -99,17 +97,9 @@ const RootNavigator = ({
         options={{title: t('notes.title'), ...headerOptions}}
       />
       <Stack.Screen
-        name="Search"
-        component={SearchScreen}
-        options={({route}) => ({
-          title: route.params.mode === 'bible' ? t('search.titleBible') : t('search.titleHymnal'),
-          ...headerOptions,
-        })}
-      />
-      <Stack.Screen
         name="GlobalSearch"
         component={GlobalSearchScreen}
-        options={{title: t('search.titleBible'), ...headerOptions}}
+        options={{title: t('menu.search'), ...headerOptions}}
       />
       <Stack.Screen
         name="VerseList"
