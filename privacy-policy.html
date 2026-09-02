@@ -75,60 +75,73 @@
 </head>
 <body>
     <div class="container">
-        <!-- Malagasy section is a draft placeholder — legal copy, review/correct
-             before relying on it. Kept structurally parallel to the English
-             section below so the two are easy to compare and keep in sync. -->
+        <!-- Malagasy section mirrors src/screens/PrivacyPolicyScreen.tsx
+             (policyTextMg) — keep both in sync when editing either. -->
         <section lang="mg">
-            <h1>Politikam-pitsimbinana ny tsiambaratelo - e-Baiboly</h1>
-            <p class="last-updated">Nohavaozina farany: 2026-08-30</p>
+            <h1>Faneken'ny e-Baiboly hiaro ny tsiambaratelonao</h1>
+            <p>Politique de confidentialité</p>
+            <p class="last-updated">Nohavaozina farany: 2026-09-01</p>
 
-            <p>Rindrankajy famakiana ny Baiboly sy ny fihirana ny e-Baiboly. Ity politika ity dia manazava ny fomba fitantanana ny angona.</p>
+            <p>Rindrankajy famakiana ny Baiboly sy ny fihirana ity. Zaraina maimaimpoana ary tsy misy zavatra amidy ao anatin'ny rindrankajy.</p>
 
-            <h2>Mombamomba ny rindrankajy</h2>
-            <p>Rindrankajy famakiana ny Baiboly sy ny fihirana ity. Tsy misy vidiny na fividianana ao anatin'ny rindrankajy.</p>
-
-            <h2>Angona angonina</h2>
+            <h2>Fahaleovantena</h2>
             <ul>
-                <li>Tsy mila kaonty ianao.</li>
-                <li>Ny ankafizinao, ny tantaram-pamakianao, ary ny fandrindrana dia tehirizina ao amin'ny finday ihany.</li>
-                <li>Raha mampiasa ny "Manao fitarainana" ianao, dia mety halefan'ny rindrankajy any amin'ny mpampandroso ny lahatsoratra/ny toerana voatondro sy ny hevitrao.</li>
+                <li>Ny e-Baiboly dia karakaraina sy zaraina an-tenany, tsy miankina amin'olon-kafa.</li>
+                <li>Azon'ny OLONA REHETRA ampiasaina ny e-Baiboly. Tsy mifamatotra amina antokom-pinoana, na fikambanana ara-pivavahana ny e-Baiboly</li>
+                <li>Tsy manavaka olona na antokom-pinoana ampiasa azy ary azonao ampiasaina any amin'ny toerana rehetra ny e-Baiboly.</li>
+                <li>Manaja sy manaraka ny rafitra sy ny fahefana misy any amin'ny firenena tsirairay ampiasana azy ny e-Baiboly (Hetra, haba...) kanefa tsy mifamatotra amina governemanta na antoko politika na firehan-kevitra.</li>
+                <li>Ny tanjony tokana dia ny fizarana an-kalalahana'ny soratra masina, ho an'ny olona rehetra.</li>
             </ul>
 
-            <h2>Fomba fampiasana ny angona</h2>
+            <h2>Ny données angonina</h2>
+            <ul>
+                <li>Tsy mila kaonty ianao. Ary tsy mitahiry na maka "informations" momba anao izahay, hajainay ny "vie privée anao"</li>
+                <li>Ny ankafizinao, ny tantaram-pamakianao, ary ny fandrindrana dia tehirizina ao amin'ny finday ihany. Tsy misy makany amin'ny serveur ny e-Baiboly</li>
+                <li>Rehefa mampiasa ny teboka "Manao fitaterana izay diso" ihany ianao, vao mety halefan'ny rindrankajy any amin'ny "developeur" ny hevitrao. Isaorana mialoha noho izany ianao.</li>
+                <li>Tsy ampiasaina anaovana "entrainement na IA" ny données anao.</li>
+            </ul>
+
+            <h2>Ny fitaovana fanaovana fitarainana sy Cloudflare</h2>
+            <p>Safidy ihany ny fampiasana ny "Manao fitarainana izay diso". Rehefa mandefa fitarainana ianao, dia alefan'ny rindrankajy amin'ny alalan'ny HTTPS ho any amin'ny "endpoint" an'ny "developeur", izay mitoetra ao amin'ny Cloudflare Workers.</p>
+            <ul>
+                <li>Ny fitarainana dia natao ho an'ny fanitsiana lahatsoratra na votoaty tsy misy anarana. Tsy mila kaonty ianao ary tsy mangataka ny anaranao, ny mailakao, ny laharana finday, na inona na inona famantarana manokana mivantana rehefa mandefa fitarainana ianao.</li>
+            </ul>
+
+            <h2>Fomba fampiasana ny données</h2>
             <ul>
                 <li>Ny ankafizinao, ny tantara, ary ny fandrindrana dia ampiasaina hanomezana traikefa famakiana sy fitetezana manokana ao anatin'ny rindrankajy.</li>
-                <li>Ny fitarainana voaray dia ampiasaina hanatsarana ny kalitaon'ny rindrankajy sy hanitsiana ny olana.</li>
+                <li>Ny fitaterana izay diso voaray dia ampiasaina hanatsarana ny kalitaon'ny rindrankajy sy hanitsiana izay diso.</li>
             </ul>
 
-            <h2>Fiarovana ny angona</h2>
+            <h2>Fiarovana ny données</h2>
             <ul>
-                <li>Ny angona rehetra dia tehirizina ao amin'ny finday ary voaaro raha misy izany.</li>
-                <li>Ny angona alefa ho an'ny fitarainana dia mandeha amin'ny alalan'ny HTTPS.</li>
-                <li>Tsy misy angona manokana na saro-pady amidy amin'ny antoko fahatelo.</li>
+                <li>Ny données rehetra dia tehirizina ao amin'ny finday ary voaaro raha misy izany "(encrypted)".</li>
+                <li>Ny données alefa ho an'ny fitanterana izay diso dia mandeha amin'ny alalan'ny HTTPS.</li>
+                <li>Tsy misy données manokana na saro-pady amidy amin'ny olona ivelan'ny e-Baiboly.</li>
             </ul>
 
-            <h2>Fitehirizana sy famafana ny angona</h2>
+            <h2>Fitehirizana sy famafana ny données</h2>
             <ul>
                 <li>Ny ankafizinao, ny tantara, ary ny fandrindrana dia mijanona ao amin'ny finday mandra-panesoranao ny rindrankajy na famafana ny angon-drindrankajy.</li>
-                <li>Ny angon'ny fitarainana dia mety hotehirizin'ny mpampandroso mba hanitsiana ny olana.</li>
+                <li>Ny angon'ny fitaterana izay diso dia mety hotehirizin'ny "developeur" mba hanitsiana ny olana.</li>
             </ul>
 
             <h2>Ny zonao</h2>
             <ul>
-                <li>Azonao jerena, ovaina, na fafana ny angonao tehirizina ao amin'ny finday, amin'ny alalan'ny famafana ny angon-drindrankajy ao amin'ny paramaetatry ny finday.</li>
-                <li>Azonao esorina ny rindrankajy amin'ny fotoana rehetra mba hanesorana ny angona rehetra tehirizina ao amin'ny finday.</li>
+                <li>Azonao jerena, ovaina, na fafana ny donnéeso tehirizina ao amin'ny finday, amin'ny alalan'ny famafana ny angon-drindrankajy ao amin'ny paramaetatry ny finday.</li>
+                <li>Azonao esorina ny rindrankajy amin'ny fotoana rehetra mba hanesorana ny données rehetra tehirizina ao amin'ny finday.</li>
             </ul>
 
             <h2>Fahazoan-dalana</h2>
             <ul>
                 <li>Ny fifandraisana Internet dia mety ampiasaina ho an'ny endri-drindrankajy tsy tery (ohatra: ny fitarainana).</li>
-                <li>Ny rindrankajy dia mety mangataka fahazoan-dalana hampiseho fampahatsiarovana ("Ora famakiana tiana") — angataina ihany izay raha alefanao io endri-drindrankajy tsy tery io. Fampahatsiarovana ao amin'ny finday ihany io, tsy misy angona alefa na angonina.</li>
+                <li>Ny rindrankajy dia mety mangataka fahazoan-dalana hampiseho fampahatsiarovana ("Ora famakiana tiana") — angataina IHANY IZAY raha alefanao io endri-drindrankajy tsy an-tery io. Fampahatsiarovana ao amin'ny finday ihany io, tsy misy données alefa na angonina.</li>
             </ul>
 
-            <h2>Tolotra avy amin'ny antoko fahatelo</h2>
+            <h2>Tolotra avy amin'ny olona ivelan'ny e-Baiboly</h2>
             <ul>
-                <li>Ny rindrankajy dia mety mampiasa tahirin-kevitra avy amin'ny antoko fahatelo ilaina amin'ny fiasany. Tsy misy SDK dob ampiasaina.</li>
-                <li>Ny tahirin-kevitra avy amin'ny antoko fahatelo dia tsy afaka mahazo ny angonao manokana ankoatra izay ilaina amin'ny fiasany.</li>
+                <li>Ny rindrankajy dia mety mampiasa tahirin-kevitra avy amin'ny olona ivelan'ny e-Baiboly ilaina amin'ny fiasany. Tsy misy SDK dob ampiasaina.</li>
+                <li>Ny tahirin-kevitra avy amin'ny olona ivelan'ny e-Baiboly dia tsy afaka mahazo ny donnéeso manokana ankoatra izay ilaina amin'ny fiasany.</li>
             </ul>
 
             <h2>Fanovana ity politika ity</h2>
@@ -139,24 +152,39 @@
 
             <div class="contact">
                 <h2>Fifandraisana</h2>
-                <p>Raha manana fanontaniana ianao momba ity politika ity, antsoy: <a href="mailto:arotianarandria@proton.me">arotianarandria@proton.me</a></p>
+                <p>Raha manana fanontaniana ianao, antsoy: <a href="mailto:arotianarandria@proton.me">arotianarandria@proton.me</a></p>
             </div>
         </section>
 
         <section lang="en" class="lang-divider">
             <h1>Privacy Policy - e-Baiboly</h1>
-            <p class="last-updated">Last updated: 2026-08-30</p>
+            <p class="last-updated">Last updated: 2026-09-01</p>
 
             <p>e-Baiboly is a Bible and hymnal reader application. This privacy policy explains how we handle your data.</p>
 
             <h2>App Description</h2>
             <p>This app is a Bible and hymnal reader. It does not include in-app purchases or payments.</p>
 
+            <h2>Independence</h2>
+            <ul>
+                <li>e-Baiboly is developed and distributed independently, not dependent on any outside party.</li>
+                <li>e-Baiboly can be used by EVERYONE. It is not affiliated with any faith community or religious organization.</li>
+                <li>It does not discriminate against any person or faith community who uses it, and it can be used anywhere.</li>
+                <li>It respects and complies with the laws and authorities of each country it is used in (taxes, duties, etc.), but is not affiliated with any government, political party, or political movement.</li>
+                <li>Its sole purpose is the free distribution of scripture, for everyone.</li>
+            </ul>
+
             <h2>Data Collected</h2>
             <ul>
                 <li>No account is required.</li>
                 <li>Your favorites, history, and settings are stored locally on your device.</li>
                 <li>If you use the "Report issue" feature, the app may send the reported text/reference and your comment to the developer endpoint configured in the app.</li>
+            </ul>
+
+            <h2>Issue Reporting and Cloudflare</h2>
+            <p>The "Report issue" feature is optional. When you submit a report, the app sends your report over HTTPS to a developer endpoint hosted on Cloudflare Workers.</p>
+            <ul>
+                <li>Issue reports are intended for anonymous typographical/content corrections. No account is required and the app does not ask for your name, email address, phone number, or any other direct personal identifier when you submit a report.</li>
             </ul>
 
             <h2>How Data Is Used</h2>
