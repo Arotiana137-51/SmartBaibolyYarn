@@ -53,65 +53,64 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
   // two stay easy to compare/update together.
   const policyTextMg = useMemo(() => {
     return [
-      'Faneken\'ny e-Baiboly hiaro ny tsiambaratelonao', 
-      'Politique de confidentialité',
+      'Faneken\'ny e-Baiboly hiaro ny tsiambaratelonao',
       '',
       'Nohavaozina farany: 2026-09-01',
       '',
       "Rindrankajy famakiana ny Baiboly sy ny fihirana ity. Zaraina maimaimpoana ary tsy misy zavatra amidy ao anatin'ny rindrankajy.",
       '',
 
-      'Fahaleovantena',
+      '## Fizakan-tena',
       "- Ny e-Baiboly dia karakaraina sy zaraina an-tenany, tsy miankina amin'olon-kafa.",
-      "- Azon'ny OLONA REHETRA ampiasaina ny e-Baiboly. Tsy mifamatotra amina antokom-pinoana, na fikambanana ara-pivavahana ny e-Baiboly",
+      "- Azon'ny OLONA REHETRA ampiasaina ny e-Baiboly.",
       "- Tsy manavaka olona na antokom-pinoana ampiasa azy ary azonao ampiasaina any amin'ny toerana rehetra ny e-Baiboly.",
       "- Manaja sy manaraka ny rafitra sy ny fahefana misy any amin'ny firenena tsirairay ampiasana azy ny e-Baiboly (Hetra,haba...) kanefa tsy mifamatotra amina governemanta na antoko politika na firehan-kevitra.",
       "- Ny tanjony tokana dia ny fizarana an-kalalahana'ny soratra masina, ho an'ny olona rehetra.",
       '',
-      'Ny données angonina',
+      '## Ny données angonina',
       "- Tsy mila kaonty ianao,  tsy mitahiry na maka \"informations\"  momba anao izahay , hajainay ny \"vie privée anao\" ",
       "- Ny ankafizinao, ny tantaram-pamakianao, ary ny fandrindrana dia tehirizina ao amin'ny finday ihany. Tsy misy makany amin'ny serveur ny e-Baiboly",
       "- Rehefa mampiasa ny teboka \"Manao fitaterana izay diso\" ihany ianao, vao mety halefan'ny rindrankajy any amin'ny \"developeur\" ny hevitrao. Isaorana mialoha noho izany ianao.",
       "- Tsy ampiasaina anaovana \"entrainement na IA\" ny données anao.",
       '',
-      // DRAFT MG translation of the Cloudflare/reporting disclosure below —
+      // DRAFT MG translation of the Cloudflare/reporting disclosure below —   
       // technical/legal wording, please review before shipping.
-      "Ny fitaovana fanaovana fitarainana sy Cloudflare",
-      "Safidy ihany ny fampiasana ny \"Manao fitarainana izay diso\". Rehefa mandefa fitarainana ianao, dia alefan'ny rindrankajy amin'ny alalan'ny HTTPS ho any amin'ny \"endpoint\" an'ny \"developeur\", izay mitoetra ao amin'ny Cloudflare Workers.",
-      "- Ny fitarainana dia natao ho an'ny fanitsiana lahatsoratra na votoaty tsy misy anarana. Tsy mila kaonty ianao ary tsy mangataka ny anaranao, ny mailakao, ny laharana finday, na inona na inona famantarana manokana mivantana rehefa mandefa fitarainana ianao.",
+      "## Ny fitaovana fanaovana fitaterana sy Cloudflare",
+      "Arakaraky ny safidinao ihany ny fampiasana ny teboka \"Manao fitaterana izay diso\". Rehefa mandefa fitaterana ianao, dia alefan'ny rindrankajy amin'ny alalan'ny HTTPS ho any amin'ny \"endpoint\" an'ny \"developeur\", izay mitoetra ao amin'ny Cloudflare Workers.",
+      "- Ny fitaterana dia natao ho an'ny fanitsiana lahatsoratra. Tsy mila kaonty ianao ary tsy mangataka ny anaranao, ny mailakao, ny laharana finday, na inona na inona famantarana manokana mivantana rehefa mandefa fitaterana ianao.",
       '',
-      "Fomba fampiasana ny données",
+      "## Fomba fampiasana ny données",
       "- Ny ankafizinao, ny tantara, ary ny fandrindrana dia ampiasaina hanomezana traikefa famakiana sy fitetezana manokana ao anatin'ny rindrankajy.",
       "- Ny fitaterana izay diso voaray dia ampiasaina hanatsarana ny kalitaon'ny rindrankajy sy hanitsiana izay diso.",
       '',
-      "Fiarovana ny données",
+      "## Fiarovana ny données",
       "- Ny données rehetra dia tehirizina ao amin'ny finday ary voaaro raha misy izany\"(encrypted)\".",
       "- Ny données alefa ho an'ny fitanterana izay diso dia mandeha amin'ny alalan'ny HTTPS.",
       "- Tsy misy données manokana na saro-pady amidy amin'ny olona ivelan'ny e-Baiboly.",
       '',
-      "Fitehirizana sy famafana ny données",
+      "## Fitehirizana sy famafana ny données",
       "- Ny ankafizinao, ny tantara, ary ny fandrindrana dia mijanona ao amin'ny finday mandra-panesoranao ny rindrankajy na famafana ny angon-drindrankajy.",
       "- Ny angon'ny fitaterana izay diso dia mety hotehirizin'ny \"developeur\" mba hanitsiana ny olana.",
       '',
-      'Ny zonao',
-      "- Azonao jerena, ovaina, na fafana ny donnéeso tehirizina ao amin'ny finday, amin'ny alalan'ny famafana ny angon-drindrankajy ao amin'ny paramaetatry ny finday.",
+      '## Ny zonao',
+      "- Azonao jerena, ovaina, na fafana ny données tehirizina ao amin'ny finday, amin'ny alalan'ny famafana ny angon-drindrankajy ao amin'ny parametres ny finday.",
       "- Azonao esorina ny rindrankajy amin'ny fotoana rehetra mba hanesorana ny données rehetra tehirizina ao amin'ny finday.",
       '',
-      "Fahazoan-dalana",
-      "- Ny fifandraisana Internet dia mety ampiasaina ho an'ny endri-drindrankajy tsy tery (ohatra: ny fitarainana).",
+      "## Fahazoan-dalana",
+      "- Ny fifandraisana Internet dia mety ampiasaina ho an'ny endri-drindrankajy (ohatra: ny fitaterana).",
       "- Ny rindrankajy dia mety mangataka fahazoan-dalana hampiseho fampahatsiarovana (\"Ora famakiana tiana\") — angataina IHANY IZAY raha alefanao io endri-drindrankajy tsy an-tery io. Fampahatsiarovana ao amin'ny finday ihany io, tsy misy données alefa na angonina.",
       '',
-      "Tolotra avy amin'ny olona ivelan'ny e-Baiboly",
+      "## Tolotra avy amin'ny olona ivelan'ny e-Baiboly",
       "- Ny rindrankajy dia mety mampiasa tahirin-kevitra avy amin'ny olona ivelan'ny e-Baiboly ilaina amin'ny fiasany. Tsy misy SDK dob ampiasaina.",
       "- Ny tahirin-kevitra avy amin'ny olona ivelan'ny e-Baiboly dia tsy afaka mahazo ny donnéeso manokana ankoatra izay ilaina amin'ny fiasany.",
       '',
-      'Fanovana ity politika ity',
+      '## Fanovana ity politika ity',
       "- Mety hohavaozinay ity politika ity. Ny fanovana lehibe dia hampahafantarina ao anatin'ny rindrankajy.",
       "- Ny daty voalaza eo ambony dia manondro ny fotoana nanaovana ny fanovana farany.",
       '',
-      'Fifandraisana',
-      'Raha manana fanontaniana ianao, antsoy: arotianarandria@proton.me',
-    ].join('\n');
+      '## Fifandraisana',
+      'Raha manana fanontaniana ianao, mailaka: arotianarandria@proton.me',
+    ];
   }, []);
 
   const policyTextEn = useMemo(() => {
@@ -122,55 +121,92 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
       '',
       'This app is a Bible and hymnal reader. It does not include in-app purchases or payments.',
       '',
-      'Independence',
+      '## Independence',
       '- e-Baiboly is developed and distributed independently, not dependent on any outside third party.',
       '- e-Baiboly can be used by EVERYONE. It is not affiliated with any faith community or religious organization.',
       '- It does not discriminate against any person or faith community who uses it, and it can be used anywhere.',
       '- It respects and complies with the laws and authorities of each country it is used in (taxes, duties, etc.), but is not affiliated with any government, political party, or political movement.',
       '- Its sole purpose is the free distribution of scripture, for everyone.',
       '',
-      'Data collected',
+      '## Data collected',
       '- No account is required. We respect your privacy',
       '- Your favorites, history, and settings are stored locally on your device.',
       '- If you use the “Report issue” feature, the app may send the reported text/reference and your comment to the developer endpoint configured in the app.',
       '',
-      'Issue Reporting and Cloudflare',
+      '## Issue Reporting and Cloudflare',
       'The "Report issue" feature is optional. When you submit a report, the app sends your report over HTTPS to a developer endpoint hosted on Cloudflare Workers.',
       '- Issue reports are intended for anonymous typographical/content corrections. No account is required and the app does not ask for your name, email address, phone number, or any other direct personal identifier when you submit a report.',
       '',
-      'How data is used',
+      '## How data is used',
       '- Favorites, history, and settings are used to provide personalized reading and navigation within the app.',
       '- Reported issues are used to improve app quality and fix bugs.',
       '',
-      'Data security',
+      '## Data security',
       '- All data is stored locally on your device and encrypted where supported.',
       '- Data transmitted for reporting is sent over HTTPS.',
       '- No personal or sensitive data is sold to third parties.',
       '',
-      'Data retention and deletion',
+      '## Data retention and deletion',
       '- Your favorites, history, and settings are stored locally and will remain on your device until you uninstall the app or clear app data.',
       '- Reported issue data may be retained by the developer for bug fixing purposes.',
       '',
-      'Your rights',
+      '## Your rights',
       '- You can access, modify, or delete your locally stored data at any time by clearing app data in your device settings.',
       '- You can uninstall the app at any time to remove all locally stored data.',
       '',
-      'Permissions',
+      '## Permissions',
       '- Internet access may be used for optional features (for example, reporting).',
       '- The app may request notification permission to show a reminder ("Ora famakiana tiana" / preferred reading-time reminder). This is only requested if you turn that optional feature on. The reminder is delivered entirely on your device — nothing is collected or transmitted for it.',
       '',
-      'Third-party services',
+      '## Third-party services',
       '- The app may use third-party libraries required for functionality. No advertising SDK is included by default.',
       '- Third-party libraries do not have access to your personal data beyond what is necessary for their functionality.',
       '',
-      'Changes to this policy',
+      '## Changes to this policy',
       '- We may update this policy. Significant changes will be notified in the app.',
       '- The last updated date at the top of this policy indicates when changes were made.',
       '',
-      'Contact',
+      '## Contact',
       'If you have questions, contact: arotianarandria@proton.me',
-    ].join('\n');
+    ];
   }, []);
+
+  const renderPolicyLines = (lines: string[], emphasisColor: string) =>
+    lines.map((line, index) => {
+      if (index === 0) {
+        return (
+          <Text key={index} style={[styles.policyTitle, {color: emphasisColor}]}>
+            {line}
+            {'\n'}
+          </Text>
+        );
+      }
+      if (line.startsWith('## ')) {
+        return (
+          <Text key={index} style={[styles.policySectionHeader, {color: emphasisColor}]}>
+            {line.slice(3)}
+            {'\n'}
+          </Text>
+        );
+      }
+      const isMeta = line.startsWith('Nohavaozina farany:') || line.startsWith('Last updated:');
+      if (isMeta) {
+        return (
+          <Text key={index} style={styles.policyMeta}>
+            {line}
+            {'\n'}
+          </Text>
+        );
+      }
+      const isBullet = line.startsWith('- ');
+      const displayLine = isBullet ? `• ${line.slice(2)}` : line;
+      return (
+        <Text key={index}>
+          {displayLine}
+          {'\n'}
+        </Text>
+      );
+    });
 
   const accept = useCallback(async () => {
     try {
@@ -199,7 +235,7 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={[styles.title, {color: theme.colors.textPrimary}]}>Privacy Policy</Text>
+          <Text style={[styles.title, {color: theme.colors.textPrimary}]}>Politique de confidentialité</Text>
 
           <View
             style={[
@@ -210,7 +246,10 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
               },
             ]}
           >
-            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>{policyTextMg}</Text>
+            <Text style={[styles.langBadge, {color: theme.colors.accentBlue}]}>MG</Text>
+            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>
+              {renderPolicyLines(policyTextMg, theme.colors.textPrimary)}
+            </Text>
           </View>
 
           <View
@@ -222,7 +261,10 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
               },
             ]}
           >
-            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>{policyTextEn}</Text>
+            <Text style={[styles.langBadge, {color: theme.colors.accentBlue}]}>EN</Text>
+            <Text style={[styles.cardText, {color: theme.colors.textSecondary}]}>
+              {renderPolicyLines(policyTextEn, theme.colors.textPrimary)}
+            </Text>
           </View>
         </ScrollView>
 
@@ -277,13 +319,37 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
+    padding: 18,
+    marginBottom: 16,
   },
   cardText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 24,
     marginBottom: 6,
+  },
+  langBadge: {
+    alignSelf: 'flex-start',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    backgroundColor: 'rgba(0, 102, 204, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  policyTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  policySectionHeader: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  policyMeta: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   footer: {
     borderTopWidth: 1,
