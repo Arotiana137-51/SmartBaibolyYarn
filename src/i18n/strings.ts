@@ -172,7 +172,7 @@ const translations: Translations = {
     'history.clearAll': 'Fafao daholo',
     'history.emptyBible': "Tsy mbola misy tsiahy Baiboly",
     'history.emptyHymnal': "Tsy mbola misy tsiahy Fihirana",
-    'search.placeholderBible': 'Tadiavo ao amin\'ny Baiboly...',
+    'search.placeholderBible': "Tadiavina ao @ Baiboly sy fihirana...",
     'search.placeholderHymns': 'Tadiavo ao amin\'ny fihirana...',
     'search.noResultsBible': "Tsy nahitana valiny tao amin'ny Baiboly",
     'search.noResultsHymns': "Tsy nahitana valiny tao amin'ny fihirana",

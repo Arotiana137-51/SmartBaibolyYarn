@@ -19,6 +19,7 @@ import { HymnSearchResult } from '../hooks/useHymnSearch';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { getBibleBookShortName } from '../utils/bibleBookNames';
+import { hexToRgba } from '../utils/colorUtils';
 import { responsiveFontSize } from '../constants/Typography';
 import {
   normalizeForHighlight,
@@ -469,7 +470,10 @@ const GlobalSearchScreen = () => {
           <TextInput
             style={[styles.input, { color: theme.colors.textPrimary }]}
             placeholder={t('search.placeholderBible')}
-            placeholderTextColor={theme.colors.textSecondary}
+            // Faded further than plain textSecondary (used solid elsewhere,
+            // e.g. the search icon) — a placeholder should read as a hint,
+            // not as regular secondary text.
+            placeholderTextColor={hexToRgba(theme.colors.textSecondary, 0.5)}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
