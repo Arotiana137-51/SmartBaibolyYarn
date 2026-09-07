@@ -13,6 +13,7 @@ import AboutScreen from '../screens/AboutScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import PersonalizationScreen from '../screens/PersonalizationScreen';
 import OnboardingGateScreen from '../screens/OnboardingGateScreen';
+import CultIntroScreen from '../screens/CultIntroScreen';
 import CultModeScreen from '../screens/CultModeScreen';
 import NotesScreen from '../screens/NotesScreen';
 import HelpScreen from '../screens/HelpScreen';
@@ -39,6 +40,7 @@ export type RootStackParamList = {
   PrivacyPolicy: {mandatory?: boolean} | undefined;
   Personalization: {firstRun?: boolean} | undefined;
   OnboardingGate: undefined;
+  CultIntro: undefined;
   CultMode: undefined;
   Help: undefined;
   ReadingReminder: undefined;
@@ -135,6 +137,11 @@ const RootNavigator = ({
       <Stack.Screen
         name="OnboardingGate"
         component={OnboardingGateScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="CultIntro"
+        component={CultIntroScreen}
         options={{headerShown: false}}
       />
       <Stack.Screen

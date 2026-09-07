@@ -926,7 +926,10 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   // edge acts exactly once:
   //   null → cult       : isolate the playlist onto a throwaway slate so the
   //                        walkthrough's demo entries never touch the real one.
-  //   onboarding → null : chain into the Fotoam-pivavahana tutorial.
+  //   onboarding → null : offer the Fotoam-pivavahana tutorial (CultIntro),
+  //                        don't force it — mental-overload avoidance after a
+  //                        12-step walkthrough. Declining loses nothing: it's
+  //                        still queued in the Toro-lalana quest log (Help).
   //   cult       → null : tutorial finished/skipped — restore the real playlist
   //                        (the demo entries were never persisted). No relaunch.
   const prevTutorialId = useRef<string | null>(null);
@@ -943,9 +946,7 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     if (active !== null) return;
 
     if (prev === ONBOARDING_ID) {
-      // Cult tutorial now opens on Home and walks the user through the hamburger
-      // menu itself, so stay put — no jump to CultMode.
-      setTimeout(() => tutorial.start(CULT_TUTORIAL_ID), 350);
+      navigation.navigate('CultIntro');
     } else if (prev === CULT_TUTORIAL_ID) {
       cultMode.endTutorial();
     } else if (prev === HIGHLIGHT_TUTORIAL_ID) {
