@@ -36,6 +36,23 @@ target 'SmartBaibolyYarn' do
       target.build_configurations.each do |config|
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
       end
+
+      # react-native-quick-sqlite's podspec doesn't define SQLITE_ENABLE_FTS5
+      # for its bundled SQLite amalgamation (cpp/sqlite3.c) — without it the
+      # FTS5 module compiles out entirely and every FTS query (Bible + Hymn
+      # search) throws "no such module: fts5" at runtime, silently degrading
+      # to a full-table LIKE scan (no relevance ranking, no prefix index, the
+      # trigram fuzzy-typo tables never reachable). Confirmed on Android via
+      # the equivalent `quickSqliteFlags` Gradle property
+      # (android/gradle.properties) — mirroring the fix here since the iOS
+      # side has no equivalent app-level hook of its own.
+      if target.name == 'react-native-quick-sqlite'
+        target.build_configurations.each do |config|
+          defs = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+          defs = [defs] if defs.is_a?(String)
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = defs + ['SQLITE_ENABLE_FTS5=1']
+        end
+      end
     end
   end
 end
