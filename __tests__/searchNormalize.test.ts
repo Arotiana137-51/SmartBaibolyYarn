@@ -4,6 +4,7 @@ import {
   generateTrigrams,
   makeTrigramMatchQuery,
   trigramOverlapScore,
+  scoreInChunks,
 } from '../src/utils/searchNormalize';
 
 // `title_plain` is what the FTS5 index actually stores. It is produced by
@@ -153,5 +154,29 @@ describe('trigram fuzzy-fallback helpers', () => {
     expect(
       trigramOverlapScore(mergedTrigrams, normalizeForFtsQuery("amin'ny")),
     ).toBeGreaterThanOrEqual(0.5);
+  });
+});
+
+describe('scoreInChunks', () => {
+  it('scores every item across multiple chunks, preserving order', async () => {
+    const items = Array.from({length: 25}, (_, i) => i);
+    const result = await scoreInChunks(items, n => n * 2, 7);
+    expect(result).toEqual(items.map(n => n * 2));
+  });
+
+  it('drops items the scorer maps to null', async () => {
+    const items = [1, 2, 3, 4, 5, 6];
+    const result = await scoreInChunks(items, n => (n % 2 === 0 ? n : null), 2);
+    expect(result).toEqual([2, 4, 6]);
+  });
+
+  it('does nothing for an empty input', async () => {
+    const result = await scoreInChunks([] as number[], n => n, 10);
+    expect(result).toEqual([]);
+  });
+
+  it('handles an input smaller than the chunk size in one pass', async () => {
+    const result = await scoreInChunks([1, 2, 3], n => n + 1, 100);
+    expect(result).toEqual([2, 3, 4]);
   });
 });

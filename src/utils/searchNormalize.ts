@@ -161,7 +161,10 @@ export const makeTrigramMatchQuery = (trigrams: string[]): string =>
 // documents that happen to share a few rare trigrams (classic bm25 length
 // normalization), which can rank a coincidental match above the real one.
 // Re-score each SQL-returned candidate by the actual fraction of the query's
-// trigrams it contains, and drop anything below `minOverlap`.
+// trigrams it contains, and drop anything below `minOverlap`. The candidate
+// set is NOT capped (a typo whose letters are common Malagasy syllables can
+// pull tens of thousands of rows) — see `scoreInChunks` below for how that's
+// kept from blocking the JS thread for one unbroken multi-second stretch.
 export const trigramOverlapScore = (
   queryTrigrams: string[],
   candidateNormalizedText: string,
@@ -176,3 +179,36 @@ export const trigramOverlapScore = (
 };
 
 export const TRIGRAM_MIN_OVERLAP = 0.5;
+
+// Hands control back to the JS event loop. React Native's JS thread is
+// separate from Android's main thread, so a long synchronous loop here can't
+// trigger a system ANR — but it DOES block React from processing state
+// updates or touch input for its whole duration, which reads to the user as
+// "the app stopped responding" just the same. `setTimeout(resolve, 0)` is the
+// standard cooperative-yield trick: it lets anything already queued (a
+// pending re-render, a tap) run before the next chunk starts.
+const yieldToEventLoop = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
+// Scores every item in `items` via `score` (returning null to drop it),
+// yielding to the event loop every `chunkSize` items. Used by the trigram
+// fuzzy fallback, whose candidate pool is intentionally uncapped — for a
+// small pool this is just one pass with no yielding at all; it only matters
+// for the rare case for a query with tens of thousands of candidates.
+export const scoreInChunks = async <T, R>(
+  items: T[],
+  score: (item: T) => R | null,
+  chunkSize = 2000,
+): Promise<R[]> => {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, items.length);
+    for (let j = i; j < end; j++) {
+      const scored = score(items[j]);
+      if (scored !== null) out.push(scored);
+    }
+    if (end < items.length) {
+      await yieldToEventLoop();
+    }
+  }
+  return out;
+};

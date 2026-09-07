@@ -9,6 +9,7 @@ import {
   makeTrigramMatchQuery,
   trigramOverlapScore,
   TRIGRAM_MIN_OVERLAP,
+  scoreInChunks,
 } from '../utils/searchNormalize';
 import {
   JESUS_VARIANTS,
@@ -65,13 +66,14 @@ const fetchHymnTrigramFallback = async (normalizedQuery: string): Promise<any[]>
       [trigramExpr, trigramExpr],
     );
 
-    return rows
-      .map(row => ({
-        ...row,
-        overlap: trigramOverlapScore(trigrams, normalizeForFtsQuery(row.overlap_text)),
-      }))
-      .filter(row => row.overlap >= TRIGRAM_MIN_OVERLAP)
-      .sort((a, b) => Number(b.is_title) - Number(a.is_title) || b.overlap - a.overlap);
+    // Uncapped candidate pool (see the comment above the query) — scoreInChunks
+    // yields to the event loop periodically so scoring it doesn't block the JS
+    // thread (and the app's own input handling) for one unbroken stretch.
+    const scored = await scoreInChunks(rows, row => {
+      const overlap = trigramOverlapScore(trigrams, normalizeForFtsQuery(row.overlap_text));
+      return overlap >= TRIGRAM_MIN_OVERLAP ? {...row, overlap} : null;
+    });
+    return scored.sort((a, b) => Number(b.is_title) - Number(a.is_title) || b.overlap - a.overlap);
   } catch (e) {
     // No trigram table (DB not yet rebuilt, or fts5 unavailable) — the caller
     // already has the strict tier's (empty) result; degrade quietly.

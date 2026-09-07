@@ -9,6 +9,7 @@ import {
   makeTrigramMatchQuery,
   trigramOverlapScore,
   TRIGRAM_MIN_OVERLAP,
+  scoreInChunks,
 } from '../utils/searchNormalize';
 import {
   expandJesusToken,
@@ -60,12 +61,14 @@ const fetchTrigramFallback = async (
       [trigramExpr, ...extraParams],
     );
 
-    return rows
-      .map(row => ({
-        ...row,
-        score: -trigramOverlapScore(trigrams, normalizeForFtsQuery(row.text)),
-      }))
-      .filter(row => -row.score >= TRIGRAM_MIN_OVERLAP);
+    // Uncapped candidate pools can run into the tens of thousands for a typo
+    // whose letters are common syllables — scoreInChunks yields to the event
+    // loop periodically so that doesn't block the JS thread (and the app's
+    // own input handling) for one unbroken stretch.
+    return scoreInChunks(rows, row => {
+      const overlap = trigramOverlapScore(trigrams, normalizeForFtsQuery(row.text));
+      return overlap >= TRIGRAM_MIN_OVERLAP ? {...row, score: -overlap} : null;
+    });
   } catch (e) {
     // No trigram table (DB not yet rebuilt, or fts5 unavailable) — the caller
     // already has the strict tier's (empty) result; degrade quietly.
