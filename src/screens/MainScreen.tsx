@@ -1051,8 +1051,15 @@ const MainScreen = ({navigation}: MainScreenProps) => {
   const cultPlayerIconStyle = {opacity: CULT_PLAYER_BUTTON_ALPHA};
   // A dark drop shadow reads as depth on a light background but disappears
   // (or muddies) on a dark one — swap it for a gentle light glow instead.
+  // elevation: 0 matters here too — same Android quirk as the tutorial cards
+  // (TutorialOverlay's peekCard/modalCard): elevation assumes an opaque
+  // surface, so combined with these buttons' translucent backgroundColor it
+  // rendered the pill (and the white triangle/bar glyph inside it) as a
+  // washed-out white blob instead of the intended translucent teal circle.
+  // Dropping elevation keeps the iOS shadow* props (unaffected) and just
+  // loses the Android drop shadow.
   const cultPlayerShadow = {
-    elevation: 6,
+    elevation: 0,
     shadowColor: isDarkMode ? '#FFFFFF' : '#000000',
     shadowOpacity: isDarkMode ? 0.18 : 0.25,
     shadowRadius: 8,
