@@ -29,12 +29,14 @@ const fetchHymnTrigramFallback = async (normalizedQuery: string): Promise<any[]>
   const trigramExpr = makeTrigramMatchQuery(trigrams);
 
   try {
-    // A UNION ALL with no ORDER BY before LIMIT truncates in scan order, not
-    // relevance order — the verse arm alone easily exceeds 200 rows for a
-    // common trigram, which would starve the title arm out entirely before
-    // SQLite ever looks at it. Score each arm with its own bm25() as a
-    // regular column (same trick the strict query above uses) and rank the
-    // combined set in an outer ORDER BY before truncating.
+    // No LIMIT here on purpose — the hymn corpus is small and fixed (~1300
+    // hymns, ~5300 verses total), so there's no completeness/perf tradeoff to
+    // make; every candidate feeds the JS-side overlap re-rank below. Each arm
+    // still gets its own bm25() as a regular column so the two arms combine
+    // into one ORDER BY (a UNION ALL with no shared ordering before a LIMIT
+    // truncates in scan order, not relevance order — the verse arm alone can
+    // vastly outnumber the title arm and starve it out; this was a real bug
+    // here before the ORDER BY was added, even back when a LIMIT existed).
     const { rows } = await hymnsDatabaseService.executeQuerySilent<any>(
       `
         SELECT id, number, category, title, authors, matched_verse, verse_number, overlap_text, is_title
@@ -59,7 +61,6 @@ const fetchHymnTrigramFallback = async (normalizedQuery: string): Promise<any[]>
           WHERE HymnsTrigram MATCH ?
         )
         ORDER BY raw_score ASC
-        LIMIT 200
       `,
       [trigramExpr, trigramExpr],
     );
@@ -206,7 +207,6 @@ export const useHymnSearch = () => {
         )
         GROUP BY id, verse_number
         ORDER BY score ASC
-        LIMIT 200
       `;
 
       // LIKE fallback (no fts5): mirror the Jesus-name expansion by trying each
@@ -232,7 +232,6 @@ export const useHymnSearch = () => {
         JOIN HymnVerses v ON h.id = v.hymn_id
         WHERE ${likeWhere}
         ORDER BY h.number, v.verse_number
-        LIMIT 200
       `;
 
       let resultRows = (

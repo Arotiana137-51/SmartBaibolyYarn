@@ -159,10 +159,9 @@ export const makeTrigramMatchQuery = (trigrams: string[]): string =>
 
 // Post-query precision filter: bm25 over a trigram table favors short
 // documents that happen to share a few rare trigrams (classic bm25 length
-// normalization), which can rank a coincidental match above the real one. Re-score
-// each SQL-returned candidate by the actual fraction of the query's trigrams
-// it contains, and drop anything below `minOverlap` — cheap in JS because the
-// candidate set is already small (post-LIMIT).
+// normalization), which can rank a coincidental match above the real one.
+// Re-score each SQL-returned candidate by the actual fraction of the query's
+// trigrams it contains, and drop anything below `minOverlap`.
 export const trigramOverlapScore = (
   queryTrigrams: string[],
   candidateNormalizedText: string,
