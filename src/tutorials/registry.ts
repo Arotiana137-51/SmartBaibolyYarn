@@ -12,6 +12,8 @@ import type {TutorialIconName} from '../components/TutorialIcons';
 // useTutorialTarget(id). null target = a centered card (welcome / done), no hole.
 export type TargetId =
   | 'bottomNav'         // Baiboly ↔ Fihirana toggle (CustomBottomNav)
+  | 'bottomNavHymnTab'  // just the "Fihirana" segment of that toggle
+  | 'bottomNavBibleTab' // just the "Baiboly" segment of that toggle
   | 'topbarTitle'       // tap to open book/hymn selector
   | 'topbarPrev'        // ‹‹ chevron (previous chapter/hymn)
   | 'topbarNext'        // › chevron (next chapter/hymn)
@@ -80,10 +82,26 @@ export type CoachStep = {
   // For 'targetEvent' steps: the progress key the driven UI must reach to
   // advance. Bible: 'chapter' | 'verse' | 'selected'. Hymn: 'category' | 'selected'.
   awaitProgress?: string;
+  // For a step whose real outcome forks the rest of the tutorial (e.g. the
+  // user tapping Baiboly vs Fihirana at modeToggle). Keyed by the progress
+  // value; the matching array REPLACES every step after this one, so the
+  // steps immediately following always match what the user actually picked
+  // instead of assuming one path. A key with no entry here (but matching
+  // `awaitProgress`) falls through to the plain default order below.
+  branches?: Record<string, CoachStep[]>;
   // Optional animated gesture hint drawn over the spotlight hole — a
-  // native-style cue so the required gesture is obvious. 'longPress' = a
-  // press-and-hold fingertip with an expanding ring.
-  gesture?: 'longPress';
+  // fingertip emoji (bare glyph, no skin-tone modifier — that flat
+  // cartoon-yellow IS Unicode's neutral default) with a native-style motion
+  // cue. 'longPress' = press-and-hold in place, with an expanding ring.
+  // 'swipeHorizontal' = slides left-right for a scrollable strip, no ring (a
+  // ring there reads as "hold still", contradicting a swipe). 'dragVertical'
+  // = press-and-hold (ring, same as longPress) THEN slides up-down — for
+  // grab-and-reorder rows.
+  gesture?: 'longPress' | 'swipeHorizontal' | 'dragVertical';
+  // Destination-confirmation steps: card floats mid-right, tinted with the
+  // theme accent color at partial opacity instead of the usual opaque
+  // hole-relative card, so the spotlit content shows through it too.
+  peekCard?: boolean;
 };
 
 export type Tutorial = {
@@ -103,6 +121,190 @@ export const ONBOARDING_ID = 'onboarding';
 export const CULT_TUTORIAL_ID = 'cultMode';
 export const HIGHLIGHT_TUTORIAL_ID = 'highlight';
 
+// Onboarding's two mid-tutorial drills. Defined once, reused in whichever
+// order the user actually picks at `modeToggle` below — never assumed.
+
+// --- Bible drill: reach any verse in 3 taps ---
+const ONBOARDING_BIBLE_DRILL: CoachStep[] = [
+  {
+    id: 'openSelector',
+    targetId: 'topbarTitle',
+    text: "Tsindrio ny lohateny hitadiavana boky, toko, andininy anaty Baiboly na Fihirana arakaraky ny safidinao teny ambany.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'open',
+  },
+  {
+    id: 'pickBook',
+    targetId: 'selBookTab',
+    scope: 'modal',
+    text: 'Safidio ny boky hovakiana — ohatra: Jaona.',
+    peekCard: true,
+    advanceOn: 'targetEvent',
+    awaitProgress: 'chapter',
+  },
+  {
+    id: 'pickChapter',
+    targetId: 'selChapterGrid',
+    scope: 'modal',
+    text: 'Safidio ny toko .',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'verse',
+  },
+  {
+    id: 'pickVerse',
+    targetId: 'selVerseGrid',
+    scope: 'modal',
+    text: "Safidio ny andininy hanombohana sy hamaranana  ny famakiana teny (ao anatin'ny toko nosafidiana) ",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'selected',
+  },
+  {
+    // Confirmation beat: selecting closes the modal, but the very next step
+    // (chevron intro, or a mode-switch/done card) would otherwise cover the
+    // reader immediately — a null-target step dims the whole screen, and even
+    // nextChapter's chevron holes leave the verse content dimmed outside them.
+    // Reusing hlReaderArea (already registered on the whole reader view for
+    // the highlight tutorial) spotlights the live verse instead of hiding it,
+    // so the user actually sees they landed where they asked to.
+    id: 'confirmBibleLanding',
+    targetId: 'hlReaderArea',
+    text: 'Indro ny andininy nofidianao!',
+    peekCard: true,
+  },
+  {
+    id: 'nextChapter',
+    targetId: 'topbarNext',
+    extraTargetIds: ['topbarPrev'],
+    text: "Ireo teboka ‹‹ sy ›› ireo no ifindrana toko: ‹‹ mankany amin'ny toko teo aloha, ›› mankany amin'ny toko manaraka.",
+  },
+];
+
+// --- Hymn drill: jump to any hymn by number ---
+const ONBOARDING_HYMN_DRILL: CoachStep[] = [
+  {
+    id: 'openHymnSelector',
+    targetId: 'topbarTitle',
+    text: "Tahaka ny tao amin' ny Baiboly ihany, tsindrio eto isafidianana ny hira.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'open',
+  },
+  {
+    id: 'pickCategory',
+    targetId: 'hymnCategoryTabs',
+    scope: 'modal',
+    gesture: 'swipeHorizontal',
+    text: "Akisaho mianavanana na miankavia ny karazana boky fihirana ery ambony, avy eo tsindrio izay tianao hikarohana hira hirana mialohan'ny hanindrinao ny laharan-kira.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'category',
+  },
+  {
+    // The example number must exist in every category, not just the one the
+    // user happened to land on (pickCategory runs first and its choice isn't
+    // fixed) — 12 is safe because Antema, the smallest book, only goes up to
+    // 24 (ffpm/fanampiny/fifohazana all run into the hundreds).
+    id: 'typeNumber',
+    targetId: 'hymnKeypad',
+    scope: 'modal',
+    placement: 'top',
+    text: 'Soraty ny laharana — ohatra: 12 — dia OK.',
+    advanceOn: 'targetEvent',
+    awaitProgress: 'selected',
+  },
+  {
+    // Same confirmation beat as the Bible drill's — this is the last step of
+    // the hymn drill either way (whichever order the user picked), so without
+    // it the very next card (mode-switch transition, or done) would cover the
+    // hymn immediately via a full-dim or partial-dim scrim before it's shown.
+    id: 'confirmHymnLanding',
+    targetId: 'hlReaderArea',
+    text: 'Indro ny hira nofidianao!',
+    peekCard: true,
+  },
+];
+
+// Transition between the two drills: real gesture, no `drive` — the user's
+// own tap on the OTHER bottom-nav segment switches the mode. Same pattern
+// on both sides so it works symmetrically whichever drill ran first.
+const ONBOARDING_TO_HYMNAL: CoachStep = {
+  id: 'switchHymnal',
+  targetId: 'bottomNavHymnTab',
+  text: 'Andao ho any amin\'ny Fihirana.',
+  advanceOn: 'targetEvent',
+  awaitProgress: 'choseHymnal',
+};
+
+// NOTE: mirrors ONBOARDING_TO_HYMNAL's wording with the other noun — flag
+// for review, this text is a placeholder mirror, not authored copy.
+const ONBOARDING_TO_BIBLE: CoachStep = {
+  id: 'switchBible',
+  targetId: 'bottomNavBibleTab',
+  text: 'Andao ho any amin\'ny Baiboly.',
+  advanceOn: 'targetEvent',
+  awaitProgress: 'choseBible',
+};
+
+const ONBOARDING_DONE: CoachStep = {
+  id: 'done',
+  targetId: null,
+  text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+};
+
+// Cult tutorial: everything after both an entry has been added, regardless
+// of which order they were added in — reused by both the default (Bible
+// first) path and the branch below (Fihirana first).
+const CULT_AFTER_ADD_STEPS: CoachStep[] = [
+  {
+    id: 'cultList',
+    targetId: 'cultList',
+    scope: 'cult',
+    placement: 'bottom',
+    text: "Ireo teny sy hira nampidirinao dia miseho eto amin'ny lisitra, araka ny filaharana hovakiana.",
+  },
+  {
+    id: 'cultReorderList',
+    targetId: 'cultList',
+    scope: 'cult',
+    placement: 'top',
+    gesture: 'dragVertical',
+    text: "Hanova ny filaharana: tsindrio ela ny mari-pisintonana ☰ eo anilan'ny anarana, dia sintony miakatra na midina.",
+  },
+  {
+    id: 'cultActivate',
+    targetId: 'cultActivateToggle',
+    scope: 'cult',
+    placement: 'bottom',
+    text: "Rehefa voalahatrao ireo teny sy hira, dia velomy ity teboka PLAY ity. Avy eo dia misesy ao amin'ny ecran principal ny teny sy hira nalahatrao ",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'cultActivated',
+  },
+  {
+    id: 'cultReaderNav',
+    targetId: 'cultReaderNav',
+    extraTargetIds: ['cultReaderNavNext'],
+    scope: 'screen',
+    drive: 'showCultReaderNav',
+    placement: 'top',
+    text: "Velona ny fotoana! Tsindrio  ny teboka < (prev) na > (next) ahafahanao mifindra amin'ny teny na ny hira nalahatrao.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'cultNavStepped',
+  },
+  {
+    id: 'cultStop',
+    targetId: 'cultStopButton',
+    scope: 'screen',
+    placement: 'top',
+    text: "Rehefa vita ny famakiana, tsindrio ny teboka ■ eo afovoan'ireo tsindry, hampitsaharana ny Fotoam-pivavahana.",
+    advanceOn: 'targetEvent',
+    awaitProgress: 'cultStopped',
+  },
+  {
+    id: 'cultDone',
+    targetId: null,
+    scope: 'screen',
+    text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
+  },
+];
+
 export const TUTORIALS: Tutorial[] = [
   {
     id: ONBOARDING_ID,
@@ -110,6 +312,9 @@ export const TUTORIALS: Tutorial[] = [
     icon: 'rocket',
     autoStart: true,
     order: 0,
+    // Default order below is Bible-first — matches `branches.choseHymnal`'s
+    // absence of a mirrored `choseBible` entry (falls through to this array
+    // via `awaitProgress` instead), so picking Baiboly costs no re-splice.
     steps: [
       {
         id: 'welcome',
@@ -117,84 +322,30 @@ export const TUTORIALS: Tutorial[] = [
         text: 'Tongasoa! Andao hianarantsika haingana ny fomba fampiasa ny e-Baiboly.',
       },
       {
+        // Real gesture: the hole falls on the whole toggle, and whichever
+        // segment the user actually taps decides which drill runs first
+        // (`branches`, keyed off the same choseBible/choseHymnal progress the
+        // transition steps below use). Picking Fihirana here splices in the
+        // hymn drill immediately instead of walking a Bible drill the user
+        // never asked for.
         id: 'modeToggle',
         targetId: 'bottomNav',
-        text: 'Eto ianao mifindra: Baiboly na Fihirana.',
-      },
-      // --- Bible drill: reach any verse in 3 taps ---
-      {
-        id: 'openSelector',
-        targetId: 'topbarTitle',
-        text: "Tsindrio ny lohateny hitadiavana boky, toko, andininy anaty Baiboly na Fihirana arakaraky ny safidinao teny ambany.",
+        text: 'Eto ianao no misafidy: Baiboly na Fihirana hovakiana.',
         advanceOn: 'targetEvent',
-        awaitProgress: 'open',
+        awaitProgress: 'choseBible',
+        branches: {
+          choseHymnal: [
+            ...ONBOARDING_HYMN_DRILL,
+            ONBOARDING_TO_BIBLE,
+            ...ONBOARDING_BIBLE_DRILL,
+            ONBOARDING_DONE,
+          ],
+        },
       },
-      {
-        id: 'pickBook',
-        targetId: 'selBookTab',
-        scope: 'modal',
-        text: 'Safidio ny boky hovakiana — ohatra: Jaona.',
-        advanceOn: 'targetEvent',
-        awaitProgress: 'chapter',
-      },
-      {
-        id: 'pickChapter',
-        targetId: 'selChapterGrid',
-        scope: 'modal',
-        text: 'Safidio ny toko .',
-        advanceOn: 'targetEvent',
-        awaitProgress: 'verse',
-      },
-      {
-        id: 'pickVerse',
-        targetId: 'selVerseGrid',
-        scope: 'modal',
-        text: "Safidio ny andininy hanombohana sy hamaranana  ny famakiana teny (ao anatin'ny toko nosafidiana) ",
-        advanceOn: 'targetEvent',
-        awaitProgress: 'selected',
-      },
-      {
-        id: 'nextChapter',
-        targetId: 'topbarNext',
-        extraTargetIds: ['topbarPrev'],
-        text: "Ireo tsindry ‹‹ sy ›› ireo no ifindrana toko: ‹‹ mankany amin'ny toko teo aloha, ›› mankany amin'ny toko manaraka.",
-      },
-      // --- Hymn drill: jump to any hymn by number ---
-      {
-        id: 'switchHymnal',
-        targetId: 'bottomNav',
-        text: 'Andao ho any amin\'ny Fihirana.',
-        drive: 'switchToHymnal',
-      },
-      {
-        id: 'openHymnSelector',
-        targetId: 'topbarTitle',
-        text: "Tahaka ny tao amin' ny Baiboly ihany, tsindrio eto isafidianana ny hira.",
-        advanceOn: 'targetEvent',
-        awaitProgress: 'open',
-      },
-      {
-        id: 'pickCategory',
-        targetId: 'hymnCategoryTabs',
-        scope: 'modal',
-        text: "Akisaho mianavanana na miankavia ny karazana boky fihirana ery ambony, avy eo tsindrio izay tianao hikarohana hira hirana mialohan'ny hanindrinao ny laharan-kira.",
-        advanceOn: 'targetEvent',
-        awaitProgress: 'category',
-      },
-      {
-        id: 'typeNumber',
-        targetId: 'hymnKeypad',
-        scope: 'modal',
-        placement: 'top',
-        text: 'Soraty ny laharana — ohatra: 164 — dia OK.',
-        advanceOn: 'targetEvent',
-        awaitProgress: 'selected',
-      },
-      {
-        id: 'done',
-        targetId: null,
-        text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
-      },
+      ...ONBOARDING_BIBLE_DRILL,
+      ONBOARDING_TO_HYMNAL,
+      ...ONBOARDING_HYMN_DRILL,
+      ONBOARDING_DONE,
     ],
   },
   {
@@ -227,13 +378,36 @@ export const TUTORIALS: Tutorial[] = [
         text: "Ny Fotoam-pivavahana dia ahafahanao manomana mialoha lisitry ny Baiboly sy hira harahina mandritra ny fotoana.",
       },
       {
-        id: 'cultAddBible',
+        // Branch point, same pattern as onboarding's modeToggle: the row has
+        // both "Hampio Baiboly" and "Hampio Fihirana", and whichever the user
+        // taps first decides the order — text is neutral (not "tap Baiboly"),
+        // so a tap on Fihirana isn't treated as a wrong move. Default
+        // (Bible-first) falls through to cultAddHymn below via awaitProgress;
+        // Fihirana-first splices in the mirrored step + the same shared tail.
+        id: 'cultAddFirst',
         targetId: 'cultAddButtons',
         scope: 'cult',
         placement: 'bottom',
-        text: "Tsindrio \"Hampio Baiboly\" hanampiana andininy: safidio boky, toko ary andininy.",
+        text: "Ampio ao anaty lisitra ny voalohany: tsindrio \"Hampio Baiboly\" na \"Hampio Fihirana\".",
         advanceOn: 'targetEvent',
         awaitProgress: 'cultBibleAdded',
+        branches: {
+          cultHymnAdded: [
+            {
+              id: 'cultAddSecondBible',
+              targetId: 'cultAddButtons',
+              // Spotlight the just-added Fihirana row, same reasoning as
+              // cultAddHymn's extraTargetIds below, mirrored.
+              extraTargetIds: ['cultFlashRow'],
+              scope: 'cult',
+              placement: 'top',
+              text: "Ampio andininy Baiboly izao: tsindrio \"Hampio Baiboly\" dia safidio boky, toko ary andininy.",
+              advanceOn: 'targetEvent',
+              awaitProgress: 'cultBibleAdded',
+            },
+            ...CULT_AFTER_ADD_STEPS,
+          ],
+        },
       },
       {
         id: 'cultAddHymn',
@@ -249,55 +423,7 @@ export const TUTORIALS: Tutorial[] = [
         advanceOn: 'targetEvent',
         awaitProgress: 'cultHymnAdded',
       },
-      {
-        id: 'cultList',
-        targetId: 'cultList',
-        scope: 'cult',
-        placement: 'bottom',
-        text: "Ireo teny sy hira nampidirinao dia miseho eto amin'ny lisitra, araka ny filaharana hovakiana.",
-      },
-      {
-        id: 'cultReorderList',
-        targetId: 'cultList',
-        scope: 'cult',
-        placement: 'top',
-        text: "Hanova ny filaharana: tsindrio ela ny mari-pisintonana ☰ eo anilan'ny anarana, dia sintony miakatra na midina.",
-      },
-      {
-        id: 'cultActivate',
-        targetId: 'cultActivateToggle',
-        scope: 'cult',
-        placement: 'bottom',
-        text: "Rehefa voalahatrao ireo teny sy hira, dia velomy ity teboka PLAY ity. Avy eo dia misesy ao amin'ny ecran principal ny teny sy hira nalahatrao ",
-        advanceOn: 'targetEvent',
-        awaitProgress: 'cultActivated',
-      },
-      {
-        id: 'cultReaderNav',
-        targetId: 'cultReaderNav',
-        extraTargetIds: ['cultReaderNavNext'],
-        scope: 'screen',
-        drive: 'showCultReaderNav',
-        placement: 'top',
-        text: "Velona ny fotoana! Tsindrio  ny teboka < (prev) na > (next) ahafahanao mifindra amin'ny teny na ny hira nalahatrao.",
-        advanceOn: 'targetEvent',
-        awaitProgress: 'cultNavStepped',
-      },
-      {
-        id: 'cultStop',
-        targetId: 'cultStopButton',
-        scope: 'screen',
-        placement: 'top',
-        text: "Rehefa vita ny famakiana, tsindrio ny teboka ■ eo afovoan'ireo tsindry, hampitsaharana ny Fotoam-pivavahana.",
-        advanceOn: 'targetEvent',
-        awaitProgress: 'cultStopped',
-      },
-      {
-        id: 'cultDone',
-        targetId: null,
-        scope: 'screen',
-        text: "Vita! Azonao averina foana ao amin'ny Toro-lalana.",
-      },
+      ...CULT_AFTER_ADD_STEPS,
     ],
   },
   {

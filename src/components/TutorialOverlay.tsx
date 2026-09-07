@@ -18,6 +18,7 @@ import Animated, {
 import {useTheme} from '../contexts/ThemeContext';
 import {useTutorial, useTutorialTargets} from '../contexts/TutorialContext';
 import {useAdaptiveInsets} from '../hooks/useAdaptiveInsets';
+import {hexToRgba} from '../utils/colorUtils';
 import type {TargetScope} from '../tutorials/registry';
 
 const HOLE_PAD = 8;
@@ -161,11 +162,13 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     };
   });
 
-  const showLongPressHint = isMine && step?.gesture === 'longPress' && rects.length > 0;
+  const activeGesture = step?.gesture;
+  const showGestureHint = isMine && !!activeGesture && rects.length > 0;
 
-  // Drive the long-press hint loop only while it's shown and motion is allowed.
+  // One shared driver for every gesture hint — only the derived styles below
+  // differ per gesture. Runs only while a hint is shown and motion is allowed.
   useEffect(() => {
-    if (!showLongPressHint || reduceMotion) {
+    if (!showGestureHint || reduceMotion) {
       cancelAnimation(press);
       press.value = 0;
       return;
@@ -176,7 +179,7 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
       false,
     );
     return () => cancelAnimation(press);
-  }, [showLongPressHint, reduceMotion, press]);
+  }, [showGestureHint, reduceMotion, press]);
 
   // Fingertip: dips down and shrinks slightly as the "hold" begins, then lifts.
   const fingerStyle = useAnimatedStyle(() => {
@@ -196,6 +199,28 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     return {
       transform: [{scale: 0.3 + hold * 1.1}],
       opacity: (1 - hold) * 0.7,
+    };
+  });
+
+  // Fingertip slides right then left across one full cycle of the shared
+  // driver (a full sine period over press 0→1) — a smooth back-and-forth
+  // swipe with no snap at the loop boundary, since sin is 0 at both ends.
+  const swipeStyle = useAnimatedStyle(() => {
+    const wave = Math.sin(press.value * Math.PI * 2);
+    return {
+      transform: [{translateX: wave * 22}],
+      opacity: 0.4 + Math.abs(wave) * 0.6,
+    };
+  });
+
+  // Same wave as swipeStyle, but vertical — paired with the ring (dragging a
+  // list row is grab-then-move, so the "hold to grab" cue still applies,
+  // unlike a plain swipe).
+  const dragVerticalStyle = useAnimatedStyle(() => {
+    const wave = Math.sin(press.value * Math.PI * 2);
+    return {
+      transform: [{translateY: wave * 22}],
+      opacity: 0.4 + Math.abs(wave) * 0.6,
     };
   });
 
@@ -225,8 +250,10 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
           style={[
             styles.card,
             styles.modalCard,
-            // Bottom-left so it clears the menu's controls above it.
-            {backgroundColor: accent, marginBottom: insets.bottom + 66},
+            // Bottom-left so it clears the menu's controls above it. Tinted
+            // and translucent, same as the peek cards, so the real modal
+            // behind it (e.g. the highlight editor) stays partly visible.
+            {backgroundColor: hexToRgba(accent, 0.55), marginBottom: insets.bottom + 66},
           ]}>
           <Text style={styles.counterOnAccent}>
             {stepIndex + 1} / {stepCount}
@@ -323,6 +350,14 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
     Math.min(cardTop, H - ch - MARGIN - insets.bottom),
   );
 
+  // "Peek" cards (destination-confirmation steps): ignore the hole-relative
+  // placement above entirely — the point is to sit off to the side, mid-
+  // screen, tinted and translucent so the spotlit content (already undimmed,
+  // since it fills the hole) stays legible right through the card, not just
+  // around it.
+  const isPeek = !!step?.peekCard;
+  const peekCardTop = H / 2 - ch / 2;
+
   // Skip-pill anchor: default top-right, but if a hole or the coach card would
   // sit under it, fall through corners (TR → TL → BR → BL) to the first that
   // clears both. Keeps the pill from covering the very control the step wants
@@ -375,7 +410,12 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
               element underneath stays tappable when a step needs a live tap.
               Top band above the row, bottom band below it, and horizontal gap
               segments beside/between the holes within the row. */}
-          <View style={[styles.scrim, {left: 0, top: 0, right: 0, height: box.top}]} />
+          {/* Peek steps skip the top band — there's nothing above the hole the
+              user needs to ignore, and dimming the topbar for a "just look"
+              step reads as darkening for no reason. */}
+          {isPeek ? null : (
+            <View style={[styles.scrim, {left: 0, top: 0, right: 0, height: box.top}]} />
+          )}
           <View
             style={[styles.scrim, {left: 0, top: box.bottom, right: 0, bottom: 0}]}
           />
@@ -408,23 +448,41 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
               ]}
             />
           ))}
-          {/* Long-press gesture hint — a native-style fingertip + expanding
-              "held" ring, centered on the first hole. pointerEvents none so the
-              real long-press underneath still registers. */}
-          {showLongPressHint && holes[0] ? (
+          {/* Gesture hint — a fingertip emoji, centered on the first hole.
+              Deliberately the bare glyph with no skin-tone modifier: that's
+              Unicode's own "neutral" rendering (the flat cartoon-yellow tone
+              exists specifically so the default isn't any real skin color —
+              adding a tone modifier would make it LESS neutral, not more).
+              pointerEvents none so the real gesture underneath still
+              registers. longPress and dragVertical add an expanding "held"
+              ring (both start with a grab-and-hold); swipe skips it — a ring
+              there would read as "hold still", the opposite of what's asked. */}
+          {showGestureHint && holes[0] ? (
             <View
               pointerEvents="none"
               style={[
                 styles.gestureHint,
                 {
                   left: holes[0].x + holes[0].width / 2 - GESTURE_HINT_SIZE / 2,
-                  top: holes[0].y + holes[0].height / 2 - GESTURE_HINT_SIZE / 2,
+                  // +5: nudges the hint slightly below dead-center, which read
+                  // better against the actual controls than exact centering.
+                  top: holes[0].y + holes[0].height / 2 - GESTURE_HINT_SIZE / 2 + 5,
                 },
               ]}>
-              <Animated.View
-                style={[styles.pressRing, ringStyle, {borderColor: accent}]}
-              />
-              <Animated.Text style={[styles.fingerGlyph, fingerStyle]}>
+              {activeGesture === 'swipeHorizontal' ? null : (
+                <Animated.View
+                  style={[styles.pressRing, ringStyle, {borderColor: accent}]}
+                />
+              )}
+              <Animated.Text
+                style={[
+                  styles.fingerGlyph,
+                  activeGesture === 'longPress'
+                    ? fingerStyle
+                    : activeGesture === 'swipeHorizontal'
+                      ? swipeStyle
+                      : dragVerticalStyle,
+                ]}>
                 👆
               </Animated.Text>
             </View>
@@ -460,15 +518,18 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
         onLayout={e => setCardH(e.nativeEvent.layout.height)}
         style={[
           styles.card,
+          isPeek && styles.peekCard,
           {
-            backgroundColor: theme.colors.backgroundSecondary,
-            top: cardTop,
+            backgroundColor: isPeek ? hexToRgba(accent, 0.55) : theme.colors.backgroundSecondary,
+            top: isPeek ? peekCardTop : cardTop,
           },
         ]}>
-        <Text style={[styles.counter, {color: theme.colors.textSecondary}]}>
+        <Text style={isPeek ? styles.counterOnAccent : [styles.counter, {color: theme.colors.textSecondary}]}>
           {stepIndex + 1} / {stepCount}
         </Text>
-        <Text style={[styles.body, {color: theme.colors.textPrimary}]}>{step?.text}</Text>
+        <Text style={isPeek ? styles.bodyOnAccent : [styles.body, {color: theme.colors.textPrimary}]}>
+          {step?.text}
+        </Text>
         {/* Next button hidden on targetEvent steps — the real control advances,
             and the step text already tells the user what to do. */}
         {step?.advanceOn === 'targetEvent' ? null : (
@@ -535,6 +596,20 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: {width: 0, height: 4},
   },
+  // Overrides `card` for peek steps: narrower and pinned to the right instead
+  // of centered, so most of the spotlit content stays fully clear beside it.
+  // elevation: 0 matters more than it looks — Android renders a translucent
+  // backgroundColor combined with `card`'s elevation as a solid white plate
+  // (a known RN/Android quirk: elevation shadows assume an opaque surface),
+  // which defeated the whole point of tinting the card. Dropping elevation
+  // keeps the iOS shadow* props (unaffected by this) and just loses the
+  // Android drop shadow, a fine trade for an actually-translucent card.
+  peekCard: {
+    alignSelf: 'flex-end',
+    width: '62%',
+    marginRight: 16,
+    elevation: 0,
+  },
   counter: {fontSize: 12, fontWeight: '700', marginBottom: 6},
   body: {fontSize: 16, lineHeight: 22, marginBottom: 14},
   nextBtn: {
@@ -554,6 +629,9 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     bottom: undefined,
     top: undefined,
+    // Same reason as peekCard: elevation + a translucent backgroundColor
+    // renders as a solid white plate on Android, so it's dropped here too.
+    elevation: 0,
   },
   nextBtnOnAccent: {
     backgroundColor: '#FFFFFF',

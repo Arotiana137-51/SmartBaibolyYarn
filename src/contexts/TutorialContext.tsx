@@ -139,11 +139,23 @@ export const TutorialProvider = ({children}: {children: React.ReactNode}) => {
     (key: string) => {
       const current = activeRef.current;
       const s = current ? current.steps[indexRef.current] : null;
-      if (!s || s.advanceOn !== 'targetEvent') return;
+      if (!current || !s || s.advanceOn !== 'targetEvent') return;
+      // A forking step (e.g. modeToggle): this progress key picks which
+      // steps come next, replacing everything after this one so the
+      // immediately-following steps always match what the user just did.
+      const branch = s.branches?.[key];
+      if (branch) {
+        const idx = indexRef.current;
+        const newSteps = [...current.steps.slice(0, idx + 1), ...branch];
+        setActiveTutorial({...current, steps: newSteps});
+        setStepIndex(idx + 1);
+        runDrive(newSteps[idx + 1]);
+        return;
+      }
       if (s.awaitProgress && s.awaitProgress !== key) return;
       next();
     },
-    [next],
+    [next, runDrive],
   );
 
   const getStatus = useCallback(async (id: string): Promise<TutorialStatus> => {

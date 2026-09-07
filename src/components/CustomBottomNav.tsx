@@ -33,6 +33,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
   const insets = useAdaptiveInsets();
   const {theme} = useTheme();
   const navTargetRef = useTutorialTarget('bottomNav');
+  const hymnTabTargetRef = useTutorialTarget('bottomNavHymnTab');
+  const bibleTabTargetRef = useTutorialTarget('bottomNavBibleTab');
   const { verticalScale, fontFor, isSmall } = useResponsive();
   const segmentHeight = compact
     ? Math.max(30, verticalScale(34))
@@ -81,6 +83,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
         ]}
       >
         <Pressable
+          ref={bibleTabTargetRef}
+          collapsable={false}
           onPress={() => onTabPress('bible')}
           style={({pressed}) => [
             styles.segment,
@@ -107,6 +111,8 @@ const CustomBottomNav: React.FC<CustomBottomNavProps> = ({ activeMode, onTabPres
         </Pressable>
 
         <Pressable
+          ref={hymnTabTargetRef}
+          collapsable={false}
           onPress={() => onTabPress('hymnal')}
           style={({pressed}) => [
             styles.segment,

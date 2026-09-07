@@ -989,6 +989,20 @@ const MainScreen = ({navigation}: MainScreenProps) => {
     }
   }, [bibleSelectionVisible, hymnSelectionVisible, tutorial]);
 
+  // Onboarding: report a genuine Baiboly↔Fihirana mode switch (tap OR swipe)
+  // as tutorial progress. Edge-detected against the previous mode — not a
+  // plain `mode === 'hymnal'` check — so this never fires on mount just
+  // because the default mode already matches; it only fires on an actual
+  // change the user made. Drives both `modeToggle`'s branch choice and the
+  // switchHymnal/switchBible transition steps off the same real gesture.
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    const prevMode = prevModeRef.current;
+    prevModeRef.current = mode;
+    if (mode === prevMode) return;
+    tutorial.notifyProgress(mode === 'hymnal' ? 'choseHymnal' : 'choseBible');
+  }, [mode, tutorial]);
+
   // Cult tutorial lead-in: advance the 'tap the hamburger' step once the menu
   // actually opens (the real gesture, same pattern as the selectors above).
   useEffect(() => {
@@ -1187,7 +1201,13 @@ const MainScreen = ({navigation}: MainScreenProps) => {
       </Pressable>
       <CustomBottomNav
         activeMode={mode}
-        onTabPress={setMode}
+        onTabPress={(m) => {
+          setMode(m);
+          // Fires on every tap, even re-tapping the already-active segment
+          // (mode won't change then, so the mode-diff effect above alone
+          // would never advance a step that's waiting on this exact tap).
+          tutorial.notifyProgress(m === 'hymnal' ? 'choseHymnal' : 'choseBible');
+        }}
       />
       {cultMode.isActive ? (
         <View
