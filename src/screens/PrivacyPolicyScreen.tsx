@@ -1,5 +1,15 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {BackHandler, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  BackHandler,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -15,6 +25,35 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
   const [isAccepted, setIsAccepted] = useState(false);
 
   const isMandatory = route.params?.mandatory === true;
+
+  // Agree button mirrors whichever language section is currently in view:
+  // "Ekeko" while scrolled through the MG card, "I agree" once the EN card
+  // reaches the top of the viewport. enCardY is the EN card's offset within
+  // the scroll content (measured once via onLayout); Infinity keeps the MG
+  // label until that measurement lands.
+  const enCardY = useRef(Infinity);
+  const [isOnEnglishSection, setIsOnEnglishSection] = useState(false);
+  const agreeLabel = isOnEnglishSection ? 'I agree' : 'Ekeko';
+  const declineLabel = isOnEnglishSection ? 'Decline' : 'Tsy manaiky';
+
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setIsOnEnglishSection(e.nativeEvent.contentOffset.y >= enCardY.current);
+  }, []);
+
+  // Mandatory gate only (first run) — the EDPB standard is that refusing must
+  // be as easy as accepting, so a lone Accept button is a dark pattern. There
+  // is no OS API on either platform for an app to uninstall or force-close
+  // itself: Android can pop its own exit, iOS has nothing at all. So Decline
+  // means "block access" everywhere, plus a real exit on Android; on iOS we
+  // can only tell the user how to leave on their own.
+  const [showDeclineNotice, setShowDeclineNotice] = useState(false);
+  const decline = useCallback(() => {
+    if (Platform.OS === 'android') {
+      BackHandler.exitApp();
+      return;
+    }
+    setShowDeclineNotice(true);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -98,7 +137,7 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
       '',
       "## Fahazoan-dalana",
       "- Ny fifandraisana Internet dia mety ampiasaina ho an'ny endri-drindrankajy (ohatra: ny fitaterana).",
-      "- Ny rindrankajy dia mety mangataka fahazoan-dalana hampiseho fampahatsiarovana (\"Ora famakiana tiana\") — angataina IHANY IZAY raha alefanao io endri-drindrankajy tsy an-tery io. Fampahatsiarovana ao amin'ny finday ihany io, tsy misy données alefa na angonina.",
+      "- Ny rindrankajy dia mety mangataka fahazoan-dalana hampiseho fampahatsiarovana \"notifications\" (\"Oh:Ora famakiana tiana\") — angataina izany raha alefanao io endri-drindrankajy tsy an-tery io.Tsy misy données alefa na angonina.",
       '',
       "## Tolotra avy amin'ny olona ivelan'ny e-Baiboly",
       "- Ny rindrankajy dia mety mampiasa tahirin-kevitra avy amin'ny olona ivelan'ny e-Baiboly ilaina amin'ny fiasany. Tsy misy SDK dob ampiasaina.",
@@ -234,6 +273,8 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          onScroll={handleScroll}
+          scrollEventThrottle={32}
         >
           <Text style={[styles.title, {color: theme.colors.textPrimary}]}>Politique de confidentialité</Text>
 
@@ -253,6 +294,9 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
           </View>
 
           <View
+            onLayout={e => {
+              enCardY.current = e.nativeEvent.layout.y;
+            }}
             style={[
               styles.card,
               {
@@ -270,12 +314,34 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
 
         <View style={[styles.footer, {borderTopColor: theme.colors.divider}]}>
           {isMandatory ? (
-            <Pressable
-              style={[styles.primaryButton, {backgroundColor: theme.colors.accentBlue}]}
-              onPress={accept}
-            >
-              <Text style={styles.primaryButtonText}>I agree</Text>
-            </Pressable>
+            <>
+              {showDeclineNotice ? (
+                // PLACEHOLDER MG/EN copy — needs the app's own wording, not mine.
+                <Text style={[styles.declineNotice, {color: theme.colors.textSecondary}]}>
+                  Mila manaiky ianao vao afaka mampiasa ny e-Baiboly. Azonao
+                  esorina (uninstall) ny rindrankajy raha tsy te-hanaiky ianao.
+                  {'\n'}
+                  You need to accept to use e-Baiboly. You can uninstall the
+                  app yourself if you'd rather not continue.
+                </Text>
+              ) : null}
+              <View style={styles.row}>
+                <Pressable
+                  style={[styles.primaryButton, {backgroundColor: theme.colors.accentBlue}]}
+                  onPress={accept}
+                >
+                  <Text style={styles.primaryButtonText}>{agreeLabel}</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.secondaryButton, {borderColor: theme.colors.divider}]}
+                  onPress={decline}
+                >
+                  <Text style={[styles.secondaryButtonText, {color: theme.colors.textPrimary}]}>
+                    {declineLabel}
+                  </Text>
+                </Pressable>
+              </View>
+            </>
           ) : (
             <View style={styles.row}>
               {!isAccepted ? (
@@ -283,7 +349,7 @@ const PrivacyPolicyScreen = ({navigation, route}: Props) => {
                   style={[styles.primaryButton, {backgroundColor: theme.colors.accentBlue}]}
                   onPress={accept}
                 >
-                  <Text style={styles.primaryButtonText}>I agree</Text>
+                  <Text style={styles.primaryButtonText}>{agreeLabel}</Text>
                 </Pressable>
               ) : null}
               <Pressable
@@ -355,12 +421,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     padding: 16,
   },
+  declineNotice: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
   primaryButton: {
+    flex: 1,
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
