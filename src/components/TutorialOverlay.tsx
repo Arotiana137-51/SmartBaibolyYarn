@@ -22,7 +22,7 @@ import {hexToRgba} from '../utils/colorUtils';
 import type {TargetScope} from '../tutorials/registry';
 
 const HOLE_PAD = 8;
-const CARD_MAX_WIDTH = 300;
+const CARD_MAX_WIDTH = 320;
 const CARD_GAP = 14;
 const SCRIM = 'rgba(0,0,0,0.72)';
 const GESTURE_HINT_SIZE = 96;
@@ -59,9 +59,6 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   const [cardH, setCardH] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [screen, setScreen] = useState(() => Dimensions.get('window'));
-  // Measured Skip-pill size — its anchor is chosen dynamically so it never
-  // covers a highlighted hole (a tappable target) or the coach card.
-  const [skipSize, setSkipSize] = useState({w: 0, h: 0});
 
   const pulse = useSharedValue(0);
   // Long-press hint animation: 0 → 1 press-and-hold cycle driving a fingertip
@@ -235,15 +232,6 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   if (stepScope === 'modal' && rects.length === 0) {
     return (
       <View style={styles.modalCardWrap} pointerEvents="box-none">
-        <Pressable
-          onPress={skip}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Ampiasa avy hatrany"
-          style={[styles.skip, {top: insets.top + 25}]}>
-          <Text style={styles.skipText}>Ampiasa avy hatrany</Text>
-          <Text style={styles.skipClose}>✕</Text>
-        </Pressable>
         <View
           accessibilityRole="alert"
           accessibilityLiveRegion="polite"
@@ -259,18 +247,29 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
             {stepIndex + 1} / {stepCount}
           </Text>
           <Text style={styles.bodyOnAccent}>{step?.text}</Text>
-          {/* Card-only intro steps advance on tap — show the Next button.
-              targetEvent steps advance from the real UI, so no button. */}
-          {step?.advanceOn === 'targetEvent' ? null : (
+          <View style={styles.buttonRow}>
             <Pressable
-              onPress={next}
-              style={[styles.nextBtn, styles.nextBtnOnAccent]}
-              accessibilityRole="button">
-              <Text style={[styles.nextText, {color: accent}]}>
-                {isLast ? 'Vita ✓' : 'Manaraka →'}
-              </Text>
+              onPress={skip}
+              hitSlop={8}
+              style={[styles.skipInlineBtn, {borderColor: accent}]}
+              accessibilityRole="button"
+              accessibilityLabel="Aok'izao">
+              <Text style={[styles.skipInlineText, {color: accent}]}>Aok'izao</Text>
+              <Text style={[styles.skipInlineClose, {color: accent}]}>✕</Text>
             </Pressable>
-          )}
+            {/* Card-only intro steps advance on tap — show the Next button.
+                targetEvent steps advance from the real UI, so no button. */}
+            {step?.advanceOn === 'targetEvent' ? null : (
+              <Pressable
+                onPress={next}
+                style={[styles.nextBtn, styles.nextBtnOnAccent]}
+                accessibilityRole="button">
+                <Text style={[styles.nextText, {color: accent}]}>
+                  {isLast ? 'Vita ✓' : 'Manaraka →'}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -357,45 +356,6 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
   // around it.
   const isPeek = !!step?.peekCard;
   const peekCardTop = H / 2 - ch / 2;
-
-  // Skip-pill anchor: default top-right, but if a hole or the coach card would
-  // sit under it, fall through corners (TR → TL → BR → BL) to the first that
-  // clears both. Keeps the pill from covering the very control the step wants
-  // the user to tap. Uses measured pill size; before first layout the default
-  // top-right is used (rough estimate) and corrected on the next frame.
-  const skipTop = insets.top + 45;
-  const skipBottom = insets.bottom + 16;
-  const sw = skipSize.w || 190;
-  const sh = skipSize.h || 40;
-  const hit =
-    (ax: number, ay: number) =>
-    (r: {left: number; top: number; right: number; bottom: number}) =>
-      ax < r.right && ax + sw > r.left && ay < r.bottom && ay + sh > r.top;
-  // Coach card spans ~86% width centered; treat its band as blocked.
-  const cardLeft = screen.width * 0.07;
-  const overlapsCard = (ax: number, ay: number): boolean =>
-    hit(ax, ay)({left: cardLeft, top: cardTop, right: screen.width - cardLeft, bottom: cardTop + ch});
-  const overlapsHole = (ax: number, ay: number): boolean =>
-    holes.some(h =>
-      hit(ax, ay)({left: h.x, top: h.y, right: h.x + h.width, bottom: h.y + h.height}),
-    );
-  // Corners as (ax, ay) top-left positions, TR → TL → BR → BL.
-  const rightX = screen.width - 12 - sw;
-  const bottomY = H - skipBottom - sh;
-  const candidates = [
-    {ax: rightX, ay: skipTop, style: {right: 12, left: undefined, top: skipTop}},
-    {ax: 12, ay: skipTop, style: {left: 12, right: undefined, top: skipTop}},
-    {ax: rightX, ay: bottomY, style: {right: 12, left: undefined, top: bottomY}},
-    {ax: 12, ay: bottomY, style: {left: 12, right: undefined, top: bottomY}},
-  ];
-  // Clearing the card is the hard constraint (a pill under it is invisible);
-  // clearing a hole is only a tiebreak — a flex:1 target (the playlist) fills
-  // every corner, so demanding both would fall back to TR, under the card.
-  const skipAnchor = (
-    candidates.find(c => !overlapsCard(c.ax, c.ay) && !overlapsHole(c.ax, c.ay)) ??
-    candidates.find(c => !overlapsCard(c.ax, c.ay)) ??
-    candidates[0]
-  ).style;
 
   return (
     <View
@@ -493,24 +453,6 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
         <View style={[StyleSheet.absoluteFill, {backgroundColor: SCRIM}]} />
       )}
 
-      {/* Persistent Skip pill — top-right, above everything. Sits 15px below
-          the safe-area top so it clears the notch on any screen size. */}
-      <Pressable
-        onPress={skip}
-        hitSlop={12}
-        onLayout={e =>
-          setSkipSize({
-            w: e.nativeEvent.layout.width,
-            h: e.nativeEvent.layout.height,
-          })
-        }
-        accessibilityRole="button"
-        accessibilityLabel="Ampiasa avy hatrany"
-        style={[styles.skip, skipAnchor]}>
-        <Text style={styles.skipText}>Ampiasa avy hatrany</Text>
-        <Text style={styles.skipClose}>✕</Text>
-      </Pressable>
-
       {/* Coach card */}
       <View
         accessibilityRole="alert"
@@ -530,16 +472,27 @@ const TutorialOverlay: React.FC<Props> = ({scope = 'screen'}) => {
         <Text style={isPeek ? styles.bodyOnAccent : [styles.body, {color: theme.colors.textPrimary}]}>
           {step?.text}
         </Text>
-        {/* Next button hidden on targetEvent steps — the real control advances,
-            and the step text already tells the user what to do. */}
-        {step?.advanceOn === 'targetEvent' ? null : (
+        <View style={styles.buttonRow}>
           <Pressable
-            onPress={next}
-            style={[styles.nextBtn, {backgroundColor: accent}]}
-            accessibilityRole="button">
-            <Text style={styles.nextText}>{isLast ? 'Vita ✓' : 'Manaraka →'}</Text>
+            onPress={skip}
+            hitSlop={8}
+            style={[styles.skipInlineBtn, {borderColor: accent}]}
+            accessibilityRole="button"
+            accessibilityLabel="Aok'izao">
+            <Text style={[styles.skipInlineText, {color: accent}]}>Aok'izao</Text>
+            <Text style={[styles.skipInlineClose, {color: accent}]}>✕</Text>
           </Pressable>
-        )}
+          {/* Next button hidden on targetEvent steps — the real control advances,
+              and the step text already tells the user what to do. */}
+          {step?.advanceOn === 'targetEvent' ? null : (
+            <Pressable
+              onPress={next}
+              style={[styles.nextBtn, {backgroundColor: accent}]}
+              accessibilityRole="button">
+              <Text style={styles.nextText}>{isLast ? 'Vita ✓' : 'Manaraka →'}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -571,25 +524,29 @@ const styles = StyleSheet.create({
   fingerGlyph: {
     fontSize: 44,
   },
-  skip: {
-    position: 'absolute',
-    right: 12,
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skipInlineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
   },
-  skipText: {color: '#FFFFFF', fontWeight: '700', fontSize: 13},
-  skipClose: {color: '#FFFFFF', fontWeight: '700', fontSize: 14, marginLeft: 8},
+  skipInlineText: {fontWeight: '700', fontSize: 14},
+  skipInlineClose: {fontWeight: '700', fontSize: 15, marginLeft: 8},
   card: {
     position: 'absolute',
     alignSelf: 'center',
     maxWidth: CARD_MAX_WIDTH,
-    width: '86%',
+    width: '90%',
     borderRadius: 14,
-    padding: 16,
+    padding: 18,
     elevation: 8,
     shadowColor: '#000',
     shadowOpacity: 0.3,
@@ -613,7 +570,6 @@ const styles = StyleSheet.create({
   counter: {fontSize: 12, fontWeight: '700', marginBottom: 6},
   body: {fontSize: 16, lineHeight: 22, marginBottom: 14},
   nextBtn: {
-    alignSelf: 'flex-end',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 999,
@@ -635,7 +591,6 @@ const styles = StyleSheet.create({
   },
   nextBtnOnAccent: {
     backgroundColor: '#FFFFFF',
-    marginTop: 14,
   },
   counterOnAccent: {
     fontSize: 12,
@@ -643,7 +598,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: 'rgba(255,255,255,0.85)',
   },
-  bodyOnAccent: {fontSize: 16, lineHeight: 22, color: '#FFFFFF'},
+  bodyOnAccent: {fontSize: 16, lineHeight: 22, color: '#FFFFFF', marginBottom: 14},
 });
 
 export default TutorialOverlay;
