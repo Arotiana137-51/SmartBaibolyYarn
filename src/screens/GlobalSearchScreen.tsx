@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -208,6 +208,17 @@ const GlobalSearchScreen = () => {
     setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
+  // Two ways to read the same results, because testers split on it. The
+  // toggle governs exactly ONE level — the innermost grouping:
+  //   Tsotra:          Baiboly -> Testamenta -> book
+  //                    Fihirana -> hymn book -> hymn
+  //   Isan-tsokajiny:  Baiboly -> Testamenta -> genre -> book
+  //                    Fihirana -> hymn book -> FFPM theme -> hymn
+  // The Testamenta split and the hymn-book classification stay in BOTH — only
+  // the genre/theme layer is opt-in. Switching never changes what matched or
+  // any count, just how many taps deep a result sits. Tsotra is the default.
+  const [categorized, setCategorized] = useState(false);
+
   useEffect(() => {
     if (!query.trim()) {
       setBible([]);
@@ -221,6 +232,46 @@ const GlobalSearchScreen = () => {
     }, 300);
     return () => clearTimeout(id);
   }, [query, search]);
+
+  // The toggle lives in the native header next to the "Fikarohana" title, so
+  // neither label repeats that word. White-on-teal segmented control: the
+  // header is navBackground with white text (see RootNavigator's
+  // headerOptions), so the selected half inverts to a white pill rather than
+  // using an accent color that would blend into the bar.
+  const headerRight = useCallback(
+    () => (
+      <View style={styles.modeToggle}>
+        {([false, true] as const).map(isCategorized => {
+          const selected = categorized === isCategorized;
+          return (
+            <Pressable
+              key={String(isCategorized)}
+              onPress={() => setCategorized(isCategorized)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              style={[styles.modeOption, selected && styles.modeOptionSelected]}
+            >
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.modeOptionText,
+                  { color: selected ? theme.colors.navBackground : '#FFFFFF' },
+                ]}
+              >
+                {t(isCategorized ? 'search.categorized' : 'search.simple')}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    ),
+    [categorized, theme.colors.navBackground],
+  );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerRight });
+  }, [navigation, headerRight]);
 
   const normalizedHighlight = useMemo(() => normalizeForHighlight(query), [query]);
 
@@ -263,6 +314,14 @@ const GlobalSearchScreen = () => {
           out.push({ kind: 'groupHeader', id: testamentId, title: testamentTitle, count: testamentCount, depth: 1 });
           if (!expandedSections[testamentId]) return;
 
+          // Tsotra: books straight under the testament. The genre level
+          // (Pentateoka, Bokim-pahendrena, Mpaminany...) is the ONLY thing
+          // the toggle adds — the testament split stays either way.
+          if (!categorized) {
+            testamentItems.forEach(data => out.push({ kind: 'bible', data, depth: 2 }));
+            return;
+          }
+
           const genreGroups = groupInOrder(testamentItems, b => bibleGenreFor(b.bookId), BIBLE_GENRE_ORDER);
           genreGroups.forEach(([genreTitle, genreItems]) => {
             const genreId = `${testamentId}:${genreTitle}`;
@@ -285,7 +344,11 @@ const GlobalSearchScreen = () => {
           out.push({ kind: 'groupHeader', id: categoryId, title: categoryTitle, count: categoryItems.length, depth: 1 });
           if (!expandedSections[categoryId]) return;
 
-          if (categoryTitle !== 'FFPM') {
+          // Hymns straight under their hymn book — in Tsotra always, and in
+          // Isan-tsokajiny for every category except FFPM, the only one with
+          // a verified theme breakdown. The hymn-book split itself stays in
+          // both modes; only the theme level is the toggle's business.
+          if (!categorized || categoryTitle !== 'FFPM') {
             categoryItems.forEach(data => out.push({ kind: 'hymn', data, depth: 2 }));
             return;
           }
@@ -317,7 +380,7 @@ const GlobalSearchScreen = () => {
     }
 
     return out;
-  }, [bible, hymns, expandedSections]);
+  }, [bible, hymns, expandedSections, categorized]);
 
   const openBible = useCallback(
     (item: BibleSearchResult) => {
@@ -483,6 +546,7 @@ const GlobalSearchScreen = () => {
         </View>
       </View>
 
+
       {isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={theme.colors.accentBlue} />
@@ -594,6 +658,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   input: { flex: 1, marginLeft: 10, fontSize: 16, paddingVertical: 2 },
+  // Sits in the header bar, so it has to stay narrow enough to leave the
+  // "Fikarohana" title room — hence the small type and tight padding, with
+  // hitSlop on each half making up the tap area the visual size gives up.
+  modeToggle: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    padding: 2,
+    marginRight: 4,
+  },
+  modeOption: {
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeOptionSelected: { backgroundColor: '#FFFFFF' },
+  modeOptionText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2, textAlign: 'center' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   listContent: { paddingBottom: 24 },
   bigTileContainer: { flex: 1, padding: 12, gap: 12 },

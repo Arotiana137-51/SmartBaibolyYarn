@@ -55,6 +55,8 @@ type TranslationKey =
   | 'search.noResultsBible'
   | 'search.noResultsHymns'
   | 'search.resultCount'
+  | 'search.categorized'
+  | 'search.simple'
   | 'verseList.title'
   | 'verseList.searchLabel'
   | 'verseList.empty'
@@ -177,6 +179,9 @@ const translations: Translations = {
     'search.noResultsBible': "Tsy nahitana valiny tao amin'ny Baiboly",
     'search.noResultsHymns': "Tsy nahitana valiny tao amin'ny fihirana",
     'search.resultCount': '{{count}} valiny',
+    // Shown as a pair in the "Fikarohana" header bar, so neither repeats it.
+    'search.categorized': 'Isan-tsokajiny',
+    'search.simple': 'Tsotra',
     'verseList.title': "Valin'ny fikarohana",
     'verseList.searchLabel': 'Fikarohana: "{{query}}"',
     'verseList.empty': "Tsy nahitana andininy ho an'ny \"{{query}}\" ao amin'ny {{book}}",
